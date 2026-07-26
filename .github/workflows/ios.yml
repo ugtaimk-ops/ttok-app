@@ -25,6 +25,8 @@ jobs:
 
       - name: Build Web Application
         run: npx vite build
+        env:
+          APP_URL: ${{ vars.APP_URL }}
 
       - name: Add iOS platform (if missing)
         run: |
