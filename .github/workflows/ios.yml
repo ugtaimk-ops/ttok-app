@@ -35,14 +35,14 @@ jobs:
       - name: Sync Capacitor iOS
         run: npx cap sync ios
 
-      - name: Install CocoaPods dependencies
+      - name: Resolve Swift Package dependencies
         working-directory: ios/App
-        run: pod install
+        run: xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
 
       - name: Build unsigned archive
         run: |
           xcodebuild \
-            -workspace ios/App/App.xcworkspace \
+            -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Release \
             -sdk iphoneos \
