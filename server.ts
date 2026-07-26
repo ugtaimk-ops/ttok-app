@@ -8,7 +8,7 @@ import { getAIService, parseJSONResponse } from "./services/ai";
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 // Enable JSON payload with a large limit for base64 image uploads
 app.use(express.json({ limit: "25mb" }));
