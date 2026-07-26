@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net - Default Deny Catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions for auth state and ownership
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Rules for Users collection and subcollections
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /schedules/{scheduleId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /todos/{todoId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /scripts/{scriptId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /practiceLogs/{logId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+  }
+}

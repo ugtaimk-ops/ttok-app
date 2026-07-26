@@ -1,0 +1,11 @@
+{
+  "name": "똑",
+  "description": "학생들을 위한 똑 부러지는 AI 스케줄 관리 및 발표 연습 파트너",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

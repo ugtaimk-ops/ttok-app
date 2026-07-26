@@ -1,0 +1,123 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Authenticated user profile and onboarding meta configuration",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier of the user" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User display name from Google/Apple" },
+        "photoURL": { "type": "string", "description": "Profile photo URL from Google/Apple" },
+        "provider": { "type": "string", "description": "Authentication provider used (google.com, apple.com)" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of account creation" },
+        "lastLogin": { "type": "string", "format": "date-time", "description": "Timestamp of most recent sign-in" },
+        "name": { "type": "string", "description": "Custom verified student name" },
+        "school": { "type": "string", "description": "Registered NEIS school name" },
+        "schoolCode": { "type": "string", "description": "NEIS school code" },
+        "officeCode": { "type": "string", "description": "NEIS local office of education code" },
+        "officeName": { "type": "string", "description": "NEIS local office of education name" },
+        "schoolKind": { "type": "string", "description": "Kind of school (e.g. high_school)" },
+        "grade": { "type": "string", "description": "Current school grade level" },
+        "classNum": { "type": "string", "description": "Current academic class number" },
+        "goal": { "type": "string", "description": "Academic and presentation goals for the semester" },
+        "avatarUrl": { "type": "string", "description": "URL of chosen avatar" },
+        "allergies": { "type": "array", "description": "Selected NEIS food allergy code indices" }
+      },
+      "required": ["uid", "email", "provider", "createdAt", "lastLogin"]
+    },
+    "Schedule": {
+      "title": "Schedule",
+      "description": "User academic schedule and assessment events",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "subject": { "type": "string" },
+        "date": { "type": "string" },
+        "supplies": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "criteria": { "type": "string" },
+        "submissionMethod": { "type": "string" },
+        "presentationTime": { "type": "string" },
+        "type": { "type": "string", "enum": ["assessment", "exam", "study", "homework"] }
+      },
+      "required": ["id", "title", "subject", "date", "type"]
+    },
+    "Todo": {
+      "title": "Todo",
+      "description": "User todo tasks and checklist items",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "dueDate": { "type": "string" },
+        "category": { "type": "string", "enum": ["homework", "general", "exam", "assessment"] },
+        "subject": { "type": "string" }
+      },
+      "required": ["id", "text", "completed", "dueDate", "category"]
+    },
+    "Script": {
+      "title": "Script",
+      "description": "AI-generated or user-edited presentation speech scripts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "topic": { "type": "string" },
+        "script": { "type": "string" },
+        "outline": { "type": "array" },
+        "tips": { "type": "array" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "grade": { "type": "string" },
+        "subject": { "type": "string" },
+        "audience": { "type": "string" },
+        "tone": { "type": "string" },
+        "purpose": { "type": "string" },
+        "style": { "type": "string" }
+      },
+      "required": ["id", "title", "topic", "script", "date"]
+    },
+    "PracticeLog": {
+      "title": "PracticeLog",
+      "description": "Presentation AI camera/mic feedback logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "topic": { "type": "string" },
+        "date": { "type": "string" },
+        "totalScore": { "type": "number" },
+        "duration": { "type": "number" },
+        "scores": { "type": "object" },
+        "voiceAnalysis": { "type": "object" },
+        "videoAnalysis": { "type": "object" },
+        "feedback": { "type": "array" }
+      },
+      "required": ["id", "topic", "date", "totalScore", "scores", "voiceAnalysis", "videoAnalysis", "feedback"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Collection storing student personal profiles and metadata"
+    },
+    "users/{userId}/schedules/{scheduleId}": {
+      "schema": "Schedule",
+      "description": "Academic schedule and assessment items"
+    },
+    "users/{userId}/todos/{todoId}": {
+      "schema": "Todo",
+      "description": "Student homework, exam study, and general checklist tasks"
+    },
+    "users/{userId}/scripts/{scriptId}": {
+      "schema": "Script",
+      "description": "Speech scripts generated and edited for active presentation study"
+    },
+    "users/{userId}/practiceLogs/{logId}": {
+      "schema": "PracticeLog",
+      "description": "Historical feedback records of AI presentation practice"
+    }
+  }
+}

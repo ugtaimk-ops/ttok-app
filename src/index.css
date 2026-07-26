@@ -1,0 +1,182 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", "Pretendard", "SF Pro Text", system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "SF Pro Display", system-ui, sans-serif;
+  
+  --color-brand: #0066FF;
+  --color-brand-light: #EBF3FF;
+  --color-brand-dark: #004ecc;
+}
+
+@layer utilities {
+  /* Premium Glass Effect */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+  
+  .glass-panel-dark {
+    background: rgba(23, 23, 23, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .glass-card {
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .glass-card-dark {
+    background: rgba(30, 30, 30, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* SF Pro Typography Adjustments */
+  .tracking-tight-sf {
+    letter-spacing: -0.022em;
+  }
+  
+  .tracking-tighter-sf {
+    letter-spacing: -0.043em;
+  }
+
+  /* Safe Area Padding & Margin Utilities for Notch & Home Indicator */
+  .safe-top {
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  }
+  .safe-bottom {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+  .safe-left {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  .safe-right {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  .m-safe-top {
+    margin-top: env(safe-area-inset-top, 0px);
+  }
+  .m-safe-bottom {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Safe padding for screen layouts, accommodating BottomNavigationBar + safe areas */
+  .pb-safe-layout {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 16px));
+  }
+
+  /* Positioning offset for FABs, toasts, or bottom buttons to sit beautifully above the floating bottom navigation */
+  .bottom-fab-safe {
+    bottom: calc(92px + env(safe-area-inset-bottom, 16px));
+  }
+
+  /* Fluid Responsive Utilities using clamp() */
+  .text-fluid-xs {
+    font-size: clamp(0.875rem, 0.85rem + 0.1vw, 0.9375rem); /* 14sp ~ 15sp */
+  }
+  .text-fluid-sm {
+    font-size: clamp(0.9375rem, 0.9rem + 0.15vw, 1rem); /* 15sp ~ 16sp */
+  }
+  .text-fluid-base {
+    font-size: clamp(1rem, 0.95rem + 0.2vw, 1.125rem); /* 16sp ~ 18sp */
+  }
+  .text-fluid-lg {
+    font-size: clamp(1.125rem, 1.05rem + 0.3vw, 1.25rem); /* 18sp ~ 20sp */
+  }
+  .text-fluid-xl {
+    font-size: clamp(1.25rem, 1.15rem + 0.4vw, 1.5rem); /* 20sp ~ 24sp */
+  }
+  .text-fluid-2xl {
+    font-size: clamp(1.5rem, 1.4rem + 0.5vw, 1.75rem); /* 24sp ~ 28sp */
+  }
+  .text-fluid-3xl {
+    font-size: clamp(1.75rem, 1.6rem + 0.6vw, 2rem); /* 28sp ~ 32sp */
+  }
+  .text-fluid-4xl {
+    font-size: clamp(2rem, 1.8rem + 1vw, 2.5rem); /* 32sp ~ 40sp */
+  }
+
+  .p-fluid {
+    padding: clamp(0.5rem, 0.35rem + 0.8vw, 1.5rem);
+  }
+  .g-fluid {
+    gap: clamp(0.4rem, 0.25rem + 0.6vw, 1.25rem);
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 102, 255, 0.15);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 102, 255, 0.3);
+}
+
+/* Hide scrollbar for clean horizontal cards */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #F8FAFC;
+  color: #0F172A;
+  overflow-x: hidden;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.dark body {
+  background-color: #0B0F19;
+  color: #F8FAFC;
+}
+
+/* Voice wave animations */
+@keyframes wave-bounce {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+.wave-bar {
+  display: inline-block;
+  width: 4px;
+  height: 24px;
+  background-color: #0066FF;
+  border-radius: 2px;
+  animation: wave-bounce 1.2s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+.wave-bar:nth-child(2) { animation-delay: 0.1s; }
+.wave-bar:nth-child(3) { animation-delay: 0.2s; }
+.wave-bar:nth-child(4) { animation-delay: 0.15s; }
+.wave-bar:nth-child(5) { animation-delay: 0.3s; }
+.wave-bar:nth-child(6) { animation-delay: 0.05s; }
+.wave-bar:nth-child(7) { animation-delay: 0.25s; }
+.wave-bar:nth-child(8) { animation-delay: 0.1s; }

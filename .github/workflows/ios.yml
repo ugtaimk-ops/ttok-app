@@ -1,0 +1,67 @@
+name: Build iOS App (Unsigned IPA)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build iOS Unsigned IPA
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Application
+        run: npx vite build
+
+      - name: Add iOS platform (if missing)
+        run: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios/App
+        run: pod install
+
+      - name: Build unsigned archive
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath build/App.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE="" \
+            archive
+
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p build/Payload
+          cp -r build/App.xcarchive/Products/Applications/App.app build/Payload/
+          cd build
+          zip -r ttok-unsigned.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ttok-ios-unsigned-ipa
+          path: build/ttok-unsigned.ipa
