@@ -13,3 +13,9 @@ ios/App/build/
 ios/App/App.xcworkspace/xcuserdata/
 ios/App/App.xcodeproj/xcuserdata/
 *.ipa
+
+# Release signing material - never commit
+*.keystore
+*.jks
+keystore.properties
+release-keystore-credentials.txt
