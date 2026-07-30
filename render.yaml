@@ -16,3 +16,5 @@ services:
         sync: false
       - key: NEIS_API_KEY
         sync: false
+      - key: APP_SHARED_SECRET
+        sync: false

@@ -276,7 +276,7 @@ export default function SettingsScreen({
           darkMode ? "bg-slate-900 border-slate-800/80" : "bg-white border-slate-100"
         } shadow-sm space-y-4 text-left`}>
           <h3 className="text-fluid-xs font-black text-slate-400 uppercase tracking-wider mb-2">기기 연동 및 계정 관리</h3>
-          
+
           <div className="space-y-3.5">
             <div className="flex items-center justify-between text-fluid-sm font-semibold">
               <span className="text-slate-400">플랫폼 모드</span>
@@ -291,6 +291,20 @@ export default function SettingsScreen({
                 <Lock size={14} /> Google Cloud 기기 간 완벽 백업 지원
               </span>
             </div>
+
+            {user.email && (
+              <div className="flex items-center justify-between text-fluid-sm font-semibold">
+                <span className="text-slate-400">로그인 계정</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{user.email}</span>
+              </div>
+            )}
+
+            <button
+              onClick={onLogout}
+              className="w-full mt-1 py-3 rounded-2xl flex items-center justify-center gap-1.5 text-fluid-sm font-black text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            >
+              <LogOut size={15} /> 로그아웃
+            </button>
           </div>
         </div>
 

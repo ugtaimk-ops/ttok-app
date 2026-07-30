@@ -27,6 +27,7 @@ jobs:
         run: npx vite build
         env:
           APP_URL: ${{ vars.APP_URL }}
+          APP_SHARED_SECRET: ${{ vars.APP_SHARED_SECRET }}
 
       - name: Add iOS platform (if missing)
         run: |
@@ -44,6 +45,21 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string '발표 연습을 녹화하기 위해 카메라 접근 권한이 필요합니다.'" "$PLIST"
           /usr/libexec/PlistBuddy -c "Delete :NSMicrophoneUsageDescription" "$PLIST" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string '발표 연습 음성을 녹음하기 위해 마이크 접근 권한이 필요합니다.'" "$PLIST"
+
+      - name: Inject GoogleService-Info.plist and URL scheme (for Google Sign-In)
+        if: ${{ vars.GOOGLE_SERVICE_INFO_PLIST != '' }}
+        run: |
+          PLIST=ios/App/App/Info.plist
+          GOOGLE_PLIST=ios/App/App/GoogleService-Info.plist
+          cat > "$GOOGLE_PLIST" <<'EOF'
+          ${{ vars.GOOGLE_SERVICE_INFO_PLIST }}
+          EOF
+          REVERSED_CLIENT_ID=$(/usr/libexec/PlistBuddy -c "Print :REVERSED_CLIENT_ID" "$GOOGLE_PLIST")
+          /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string $REVERSED_CLIENT_ID" "$PLIST"
 
       - name: Resolve Swift Package dependencies
         working-directory: ios/App

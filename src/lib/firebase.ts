@@ -36,7 +36,7 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = initializeFirestore(app, {
   ignoreUndefinedProperties: true
-});
+}, "ai-studio-22fbd27c-5516-4028-bd17-a6d4ba99710b");
 
 export {
   signInWithEmailAndPassword,

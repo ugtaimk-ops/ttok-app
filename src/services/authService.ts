@@ -1,19 +1,27 @@
-import { 
-  GoogleAuthProvider, 
-  OAuthProvider, 
-  signInWithPopup, 
-  signOut, 
+import {
+  GoogleAuthProvider,
+  OAuthProvider,
+  signInWithPopup,
+  signInWithCredential,
+  signInWithEmailAndPassword as fbSignInWithEmailAndPassword,
+  createUserWithEmailAndPassword as fbCreateUserWithEmailAndPassword,
+  sendPasswordResetEmail as fbSendPasswordResetEmail,
+  signOut,
   User,
   getAuth
 } from "firebase/auth";
-import { 
-  doc, 
-  getDoc, 
-  setDoc, 
-  updateDoc 
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc
 } from "firebase/firestore";
+import { Capacitor } from "@capacitor/core";
+import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { auth, db } from "../lib/firebase";
 import { UserProfile } from "../types";
+
+const isNative = () => Capacitor.isNativePlatform();
 
 export enum OperationType {
   CREATE = 'create',
@@ -69,15 +77,25 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
 export const authService = {
   /**
-   * Google Sign-In via popup
+   * Google Sign-In. Uses the native Google Sign-In SDK via @capacitor-firebase/authentication
+   * when running as a packaged app (popup-based sign-in does not work inside a native WebView),
+   * then bridges the resulting credential into the Firebase JS SDK so Firestore rules and
+   * onAuthStateChanged() see the same signed-in user. Falls back to the web popup flow when
+   * running in a regular browser (e.g. `npm run dev`).
    */
   async signInWithGoogle(): Promise<User> {
-    const provider = new GoogleAuthProvider();
-    // Prompt to select account
-    provider.setCustomParameters({
-      prompt: 'select_account'
-    });
     try {
+      if (isNative()) {
+        const result = await FirebaseAuthentication.signInWithGoogle();
+        if (!result.credential?.idToken) {
+          throw new Error("Google 로그인에 실패했습니다. 다시 시도해 주세요.");
+        }
+        const credential = GoogleAuthProvider.credential(result.credential.idToken, result.credential.accessToken);
+        const userCred = await signInWithCredential(auth, credential);
+        return userCred.user;
+      }
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
       const result = await signInWithPopup(auth, provider);
       return result.user;
     } catch (error: any) {
@@ -87,11 +105,24 @@ export const authService = {
   },
 
   /**
-   * Apple Sign-In via popup
+   * Apple Sign-In. Same native-first strategy as signInWithGoogle above.
    */
   async signInWithApple(): Promise<User> {
-    const provider = new OAuthProvider('apple.com');
     try {
+      if (isNative()) {
+        const result = await FirebaseAuthentication.signInWithApple();
+        if (!result.credential?.idToken) {
+          throw new Error("Apple 로그인에 실패했습니다. 다시 시도해 주세요.");
+        }
+        const provider = new OAuthProvider("apple.com");
+        const credential = provider.credential({
+          idToken: result.credential.idToken,
+          rawNonce: result.credential.nonce,
+        });
+        const userCred = await signInWithCredential(auth, credential);
+        return userCred.user;
+      }
+      const provider = new OAuthProvider("apple.com");
       const result = await signInWithPopup(auth, provider);
       return result.user;
     } catch (error: any) {
@@ -101,10 +132,55 @@ export const authService = {
   },
 
   /**
+   * Email/password sign-up (new account)
+   */
+  async signUpWithEmail(email: string, password: string): Promise<User> {
+    try {
+      const result = await fbCreateUserWithEmailAndPassword(auth, email, password);
+      return result.user;
+    } catch (error: any) {
+      console.error("Email sign-up failed:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Email/password sign-in (existing account)
+   */
+  async signInWithEmail(email: string, password: string): Promise<User> {
+    try {
+      const result = await fbSignInWithEmailAndPassword(auth, email, password);
+      return result.user;
+    } catch (error: any) {
+      console.error("Email sign-in failed:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Sends a password reset email
+   */
+  async resetPassword(email: string): Promise<void> {
+    try {
+      await fbSendPasswordResetEmail(auth, email);
+    } catch (error: any) {
+      console.error("Password reset failed:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Sign Out
    */
   async logout(): Promise<void> {
     try {
+      if (isNative()) {
+        try {
+          await FirebaseAuthentication.signOut();
+        } catch (nativeErr) {
+          console.warn("Native sign-out failed, continuing with JS SDK sign-out:", nativeErr);
+        }
+      }
       await signOut(auth);
     } catch (error: any) {
       console.error("Logout failed:", error);
@@ -153,10 +229,10 @@ export const authService = {
           displayName: fbUser.displayName || undefined,
           photoURL: fbUser.photoURL || undefined,
           name: fbUser.displayName || fbUser.email?.split("@")[0] || "스쿨메이트",
-          school: "서울과학고등학교",
-          grade: "2",
-          classNum: "4",
-          goal: "수행평가 All A 달성 및 발표 마스터",
+          school: "",
+          grade: "",
+          classNum: "",
+          goal: "",
           avatarUrl: fbUser.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256"
         };
       } else {
@@ -178,14 +254,14 @@ export const authService = {
           displayName: fbUser.displayName || undefined,
           photoURL: fbUser.photoURL || undefined,
           name: existingData.name || existingData.displayName || fbUser.displayName || fbUser.email?.split("@")[0] || "스쿨메이트",
-          school: existingData.school || "서울과학고등학교",
+          school: existingData.school || "",
           schoolCode: existingData.schoolCode,
           officeCode: existingData.officeCode,
           officeName: existingData.officeName,
           schoolKind: existingData.schoolKind,
-          grade: existingData.grade || "2",
-          classNum: existingData.classNum || "4",
-          goal: existingData.goal || "수행평가 All A 달성 및 발표 마스터",
+          grade: existingData.grade || "",
+          classNum: existingData.classNum || "",
+          goal: existingData.goal || "",
           avatarUrl: existingData.avatarUrl || existingData.photoURL || fbUser.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
           allergies: existingData.allergies
         };

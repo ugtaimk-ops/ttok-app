@@ -8,6 +8,7 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss()],
     define: {
       'import.meta.env.VITE_API_URL': JSON.stringify(process.env.APP_URL || 'https://ais-bvonneldyx46ericl2z475-351843784929.asia-northeast1.run.app'),
+      'import.meta.env.VITE_APP_SHARED_SECRET': JSON.stringify(process.env.APP_SHARED_SECRET || ''),
     },
     resolve: {
       alias: {

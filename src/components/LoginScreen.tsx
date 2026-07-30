@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Sparkles, Loader2, AlertCircle } from "lucide-react";
+import { Sparkles, Loader2, AlertCircle, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { authService } from "../services/authService";
 import { UserProfile } from "../types";
@@ -9,14 +9,61 @@ interface LoginScreenProps {
   darkMode: boolean;
 }
 
+function friendlyAuthError(err: any): string {
+  let message = "로그인 중 에러가 발생했습니다. 다시 시도해 주세요.";
+  if (err.code === "auth/popup-closed-by-user") {
+    message = "로그인 창이 닫혔습니다. 본인 인증을 완료하려면 다시 로그인해 주세요.";
+  } else if (err.code === "auth/cancelled-popup-request") {
+    message = "이전 로그인 요청이 취소되었습니다. 다시 시도해 주세요.";
+  } else if (err.code === "auth/network-request-failed") {
+    message = "네트워크 연결이 불안정합니다. 인터넷 연결 상태를 확인 후 다시 시도해 주세요.";
+  } else if (err.code === "auth/popup-blocked") {
+    message = "브라우저 팝업이 차단되었습니다. 팝업 차단을 해제한 뒤 다시 로그인해 주세요.";
+  } else if (err.code === "auth/user-disabled") {
+    message = "비활성화된 계정입니다. 관리자에게 문의해 주세요.";
+  } else if (err.code === "auth/invalid-email") {
+    message = "올바른 이메일 형식이 아닙니다.";
+  } else if (err.code === "auth/email-already-in-use") {
+    message = "이미 가입된 이메일입니다. 로그인을 시도해 주세요.";
+  } else if (err.code === "auth/weak-password") {
+    message = "비밀번호는 6자 이상이어야 합니다.";
+  } else if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") {
+    message = "이메일 또는 비밀번호가 올바르지 않습니다.";
+  } else if (err.code === "auth/user-not-found") {
+    message = "가입되지 않은 이메일입니다. 회원가입을 먼저 진행해 주세요.";
+  } else if (err.code === "auth/too-many-requests") {
+    message = "너무 많은 시도가 감지되었습니다. 잠시 후 다시 시도해 주세요.";
+  } else if (err.message && err.message.includes("quota")) {
+    message = "Firestore 일일 읽기/쓰기 한도가 초과되었습니다. 내일 다시 이용 가능합니다.";
+  } else if (err.message) {
+    // If it was a stringified handleFirestoreError JSON, parse or display friendly
+    try {
+      const parsed = JSON.parse(err.message);
+      if (parsed.error) {
+        message = `데이터베이스 동기화 중 오류가 발생했습니다 (${parsed.operationType}).`;
+      }
+    } catch {
+      message = err.message;
+    }
+  }
+  return message;
+}
+
 export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<"google" | "apple" | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<"google" | "apple" | "email" | null>(null);
+
+  const [emailMode, setEmailMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSignIn = async (provider: "google" | "apple") => {
     setIsLoading(true);
     setError(null);
+    setInfoMessage(null);
     setSelectedProvider(provider);
 
     try {
@@ -32,36 +79,57 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
       onLogin(userProfile);
     } catch (err: any) {
       console.error(`${provider} sign in error:`, err);
-      
-      // Handle known Firebase auth errors with user-friendly messages
-      let message = "로그인 중 에러가 발생했습니다. 다시 시도해 주세요.";
-      if (err.code === "auth/popup-closed-by-user") {
-        message = "로그인 창이 닫혔습니다. 본인 인증을 완료하려면 다시 로그인해 주세요.";
-      } else if (err.code === "auth/cancelled-popup-request") {
-        message = "이전 로그인 요청이 취소되었습니다. 다시 시도해 주세요.";
-      } else if (err.code === "auth/network-request-failed") {
-        message = "네트워크 연결이 불안정합니다. 인터넷 연결 상태를 확인 후 다시 시도해 주세요.";
-      } else if (err.code === "auth/popup-blocked") {
-        message = "브라우저 팝업이 차단되었습니다. 팝업 차단을 해제한 뒤 다시 로그인해 주세요.";
-      } else if (err.code === "auth/user-disabled") {
-        message = "비활성화된 계정입니다. 관리자에게 문의해 주세요.";
-      } else if (err.message && err.message.includes("quota")) {
-        message = "Firestore 일일 읽기/쓰기 한도가 초과되었습니다. 내일 다시 이용 가능합니다.";
-      } else if (err.message) {
-        // If it was a stringified handleFirestoreError JSON, parse or display friendly
-        try {
-          const parsed = JSON.parse(err.message);
-          if (parsed.error) {
-            message = `데이터베이스 동기화 중 오류가 발생했습니다 (${parsed.operationType}).`;
-          }
-        } catch {
-          message = err.message;
-        }
-      }
-      setError(message);
+      setError(friendlyAuthError(err));
     } finally {
       setIsLoading(false);
       setSelectedProvider(null);
+    }
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) {
+      setError("이메일과 비밀번호를 모두 입력해 주세요.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setInfoMessage(null);
+    setSelectedProvider("email");
+
+    try {
+      const user = emailMode === "signup"
+        ? await authService.signUpWithEmail(email.trim(), password)
+        : await authService.signInWithEmail(email.trim(), password);
+
+      const userProfile = await authService.handleUserSession(user);
+      onLogin(userProfile);
+    } catch (err: any) {
+      console.error("Email auth error:", err);
+      setError(friendlyAuthError(err));
+    } finally {
+      setIsLoading(false);
+      setSelectedProvider(null);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!email.trim()) {
+      setError("비밀번호를 재설정할 이메일을 먼저 입력해 주세요.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      await authService.resetPassword(email.trim());
+      setInfoMessage("비밀번호 재설정 메일을 보냈습니다. 받은편지함을 확인해 주세요.");
+    } catch (err: any) {
+      console.error("Password reset error:", err);
+      setError(friendlyAuthError(err));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -121,6 +189,21 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
               >
                 <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
                 <span className="break-keep leading-relaxed">{error}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Info Message Section (e.g. password reset confirmation) */}
+          <AnimatePresence mode="wait">
+            {infoMessage && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="w-full text-left p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-fluid-sm font-semibold flex items-start gap-2.5"
+              >
+                <Mail className="w-5 h-5 mt-0.5 shrink-0" />
+                <span className="break-keep leading-relaxed">{infoMessage}</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -186,6 +269,103 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
               )}
             </button>
           </div>
+
+          {/* Divider */}
+          <div className="w-full flex items-center gap-3 py-1">
+            <div className={`flex-1 h-px ${darkMode ? "bg-slate-800" : "bg-slate-200"}`} />
+            <span className={`text-fluid-xs font-bold uppercase tracking-wider ${darkMode ? "text-slate-600" : "text-slate-400"}`}>
+              또는
+            </span>
+            <div className={`flex-1 h-px ${darkMode ? "bg-slate-800" : "bg-slate-200"}`} />
+          </div>
+
+          {/* Email/Password Form */}
+          <form onSubmit={handleEmailSubmit} className="w-full space-y-3">
+            <div className="relative">
+              <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 ${darkMode ? "text-slate-500" : "text-slate-400"}`} />
+              <input
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="이메일"
+                disabled={isLoading}
+                className={`w-full py-3.5 pl-11 pr-4 rounded-2xl text-fluid-sm font-semibold outline-none transition-colors ${
+                  darkMode
+                    ? "bg-slate-950 border border-slate-800 text-slate-100 placeholder:text-slate-600 focus:border-blue-500/50"
+                    : "bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-brand/50"
+                }`}
+              />
+            </div>
+            <div className="relative">
+              <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 ${darkMode ? "text-slate-500" : "text-slate-400"}`} />
+              <input
+                type={showPassword ? "text" : "password"}
+                autoComplete={emailMode === "signup" ? "new-password" : "current-password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="비밀번호 (6자 이상)"
+                disabled={isLoading}
+                className={`w-full py-3.5 pl-11 pr-11 rounded-2xl text-fluid-sm font-semibold outline-none transition-colors ${
+                  darkMode
+                    ? "bg-slate-950 border border-slate-800 text-slate-100 placeholder:text-slate-600 focus:border-blue-500/50"
+                    : "bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-brand/50"
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className={`absolute right-4 top-1/2 -translate-y-1/2 ${darkMode ? "text-slate-500" : "text-slate-400"}`}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+              </button>
+            </div>
+
+            {emailMode === "signin" && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handlePasswordReset}
+                  disabled={isLoading}
+                  className={`text-fluid-xs font-bold ${darkMode ? "text-slate-400 hover:text-slate-200" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  비밀번호를 잊으셨나요?
+                </button>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`w-full py-4 rounded-2xl font-black text-fluid-base flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
+                isLoading ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.01] active:scale-[0.99]"
+              } bg-brand text-white shadow-md shadow-brand/20 dark:bg-blue-500`}
+            >
+              {isLoading && selectedProvider === "email" ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <span>{emailMode === "signup" ? "회원가입" : "이메일로 로그인"}</span>
+              )}
+            </button>
+
+            <div className="flex items-center justify-center gap-1.5 pt-1">
+              <span className={`text-fluid-xs ${darkMode ? "text-slate-500" : "text-slate-400"}`}>
+                {emailMode === "signup" ? "이미 계정이 있으신가요?" : "아직 계정이 없으신가요?"}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmailMode((m) => (m === "signup" ? "signin" : "signup"));
+                  setError(null);
+                  setInfoMessage(null);
+                }}
+                className={`text-fluid-xs font-black ${darkMode ? "text-blue-400" : "text-brand"}`}
+              >
+                {emailMode === "signup" ? "로그인" : "회원가입"}
+              </button>
+            </div>
+          </form>
         </div>
       </motion.div>
 

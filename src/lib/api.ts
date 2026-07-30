@@ -121,8 +121,13 @@ export async function robustFetch(path: string, options?: RequestInit): Promise<
         console.log(`[ANDROID_LOGCAT_API] [REQUEST_URL] Fetching: ${url}`);
         console.log(`[ANDROID_LOGCAT_API] [REQUEST_DETAILS] Method: ${options?.method || 'GET'}, Headers: ${JSON.stringify(options?.headers || {})}`);
 
+        const appSecret = (import.meta as any).env?.VITE_APP_SHARED_SECRET;
         const fetchOptions: RequestInit = {
           ...options,
+          headers: {
+            ...(options?.headers || {}),
+            ...(appSecret ? { "X-App-Secret": appSecret } : {}),
+          },
           signal: controller.signal
         };
 

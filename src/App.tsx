@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "motion/react";
-import { 
-  UserProfile, 
-  ScheduleItem, 
-  ScriptItem, 
+import { Loader2 } from "lucide-react";
+import type { User } from "firebase/auth";
+import {
+  UserProfile,
+  ScheduleItem,
+  ScriptItem,
   PracticeLog,
   TodoItem
 } from "./types";
 import { initNotifications, syncAllNotifications } from "./services/notificationService";
 import { getTodayDateString } from "./lib/api";
+import { auth, onAuthStateChanged } from "./lib/firebase";
+import { authService } from "./services/authService";
 
 // Screens imports
 import HomeScreen from "./components/HomeScreen";
@@ -19,6 +23,7 @@ import StudyScreen from "./components/StudyScreen";
 import ProfileScreen from "./components/ProfileScreen";
 import SettingsScreen from "./components/SettingsScreen";
 import BottomNavigationBar from "./components/BottomNavigationBar";
+import LoginScreen from "./components/LoginScreen";
 
 const INITIAL_USER: UserProfile = {
   name: "",
@@ -42,6 +47,16 @@ const INITIAL_SCRIPTS: ScriptItem[] = [];
 const INITIAL_PRACTICE_LOGS: PracticeLog[] = [];
 
 export default function App() {
+  // undefined = still checking auth state, null = signed out, User = signed in
+  const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      setAuthUser(fbUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [tokTab, setTokTab] = useState<string>("home");
   const [kkorureukTab, setKkorureukTab] = useState<string>("meal-today");
   const [serviceMode, setServiceMode] = useState<"tok" | "kkorureuk">("tok");
@@ -205,9 +220,17 @@ export default function App() {
     }
   }, [autoDeleteExpired, schedules, todos]);
 
-  const handleLogout = () => {
-    // Acts as a clean purge/reset and signs back in to initial state
-    handleResetData();
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch (e) {
+      console.error("Sign out failed:", e);
+    }
+    // onAuthStateChanged will flip authUser to null and return to LoginScreen
+  };
+
+  const handleLoginSuccess = (profile: UserProfile) => {
+    setUser(prev => ({ ...prev, ...profile }));
   };
 
   const handleResetData = () => {
@@ -305,11 +328,27 @@ export default function App() {
     }
   };
 
+  // Still resolving the initial auth state on app startup
+  if (authUser === undefined) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${
+        darkMode ? "bg-slate-950" : "bg-slate-50"
+      }`}>
+        <Loader2 className={`w-8 h-8 animate-spin ${darkMode ? "text-blue-400" : "text-brand"}`} />
+      </div>
+    );
+  }
+
+  // Not signed in - show the login screen
+  if (authUser === null) {
+    return <LoginScreen onLogin={handleLoginSuccess} darkMode={darkMode} />;
+  }
+
   return (
     <div className={`min-h-screen transition-colors duration-300 pb-20 ${
       darkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50/50 text-slate-800"
     }`}>
-      
+
       {/* Header Bar with Service Switcher enclosed in a beautiful Blue Box */}
       <header className={`sticky top-0 z-30 border-b backdrop-blur-md safe-top ${
         darkMode ? "bg-slate-950/80 border-slate-900" : "bg-white/80 border-slate-100"

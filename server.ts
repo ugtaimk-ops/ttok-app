@@ -3,6 +3,7 @@ import http from "http";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
+import rateLimit from "express-rate-limit";
 import { getAIService, parseJSONResponse } from "./services/ai";
 
 dotenv.config();
@@ -16,13 +17,56 @@ app.use(express.json({ limit: "25mb" }));
 // Enable lightweight CORS middleware to prevent any browser cross-origin blocks
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-App-Secret");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
   }
   next();
 });
+
+// Reject requests that don't carry the shared app secret, so the AI/school-search
+// endpoints (which cost real API quota) aren't wide open to anyone who finds the
+// server URL. This is a deterrent against casual scraping/bots, not a substitute
+// for real per-user auth - the secret ships inside the app bundle and can be
+// extracted by a determined attacker.
+app.use((req, res, next) => {
+  if (req.path === "/api/health" || !req.path.startsWith("/api/")) {
+    return next();
+  }
+  const expected = process.env.APP_SHARED_SECRET;
+  if (!expected) {
+    // No secret configured on the backend - skip the check rather than lock everyone out.
+    return next();
+  }
+  if (req.header("x-app-secret") !== expected) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+});
+
+// General API rate limit: protects against runaway costs from bots/scanners hitting
+// the public backend URL that ships inside the APK/IPA.
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." }
+});
+
+// Stricter limit for the AI generation endpoints specifically, since each call costs
+// real Gemini API quota.
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "AI 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." }
+});
+
+app.use("/api/", apiLimiter);
+app.use(["/api/script/generate", "/api/practice/analyze", "/api/assessment/extract", "/api/study/action"], aiLimiter);
 
 // ==========================================
 // API ENDPOINTS
@@ -119,16 +163,18 @@ app.get("/api/school/search", async (req, res) => {
     const urlByName = `https://open.neis.go.kr/hub/schoolInfo?Type=json&pIndex=1&pSize=150&SCHUL_NM=${encodeURIComponent(searchWord)}`;
     const urlByLocation = `https://open.neis.go.kr/hub/schoolInfo?Type=json&pIndex=1&pSize=150&LCTN_SC_NM=${encodeURIComponent(searchWord)}`;
     
+    const SEARCH_TIMEOUT_MS = 8000;
+
     const fetchPromises = [
-      fetch(schoolInfoUrl, { headers }).then(r => r.ok ? r.text() : null),
-      fetch(urlByName, { headers }).then(r => r.ok ? r.json() : null),
-      fetch(urlByLocation, { headers }).then(r => r.ok ? r.json() : null)
+      fetch(schoolInfoUrl, { headers, signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS) }).then(r => r.ok ? r.text() : null),
+      fetch(urlByName, { headers, signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS) }).then(r => r.ok ? r.json() : null),
+      fetch(urlByLocation, { headers, signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS) }).then(r => r.ok ? r.json() : null)
     ];
 
     // If we have a separate schoolKeyword (e.g. "한빛고" from "경기 한빛고"), query that too in parallel
     if (parsed.schoolKeyword && parsed.schoolKeyword !== searchWord && parsed.schoolKeyword.length >= 2) {
       const urlBySubName = `https://open.neis.go.kr/hub/schoolInfo?Type=json&pIndex=1&pSize=150&SCHUL_NM=${encodeURIComponent(parsed.schoolKeyword)}`;
-      fetchPromises.push(fetch(urlBySubName, { headers }).then(r => r.ok ? r.json() : null));
+      fetchPromises.push(fetch(urlBySubName, { headers, signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS) }).then(r => r.ok ? r.json() : null));
     }
 
     console.log(`[Proxy] Fetching SchoolInfo.go.kr & standard/sub-keyword NEIS databases in parallel`);
@@ -197,7 +243,7 @@ app.get("/api/school/search", async (req, res) => {
         if (resolved && resolved.officialName && resolved.officialName !== searchWord) {
           console.log(`[AI School Resolver] Resolved informal name "${searchWord}" to official name "${resolved.officialName}"`);
           const aiUrlByName = `https://open.neis.go.kr/hub/schoolInfo?Type=json&pIndex=1&pSize=100&SCHUL_NM=${encodeURIComponent(resolved.officialName)}`;
-          const response = await fetch(aiUrlByName, { headers });
+          const response = await fetch(aiUrlByName, { headers, signal: AbortSignal.timeout(8000) });
           if (response.ok) {
             const data = await response.json();
             if (data && data.schoolInfo && data.schoolInfo[1] && data.schoolInfo[1].row) {
