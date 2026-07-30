@@ -37,6 +37,14 @@ jobs:
       - name: Sync Capacitor iOS
         run: npx cap sync ios
 
+      - name: Configure camera/microphone permission descriptions
+        run: |
+          PLIST=ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Delete :NSCameraUsageDescription" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string '발표 연습을 녹화하기 위해 카메라 접근 권한이 필요합니다.'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :NSMicrophoneUsageDescription" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string '발표 연습 음성을 녹음하기 위해 마이크 접근 권한이 필요합니다.'" "$PLIST"
+
       - name: Resolve Swift Package dependencies
         working-directory: ios/App
         run: xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
