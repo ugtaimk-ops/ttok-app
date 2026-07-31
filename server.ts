@@ -383,7 +383,6 @@ app.get("/api/meal/info", async (req, res) => {
         calories: item.CAL_INFO,        // 650.5 kcal
         nutrition: item.NTR_INFO,       // 영양정보
         origin: item.ORPLC_INFO,        // 원산지 정보
-        allergy: item.AL_INFO,           // 알레르기 정보
         isSficSynced: true              // Indicate connection is synced with SFIC standard
       }));
       return res.json(meals);

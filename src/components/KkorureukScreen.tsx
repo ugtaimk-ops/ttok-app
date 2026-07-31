@@ -45,7 +45,6 @@ interface MealItem {
   calories: string;     // 650.5 kcal
   nutrition: string;    // 영양정보
   origin: string;       // 원산지 정보
-  allergy: string;      // 알레르기 정보
 }
 
 const ALLERGIES_LIST = [
@@ -292,7 +291,6 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
           calories: item.CAL_INFO,
           nutrition: item.NTR_INFO,
           origin: item.ORPLC_INFO,
-          allergy: item.AL_INFO,
           isSficSynced: true
         }));
         console.log(`[NEIS Debug] Successfully mapped ${meals.length} meals from direct NEIS response.`);
@@ -802,14 +800,21 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
                   </div>
 
                   <div className="pt-4 border-t border-slate-100 dark:border-slate-800/60 space-y-3 text-xs">
-                    {meal.allergy && (
-                      <div className="space-y-1">
-                        <span className="font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider block">알레르기 상세</span>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                          {meal.allergy.replace(/<br\/>/g, ", ")}
-                        </p>
-                      </div>
-                    )}
+                    {(() => {
+                      // NEIS doesn't return allergy info as its own field - it's embedded as
+                      // numeric codes in each dish name, which parseDishWithAllergy already
+                      // extracts per-dish above. Aggregate those into a meal-level summary.
+                      const allergyCodes = Array.from(new Set(rawDishes.flatMap(dish => parseDishWithAllergy(dish).allergies)));
+                      if (allergyCodes.length === 0) return null;
+                      return (
+                        <div className="space-y-1">
+                          <span className="font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider block">알레르기 상세</span>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                            {allergyCodes.map(code => `${code}.${ALLERGY_MAP[code] || ""}`).join(", ")}
+                          </p>
+                        </div>
+                      );
+                    })()}
                     {meal.nutrition && (
                       <div className="space-y-1">
                         <span className="font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider block">영양정보</span>
