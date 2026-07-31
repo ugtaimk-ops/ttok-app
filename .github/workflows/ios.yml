@@ -46,6 +46,32 @@ jobs:
           /usr/libexec/PlistBuddy -c "Delete :NSMicrophoneUsageDescription" "$PLIST" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string '발표 연습 음성을 녹음하기 위해 마이크 접근 권한이 필요합니다.'" "$PLIST"
 
+      - name: Prevent Facebook SDK crash-on-launch (transitive dep of the auth plugin)
+        run: |
+          PLIST=ios/App/App/Info.plist
+          # @capacitor-firebase/authentication pulls in FBSDKCoreKit/FBSDKLoginKit as a
+          # dependency even though we never enable "facebook.com" as a provider. FBSDKCoreKit
+          # validates its own config (FacebookAppID etc.) at app launch and raises a fatal
+          # NSException if missing. FacebookAutoInitEnabled=false skips that auto-init/validation
+          # entirely; the placeholder keys are defense-in-depth in case anything still reads them.
+          /usr/libexec/PlistBuddy -c "Delete :FacebookAutoInitEnabled" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :FacebookAutoInitEnabled bool false" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :FacebookAutoLogAppEventsEnabled" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :FacebookAutoLogAppEventsEnabled bool false" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :FacebookAdvertiserIDCollectionEnabled" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :FacebookAdvertiserIDCollectionEnabled bool false" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :FacebookAppID" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :FacebookAppID string 000000000000000" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :FacebookClientToken" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :FacebookClientToken string 0000000000000000000000000000000" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :FacebookDisplayName" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :FacebookDisplayName string 똑" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string fb000000000000000" "$PLIST"
+
       - name: Inject GoogleService-Info.plist and URL scheme (for Google Sign-In)
         if: ${{ vars.GOOGLE_SERVICE_INFO_PLIST != '' }}
         run: |
@@ -55,11 +81,9 @@ jobs:
           ${{ vars.GOOGLE_SERVICE_INFO_PLIST }}
           EOF
           REVERSED_CLIENT_ID=$(/usr/libexec/PlistBuddy -c "Print :REVERSED_CLIENT_ID" "$GOOGLE_PLIST")
-          /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$PLIST" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST"
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST"
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST"
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string $REVERSED_CLIENT_ID" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:1 dict" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:1:CFBundleURLSchemes array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:1:CFBundleURLSchemes:0 string $REVERSED_CLIENT_ID" "$PLIST"
 
       - name: Resolve Swift Package dependencies
         working-directory: ios/App
