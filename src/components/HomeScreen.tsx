@@ -70,7 +70,7 @@ const DEFAULT_SHORTCUTS: ShortcutItem[] = [
   }
 ];
 
-const TTOK_FEATURES = [
+const TTOK_FEATURES: Omit<ShortcutItem, "featureId">[] = [
   {
     id: "assessment_photo",
     title: "수행평가 계획서 스캔",

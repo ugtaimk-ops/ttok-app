@@ -249,6 +249,7 @@ export default function StudyScreen({
       if (mode === "summary") {
         setStudyResult({
           id: "demo_1",
+          date: getTodayDateString(),
           title: "📚 광합성의 원리 및 명반응/암반응 핵심 요약",
           actionType: "summary",
           content: `### 1. 광합성(Photosynthesis)의 정의
@@ -276,6 +277,7 @@ export default function StudyScreen({
       } else if (mode === "quiz") {
         setStudyResult({
           id: "demo_2",
+          date: getTodayDateString(),
           title: "✍️ 광합성 단원 자가 진단 3단 평가",
           actionType: "quiz",
           content: `### [문제 1] 광합성에서 물의 광분해가 일어나는 구체적인 세포 소기관 내 위치는 어디인가요?
@@ -304,6 +306,7 @@ export default function StudyScreen({
       } else if (mode === "note") {
         setStudyResult({
           id: "demo_3",
+          date: getTodayDateString(),
           title: "🔍 삼각함수 주기 찾기 오답 집중 처방",
           actionType: "note",
           content: `### 1. 흔히 발생하는 오답 유형 및 실수 원인
@@ -323,6 +326,7 @@ export default function StudyScreen({
       } else {
         setStudyResult({
           id: "demo_4",
+          date: getTodayDateString(),
           title: "🙋 수소 결합과 끓는점 Q&A 답변",
           actionType: "question",
           content: `질문해주신 **"왜 물($H_2O$)은 분자량이 비슷한 다른 물질들보다 끓는점이 월등히 높은가요?"**에 대한 과외 선생님의 친절한 답변입니다!

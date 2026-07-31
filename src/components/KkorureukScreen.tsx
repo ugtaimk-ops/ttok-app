@@ -153,7 +153,13 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
   // Load persistent schools
   useEffect(() => {
     const recents = localStorage.getItem("recent_schools");
-    if (recents) setRecentSchools(JSON.parse(recents));
+    if (recents) {
+      try {
+        setRecentSchools(JSON.parse(recents));
+      } catch (e) {
+        console.error("Failed to parse recent schools:", e);
+      }
+    }
   }, []);
 
   const currentSchool: SchoolItem | null = user.schoolCode ? {
