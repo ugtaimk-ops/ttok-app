@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "motion/react";
 import { Loader2 } from "lucide-react";
 import type { User } from "firebase/auth";
@@ -13,6 +13,7 @@ import { initNotifications, syncAllNotifications } from "./services/notification
 import { getTodayDateString } from "./lib/api";
 import { auth, onAuthStateChanged } from "./lib/firebase";
 import { authService } from "./services/authService";
+import { dataSyncService } from "./services/dataSyncService";
 
 // Screens imports
 import HomeScreen from "./components/HomeScreen";
@@ -158,6 +159,53 @@ export default function App() {
     localStorage.setItem("ttok_practice_logs", JSON.stringify(practiceLogs));
   }, [practiceLogs]);
 
+  // Refs so the cloud-sync effect below can read "current" local state without
+  // depending on it directly (which would tear down and rebuild the Firestore
+  // listeners on every single edit).
+  const schedulesRef = useRef(schedules);
+  const todosRef = useRef(todos);
+  const scriptsRef = useRef(scripts);
+  const practiceLogsRef = useRef(practiceLogs);
+  useEffect(() => { schedulesRef.current = schedules; }, [schedules]);
+  useEffect(() => { todosRef.current = todos; }, [todos]);
+  useEffect(() => { scriptsRef.current = scripts; }, [scripts]);
+  useEffect(() => { practiceLogsRef.current = practiceLogs; }, [practiceLogs]);
+
+  // Cloud sync: once signed in, upload any local-only data (first login on this
+  // device only - skipped if the cloud side already has data), then keep local
+  // state live-mirrored to Firestore for cross-device sync.
+  useEffect(() => {
+    if (!authUser) return;
+    const uid = authUser.uid;
+    let cancelled = false;
+    const unsubscribers: Array<() => void> = [];
+
+    (async () => {
+      await Promise.all([
+        dataSyncService.migrateSchedulesIfEmpty(uid, schedulesRef.current),
+        dataSyncService.migrateTodosIfEmpty(uid, todosRef.current),
+        dataSyncService.migrateScriptsIfEmpty(uid, scriptsRef.current),
+        dataSyncService.migratePracticeLogsIfEmpty(uid, practiceLogsRef.current)
+      ]);
+      if (cancelled) return;
+
+      unsubscribers.push(
+        dataSyncService.subscribeToProfile(uid, (data) => {
+          if (data) setUser(prev => ({ ...prev, ...data }));
+        }),
+        dataSyncService.subscribeToSchedules(uid, setSchedules),
+        dataSyncService.subscribeToTodos(uid, setTodos),
+        dataSyncService.subscribeToScripts(uid, setScripts),
+        dataSyncService.subscribeToPracticeLogs(uid, setPracticeLogs)
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+      unsubscribers.forEach((unsub) => unsub());
+    };
+  }, [authUser?.uid]);
+
   // Initialize device-specific native local notification listeners on mount
   useEffect(() => {
     initNotifications((extra) => {
@@ -241,13 +289,18 @@ export default function App() {
     setUser(prev => ({ ...prev, ...profile }));
   };
 
+  const handleUpdateUser = (updated: UserProfile) => {
+    setUser(updated);
+    if (authUser) dataSyncService.saveProfile(authUser.uid, updated);
+  };
+
   const handleResetData = () => {
     localStorage.removeItem("ttok_user_profile");
     localStorage.removeItem("ttok_schedules");
     localStorage.removeItem("ttok_todos");
     localStorage.removeItem("ttok_scripts");
     localStorage.removeItem("ttok_practice_logs");
-    
+
     setUser(INITIAL_USER);
     setSchedules(INITIAL_SCHEDULES);
     setTodos(INITIAL_TODOS);
@@ -256,29 +309,36 @@ export default function App() {
     setTokTab("home");
     setKkorureukTab("meal-today");
     setServiceMode("tok");
+
+    if (authUser) {
+      dataSyncService.saveProfile(authUser.uid, INITIAL_USER);
+      dataSyncService.clearAllUserData(authUser.uid);
+    }
   };
 
   const handleAddSchedule = (newSchedule: Omit<ScheduleItem, "id">) => {
     const id = "sc_" + Date.now();
     const item = { ...newSchedule, id };
     setSchedules(prev => [...prev, item]);
+    if (authUser) dataSyncService.saveSchedule(authUser.uid, item);
   };
 
   const handleDeleteSchedule = (id: string) => {
     setSchedules(prev => prev.filter(s => s.id !== id));
+    if (authUser) dataSyncService.deleteSchedule(authUser.uid, id);
   };
 
   const handleUpdateSchedule = (updated: ScheduleItem) => {
     setSchedules(prev => prev.map(s => s.id === updated.id ? updated : s));
+    if (authUser) dataSyncService.saveSchedule(authUser.uid, updated);
   };
 
   const handleToggleTodo = (id: string) => {
-    setTodos(prev => prev.map(t => {
-      if (t.id === id) {
-        return { ...t, completed: !t.completed };
-      }
-      return t;
-    }));
+    const target = todos.find(t => t.id === id);
+    if (!target) return;
+    const updated = { ...target, completed: !target.completed };
+    setTodos(prev => prev.map(t => t.id === id ? updated : t));
+    if (authUser) dataSyncService.saveTodo(authUser.uid, updated);
   };
 
   const handleAddTodo = (text: string, category: "homework" | "general" | "exam" | "assessment", dueDate?: string) => {
@@ -292,28 +352,34 @@ export default function App() {
       category: safeCategory
     };
     setTodos(prev => [...prev, item]);
+    if (authUser) dataSyncService.saveTodo(authUser.uid, item);
   };
 
   const handleDeleteTodo = (id: string) => {
     setTodos(prev => prev.filter(t => t.id !== id));
+    if (authUser) dataSyncService.deleteTodo(authUser.uid, id);
   };
 
   const handleAddScript = (script: ScriptItem) => {
     setScripts(prev => [...prev, script]);
+    if (authUser) dataSyncService.saveScript(authUser.uid, script);
   };
 
   const handleDeleteScript = (id: string) => {
     setScripts(prev => prev.filter(s => s.id !== id));
+    if (authUser) dataSyncService.deleteScript(authUser.uid, id);
   };
 
   const handleUpdateScript = (updated: ScriptItem) => {
     setScripts(prev => prev.map(s => s.id === updated.id ? updated : s));
+    if (authUser) dataSyncService.saveScript(authUser.uid, updated);
   };
 
   const handleAddPracticeLog = (newLog: Omit<PracticeLog, "id" | "date">) => {
     const id = "pr_" + Date.now();
     const item = { ...newLog, id, date: getTodayDateString() };
     setPracticeLogs(prev => [...prev, item]);
+    if (authUser) dataSyncService.savePracticeLog(authUser.uid, item);
   };
 
   const currentActiveTab = serviceMode === "tok" ? tokTab : kkorureukTab;
@@ -472,7 +538,7 @@ export default function App() {
             {tokTab === "profile" && (
               <ProfileScreen 
                 user={user}
-                onUpdateUser={setUser}
+                onUpdateUser={handleUpdateUser}
                 darkMode={darkMode}
               />
             )}
@@ -484,7 +550,7 @@ export default function App() {
                 onLogout={handleLogout}
                 onResetData={handleResetData}
                 user={user}
-                onUpdateUser={setUser}
+                onUpdateUser={handleUpdateUser}
                 autoDeleteExpired={autoDeleteExpired}
                 onToggleAutoDeleteExpired={handleToggleAutoDeleteExpired}
                 onSyncNotifications={() => syncAllNotifications(schedules)}
@@ -495,7 +561,7 @@ export default function App() {
           <div className="w-full animate-fade-in">
             <KkorureukScreen 
               user={user}
-              onUpdateUser={setUser}
+              onUpdateUser={handleUpdateUser}
               darkMode={darkMode}
               activeTab={kkorureukTab}
             />
