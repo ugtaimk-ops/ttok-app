@@ -86,7 +86,21 @@ export const authService = {
   async signInWithGoogle(): Promise<User> {
     try {
       if (isNative()) {
-        const result = await FirebaseAuthentication.signInWithGoogle();
+        let result;
+        try {
+          // Android's Credential Manager API (default) requires Google to recognize the
+          // app's install provenance and can fail with "no credentials available" on
+          // sideloaded builds that aren't installed via the Play Store. Fall back to the
+          // legacy GoogleSignInClient intent-based flow in that case.
+          result = await FirebaseAuthentication.signInWithGoogle();
+        } catch (credentialManagerErr: any) {
+          const msg = String(credentialManagerErr?.message || credentialManagerErr);
+          if (msg.toLowerCase().includes("no credentials available")) {
+            result = await FirebaseAuthentication.signInWithGoogle({ useCredentialManager: false });
+          } else {
+            throw credentialManagerErr;
+          }
+        }
         if (!result.credential?.idToken) {
           throw new Error("Google 로그인에 실패했습니다. 다시 시도해 주세요.");
         }
