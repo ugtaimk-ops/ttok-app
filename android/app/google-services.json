@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "725925538766-o7ltveam72phe566rgpm3v1b4vpb4p3q.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ttok.schoolmate",
+            "certificate_hash": "34ebabc9f4e815d28e835c2fcf45582205d3b1f8"
+          }
+        },
+        {
           "client_id": "725925538766-pq252c15et29al0q7q1l4pp4ss3u6dk8.apps.googleusercontent.com",
           "client_type": 3
         }
