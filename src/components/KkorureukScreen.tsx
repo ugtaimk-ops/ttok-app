@@ -1235,6 +1235,7 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
     <div className="space-y-6 pb-safe-layout animate-fade-in relative">
       {activeTab === "meal-today" && renderTodayMeals()}
       {activeTab === "meal-weekly" && renderWeeklyMeals()}
+      {activeTab === "meal-allergy" && renderAllergySettings()}
       {activeTab === "meal-school" && renderSchoolSettings()}
 
       {/* Synchronized saved status Toast feedback */}
