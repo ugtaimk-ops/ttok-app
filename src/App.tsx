@@ -54,7 +54,15 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       setAuthUser(fbUser);
     });
-    return () => unsubscribe();
+    // Safety net: if Firebase Auth's initial state callback never fires (seen on some
+    // WKWebView setups), don't leave the user stuck on the loading screen forever.
+    const timeoutId = setTimeout(() => {
+      setAuthUser(prev => (prev === undefined ? null : prev));
+    }, 8000);
+    return () => {
+      unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const [tokTab, setTokTab] = useState<string>("home");
