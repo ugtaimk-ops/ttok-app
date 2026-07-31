@@ -85,6 +85,25 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:1:CFBundleURLSchemes array" "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:1:CFBundleURLSchemes:0 string $REVERSED_CLIENT_ID" "$PLIST"
 
+      - name: Register GoogleService-Info.plist as a bundled resource
+        if: ${{ vars.GOOGLE_SERVICE_INFO_PLIST != '' }}
+        run: |
+          gem list -i xcodeproj || gem install xcodeproj --no-document
+          ruby -e '
+            require "xcodeproj"
+            project_path = "ios/App/App.xcodeproj"
+            project = Xcodeproj::Project.open(project_path)
+            target = project.targets.find { |t| t.name == "App" }
+            raise "App target not found" if target.nil?
+            group = project.main_group.find_subpath("App", true)
+            existing = group.files.find { |f| f.path == "GoogleService-Info.plist" }
+            file_ref = existing || group.new_reference("GoogleService-Info.plist")
+            already_included = target.resources_build_phase.files.any? { |bf| bf.file_ref == file_ref }
+            target.add_resources([file_ref]) unless already_included
+            project.save
+            puts "GoogleService-Info.plist registered in Copy Bundle Resources"
+          '
+
       - name: Resolve Swift Package dependencies
         working-directory: ios/App
         run: xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
@@ -102,6 +121,16 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE="" \
             archive
+
+      - name: Verify GoogleService-Info.plist is bundled in the built app
+        if: ${{ vars.GOOGLE_SERVICE_INFO_PLIST != '' }}
+        run: |
+          if [ -f "build/App.xcarchive/Products/Applications/App.app/GoogleService-Info.plist" ]; then
+            echo "OK: GoogleService-Info.plist is present in the built .app"
+          else
+            echo "ERROR: GoogleService-Info.plist is missing from the built .app - Firebase will crash on launch"
+            exit 1
+          fi
 
       - name: Package unsigned IPA
         run: |
