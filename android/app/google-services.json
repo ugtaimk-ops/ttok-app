@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "725925538766",
+    "project_id": "gen-lang-client-0685740024",
+    "storage_bucket": "gen-lang-client-0685740024.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:725925538766:android:5fe7c062c0a906a8a8d99f",
+        "android_client_info": {
+          "package_name": "com.ttok.schoolmate"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "725925538766-pq252c15et29al0q7q1l4pp4ss3u6dk8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAOhYK2JYZ1ozUM8qupuh6ByVSt7Ta_AmY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "725925538766-pq252c15et29al0q7q1l4pp4ss3u6dk8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
