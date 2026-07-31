@@ -1,14 +1,13 @@
-import { 
-  Home, 
-  Calendar, 
-  Video, 
-  BookOpen, 
-  User, 
-  Settings, 
-  Utensils, 
-  CalendarDays, 
-  ShieldAlert, 
-  Search 
+import {
+  Home,
+  Calendar,
+  Video,
+  BookOpen,
+  User,
+  Settings,
+  Utensils,
+  CalendarDays,
+  Search
 } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -38,7 +37,6 @@ export default function BottomNavigationBar({
   const kkorureukTabs = [
     { id: "meal-today", label: "오늘 급식", icon: Utensils },
     { id: "meal-weekly", label: "이번 주 급식", icon: CalendarDays },
-    { id: "meal-allergy", label: "알레르기 설정", icon: ShieldAlert },
     { id: "meal-school", label: "학교 설정", icon: Search },
   ];
 

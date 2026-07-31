@@ -14,7 +14,6 @@ import {
   School,
   Utensils,
   Check,
-  ShieldAlert,
   ExternalLink,
   Bell,
   Clock
@@ -46,50 +45,6 @@ interface MealItem {
   nutrition: string;    // 영양정보
   origin: string;       // 원산지 정보
 }
-
-const ALLERGIES_LIST = [
-  { id: 1, label: "난류(계란)" },
-  { id: 2, label: "우유" },
-  { id: 3, label: "메밀" },
-  { id: 4, label: "땅콩" },
-  { id: 5, label: "대두(콩)" },
-  { id: 6, label: "밀" },
-  { id: 7, label: "고등어" },
-  { id: 8, label: "게" },
-  { id: 9, label: "새우" },
-  { id: 10, label: "돼지고기" },
-  { id: 11, label: "복숭아" },
-  { id: 12, label: "토마토" },
-  { id: 13, label: "아황산류" },
-  { id: 14, label: "호두" },
-  { id: 15, label: "닭고기" },
-  { id: 16, label: "쇠고기" },
-  { id: 17, label: "오징어" },
-  { id: 18, label: "조개류(굴/전복/홍합)" },
-  { id: 19, label: "잣" }
-];
-
-const ALLERGY_MAP: { [key: number]: string } = {
-  1: "난류(계란)",
-  2: "우유",
-  3: "메밀",
-  4: "땅콩",
-  5: "대두(콩)",
-  6: "밀",
-  7: "고등어",
-  8: "게",
-  9: "새우",
-  10: "돼지고기",
-  11: "복숭아",
-  12: "토마토",
-  13: "아황산류",
-  14: "호두",
-  15: "닭고기",
-  16: "쇠고기",
-  17: "오징어",
-  18: "조개류(굴, 전복, 홍합 포함)",
-  19: "잣"
-};
 
 export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTab }: KkorureukScreenProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -450,41 +405,8 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
     setSchoolSearchQuery("");
   };
 
-  // Toggle allergy from list
-  const handleToggleAllergy = (allergyId: number) => {
-    const currentAllergies = user.allergies || [];
-    let updatedAllergies;
-    if (currentAllergies.includes(allergyId)) {
-      updatedAllergies = currentAllergies.filter(id => id !== allergyId);
-    } else {
-      updatedAllergies = [...currentAllergies, allergyId];
-    }
-    onUpdateUser({
-      ...user,
-      allergies: updatedAllergies
-    });
-  };
-
-  // Parse dish and detect allergic warnings
-  const parseDishWithAllergy = (dishName: string) => {
-    const match = dishName.match(/\(([^)]+)\)/);
-    let nameOnly = dishName.replace(/\s*\([^)]+\)/g, "").trim();
-    let allergiesFound: number[] = [];
-    let containsMyAllergy = false;
-
-    if (match && match[1]) {
-      allergiesFound = match[1].split(/[.,\s]+/).map(numStr => parseInt(numStr, 10)).filter(n => !isNaN(n));
-      if (user.allergies && user.allergies.length > 0) {
-        containsMyAllergy = allergiesFound.some(code => user.allergies?.includes(code));
-      }
-    }
-
-    return {
-      name: nameOnly,
-      allergies: allergiesFound,
-      containsMyAllergy
-    };
-  };
+  // Strip the parenthetical allergen-code suffix NEIS embeds in dish names (e.g. "김치찌개(5.6.13.)")
+  const cleanDishName = (dishName: string) => dishName.replace(/\s*\([^)]+\)/g, "").trim();
 
   // Date Nav Helpers
   const shiftDay = (days: number) => {
@@ -577,8 +499,6 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
       month: "long",
       day: "numeric"
     });
-    const activeAllergiesList = user.allergies || [];
-
     return (
       <div className="space-y-6">
         {/* Upper Info Box - Simplified to school name only as requested */}
@@ -751,70 +671,25 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
 
                   <div className="space-y-2.5">
                     {rawDishes.map((dish, dishIdx) => {
-                      const parsed = parseDishWithAllergy(dish);
-                      if (!parsed.name) return null;
+                      const name = cleanDishName(dish);
+                      if (!name) return null;
 
                       return (
-                        <div 
+                        <div
                           key={dishIdx}
                           className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
-                            parsed.containsMyAllergy
-                              ? "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400"
-                              : darkMode
-                                ? "bg-slate-950/40 border-slate-800/30 text-slate-200"
-                                : "bg-slate-50 border-slate-100/50 text-slate-700"
+                            darkMode
+                              ? "bg-slate-950/40 border-slate-800/30 text-slate-200"
+                              : "bg-slate-50 border-slate-100/50 text-slate-700"
                           }`}
                         >
-                          <div className="flex items-center gap-2">
-                            <span className="text-fluid-base font-bold">{parsed.name}</span>
-                            {parsed.containsMyAllergy && (
-                              <span className="px-2 py-0.5 bg-rose-500 text-white text-fluid-xs font-extrabold rounded-md uppercase animate-pulse shrink-0">
-                                경고
-                              </span>
-                            )}
-                          </div>
-
-                          {parsed.allergies.length > 0 && (
-                            <div className="flex gap-1.5 flex-wrap justify-end max-w-[140px]">
-                              {parsed.allergies.map(code => {
-                                const userHasAllergy = user.allergies?.includes(code);
-                                return (
-                                  <span 
-                                    key={code}
-                                    title={ALLERGY_MAP[code]}
-                                    className={`text-fluid-xs px-2 py-0.5 rounded-md font-bold ${
-                                      userHasAllergy 
-                                        ? "bg-rose-500 text-white font-black" 
-                                        : "bg-slate-200 dark:bg-slate-800 text-slate-500"
-                                    }`}
-                                  >
-                                    {code}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          )}
+                          <span className="text-fluid-base font-bold">{name}</span>
                         </div>
                       );
                     })}
                   </div>
 
                   <div className="pt-4 border-t border-slate-100 dark:border-slate-800/60 space-y-3 text-xs">
-                    {(() => {
-                      // NEIS doesn't return allergy info as its own field - it's embedded as
-                      // numeric codes in each dish name, which parseDishWithAllergy already
-                      // extracts per-dish above. Aggregate those into a meal-level summary.
-                      const allergyCodes = Array.from(new Set(rawDishes.flatMap(dish => parseDishWithAllergy(dish).allergies)));
-                      if (allergyCodes.length === 0) return null;
-                      return (
-                        <div className="space-y-1">
-                          <span className="font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider block">알레르기 상세</span>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                            {allergyCodes.map(code => `${code}.${ALLERGY_MAP[code] || ""}`).join(", ")}
-                          </p>
-                        </div>
-                      );
-                    })()}
                     {meal.nutrition && (
                       <div className="space-y-1">
                         <span className="font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider block">영양정보</span>
@@ -938,19 +813,14 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
                             </span>
                             <div className="flex flex-wrap gap-1">
                               {raw.map((dish, dIdx) => {
-                                const parsed = parseDishWithAllergy(dish);
-                                if (!parsed.name) return null;
+                                const name = cleanDishName(dish);
+                                if (!name) return null;
                                 return (
-                                  <span 
+                                  <span
                                     key={dIdx}
-                                    className={`text-[10px] px-2 py-1 rounded-xl font-bold border ${
-                                      parsed.containsMyAllergy
-                                        ? "bg-rose-500/10 border-rose-500/20 text-rose-500"
-                                        : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300"
-                                    }`}
+                                    className="text-[10px] px-2 py-1 rounded-xl font-bold border bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300"
                                   >
-                                    {parsed.name}
-                                    {parsed.containsMyAllergy && " ⚠️"}
+                                    {name}
                                   </span>
                                 );
                               })}
@@ -969,59 +839,7 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
     );
   };
 
-  // 3. ALLERGY SETTINGS VIEW
-  const renderAllergySettings = () => {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className={`p-6 rounded-[32px] border ${
-          darkMode ? "bg-slate-900 border-slate-800/80" : "bg-white border-slate-100"
-        } shadow-sm space-y-3`}>
-          <div>
-            <h2 className="text-xl font-black tracking-tight-sf">학교 급식 알레르기 설정</h2>
-          </div>
-        </div>
-
-        <div className={`p-6 rounded-[32px] border ${
-          darkMode ? "bg-slate-900 border-slate-800/80" : "bg-white border-slate-100"
-        } shadow-sm space-y-4`}>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-6 bg-rose-500 rounded-full" />
-            <h3 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider">알레르기 유발 물질 19종 체크리스트</h3>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-            {ALLERGIES_LIST.map((allergy) => {
-              const isSelected = (user.allergies || []).includes(allergy.id);
-              return (
-                <button
-                  key={allergy.id}
-                  onClick={() => handleToggleAllergy(allergy.id)}
-                  className={`px-3 py-3 rounded-2xl border text-left text-[11px] font-bold transition-all flex items-center justify-between cursor-pointer ${
-                    isSelected
-                      ? "bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-400 shadow-sm scale-[1.02]"
-                      : darkMode
-                        ? "bg-slate-950/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                        : "bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  <span className="truncate pr-1">{allergy.label}</span>
-                  {isSelected ? (
-                    <span className="w-4 h-4 rounded-full bg-rose-500 flex items-center justify-center shrink-0">
-                      <Check size={10} className="text-white font-black" />
-                    </span>
-                  ) : (
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 shrink-0" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // 4. SCHOOL SETTINGS VIEW
+  // 3. SCHOOL SETTINGS VIEW
   const renderSchoolSettings = () => {
     return (
       <div className="space-y-4 sm:space-y-6 animate-fade-in">
@@ -1240,7 +1058,6 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
     <div className="space-y-6 pb-safe-layout animate-fade-in relative">
       {activeTab === "meal-today" && renderTodayMeals()}
       {activeTab === "meal-weekly" && renderWeeklyMeals()}
-      {activeTab === "meal-allergy" && renderAllergySettings()}
       {activeTab === "meal-school" && renderSchoolSettings()}
 
       {/* Synchronized saved status Toast feedback */}

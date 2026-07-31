@@ -9,7 +9,6 @@ export interface UserProfile {
   classNum: string;
   goal: string;
   avatarUrl: string;
-  allergies?: number[];
   uid?: string;
   displayName?: string;
   email?: string;
