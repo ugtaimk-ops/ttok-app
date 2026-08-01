@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "725925538766-o7ltveam72phe566rgpm3v1b4vpb4p3q.apps.googleusercontent.com",
+          "client_id": "725925538766-aevsv44g9vrb69ef43n7ffjskks530i7.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.ttok.schoolmate",
-            "certificate_hash": "34ebabc9f4e815d28e835c2fcf45582205d3b1f8"
+            "certificate_hash": "7bd89f39d6d442193a238bd97c3f80d128d9c450"
           }
         },
         {
@@ -37,6 +37,13 @@
             {
               "client_id": "725925538766-pq252c15et29al0q7q1l4pp4ss3u6dk8.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "725925538766-v4tfkg3hod8gunarvkeclfhmpu6p8715.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ttok.schoolmate"
+              }
             }
           ]
         }
