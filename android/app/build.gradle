@@ -32,8 +32,24 @@ android {
                 keyPassword keystoreProperties['keyPassword']
             }
         }
+        // Fixed debug keystore committed to the repo. Without this, the Android Gradle
+        // Plugin's implicit default falls back to ~/.android/debug.keystore, which CI
+        // runners auto-generate fresh (and randomly) on every run since each job starts
+        // on a brand-new ephemeral VM. That meant every CI-built APK had a different
+        // signing SHA-1, none of which matched what's registered in Firebase, so Google
+        // Sign-In failed with DEVELOPER_ERROR (10) — while locally-built APKs (signed with
+        // a developer's persistent local debug.keystore) worked fine.
+        debug {
+            storeFile file('ci-debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
     }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

@@ -57,6 +57,10 @@ captures/
 *.keystore
 keystore.properties
 
+# Exception: fixed debug-only keystore, intentionally committed so every CI
+# build gets the same SHA-1 (well-known debug password/alias, not sensitive)
+!app/ci-debug.keystore
+
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild
 .cxx/
