@@ -465,9 +465,16 @@ export default function PracticeScreen({
         partialResults: true,
         popup: false
       }).catch((err) => console.log("Speech recognition ended:", err));
-    } catch (err) {
+    } catch (err: any) {
       console.log("Speech recognition unavailable:", err);
-      setTranscript("음성 인식이 지원되지 않는 환경입니다. 말한 내용에 어울리는 똑똑한 AI 분석이 진행됩니다.");
+      const reason = err?.message || String(err);
+      if (reason === "not-available") {
+        setTranscript("이 기기에서 음성 인식 서비스를 찾을 수 없어요. Google 앱(또는 음성 서비스)이 설치·활성화되어 있는지 확인해주세요.");
+      } else if (reason === "permission-denied") {
+        setTranscript("음성 인식 권한이 꺼져 있어요. 아이폰은 설정 > 똑 에서 '마이크'와 별개로 '음성 인식' 권한도 따로 켜야 해요. 안드로이드는 설정 > 앱 > 똑 > 권한에서 '마이크'를 허용해주세요.");
+      } else {
+        setTranscript(`음성 인식을 시작하지 못했어요 (${reason}). 말한 내용에 어울리는 똑똑한 AI 분석이 진행됩니다.`);
+      }
     }
 
     // 2. Start stats timer
