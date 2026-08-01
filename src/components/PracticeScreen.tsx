@@ -379,14 +379,15 @@ export default function PracticeScreen({
       return;
     }
 
-    // 1. Pre-check standard web permissions API if available
+    // 1. Pre-check standard web permissions API if available. Microphone isn't
+    // requested here anymore (the native SpeechRecognition plugin owns it), so
+    // only the camera's state should gate the video preview.
     try {
       if (navigator.permissions && navigator.permissions.query) {
         const camQuery = await navigator.permissions.query({ name: "camera" as any });
-        const micQuery = await navigator.permissions.query({ name: "microphone" as any });
 
-        if (camQuery.state === "denied" || micQuery.state === "denied") {
-          console.warn("Camera or microphone permission is explicitly denied.");
+        if (camQuery.state === "denied") {
+          console.warn("Camera permission is explicitly denied.");
           setPermissionError("PermissionDeniedError");
           setHasPermission(false);
           setShowPermissionModal(true);
@@ -397,12 +398,15 @@ export default function PracticeScreen({
       console.warn("Permissions API check not supported or threw an error:", e);
     }
 
+    // Video-only: the microphone is captured separately by the native
+    // SpeechRecognition plugin (see startPracticeRecording). Also requesting
+    // audio here would make the WebView hold the mic via getUserMedia at the
+    // same time the native recognizer opens its own audio session, which
+    // silently starves the recognizer of input on both iOS (AVAudioSession
+    // conflict) and Android — the subtitle would never update even though
+    // nothing throws an error.
     try {
-      // Try standard constraints with front camera
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "user" }, 
-        audio: true 
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
       mediaStreamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -411,35 +415,20 @@ export default function PracticeScreen({
       setShowPermissionModal(false);
     } catch (err: any) {
       console.warn("Initial getUserMedia failed, attempting fallback...", err);
-      
-      // Fallback 1: Try standard generic constraints
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        mediaStreamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        setHasPermission(true);
-        setShowPermissionModal(false);
-        return;
-      } catch (err2) {
-        console.warn("Fallback 1 failed, attempting video-only...", err2);
-      }
 
-      // Fallback 2: Try video only (in case microphone is missing, blocked, or in-use)
+      // Fallback: generic video constraints
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         mediaStreamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
         setHasPermission(true);
-        setPermissionError("AUDIO_DISABLED");
         setShowPermissionModal(false);
         return;
-      } catch (err3: any) {
-        console.error("All media requests failed:", err3);
-        setPermissionError(err3.name || err3.message || "UnknownError");
+      } catch (err2: any) {
+        console.error("All media requests failed:", err2);
+        setPermissionError(err2.name || err2.message || "UnknownError");
         setHasPermission(false);
         setShowPermissionModal(true);
       }
@@ -1337,13 +1326,6 @@ export default function PracticeScreen({
                               <RefreshCw size={12} /> 기기 다시 연결 및 권한 요청
                             </button>
                           </div>
-                        </div>
-                      )}
-
-                      {/* Recording active indicator overlays */}
-                      {hasPermission && permissionError === "AUDIO_DISABLED" && (
-                        <div className="absolute top-4 left-4 right-4 z-10 bg-amber-500/90 text-white font-bold text-[10px] px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md">
-                          <span>⚠️ 마이크 감지 안됨: 비디오 전용 녹화 중입니다. 발표 분석은 가상 채점으로 진행됩니다.</span>
                         </div>
                       )}
 
