@@ -26,7 +26,7 @@ import {
   FolderOpen
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { SpeechRecognition } from "@capacitor-community/speech-recognition";
+import { SpeechRecognition } from "@capgo/capacitor-speech-recognition";
 import GlassSelect from "./GlassSelect";
 import { 
   Radar, 
