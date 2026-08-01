@@ -282,6 +282,15 @@ export default function App() {
     } catch (e) {
       console.error("Sign out failed:", e);
     }
+    // Clear local state/refs so that if a different account signs in on this
+    // same device, the cloud-sync effect's migrate-if-empty step doesn't read
+    // stale refs still holding the previous user's data and upload it into
+    // the new account.
+    setUser(INITIAL_USER);
+    setSchedules(INITIAL_SCHEDULES);
+    setTodos(INITIAL_TODOS);
+    setScripts(INITIAL_SCRIPTS);
+    setPracticeLogs(INITIAL_PRACTICE_LOGS);
     // onAuthStateChanged will flip authUser to null and return to LoginScreen
   };
 

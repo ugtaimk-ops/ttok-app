@@ -67,6 +67,27 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
   const [avatar, setAvatar] = useState(user.avatarUrl);
   const [showSavedToast, setShowSavedToast] = useState(false);
 
+  // The cloud profile can arrive asynchronously after this screen has already
+  // mounted with the pre-sync (often blank) local values - e.g. signing in on
+  // a new device where Firestore's subscribeToProfile snapshot resolves a
+  // moment after this form initialized. Adopt cloud values into any field
+  // still at its blank default so a save right after mount doesn't overwrite
+  // the just-synced cloud data with empty strings. Once a field has any
+  // value (cloud-adopted or user-typed) it's left alone, so in-progress edits
+  // are never clobbered by a later snapshot.
+  useEffect(() => {
+    if (!name && user.name) setName(user.name);
+    if (!school && user.school) setSchool(user.school);
+    if (!schoolCode && user.schoolCode) setSchoolCode(user.schoolCode);
+    if (!officeCode && user.officeCode) setOfficeCode(user.officeCode);
+    if (!officeName && user.officeName) setOfficeName(user.officeName);
+    if (!schoolKind && user.schoolKind) setSchoolKind(user.schoolKind);
+    if (!grade && user.grade) setGrade(user.grade);
+    if (!classNum && user.classNum) setClassNum(user.classNum);
+    if (!goal && user.goal) setGoal(user.goal);
+    if (!avatar && user.avatarUrl) setAvatar(user.avatarUrl);
+  }, [user]);
+
   // Grade options depend on school level: elementary goes to 6th grade, middle/high to 3rd
   const maxGrade = schoolKind.includes("초등학교") ? 6 : 3;
 

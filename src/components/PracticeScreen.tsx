@@ -158,14 +158,21 @@ export default function PracticeScreen({
     }
   };
 
-  // Auto-select the first script from histories if available
+  // Auto-select the most recently generated script if available. Cloud-synced
+  // scripts arrive via a Firestore onSnapshot with no orderBy, so array order
+  // isn't reliable - sort by the timestamp embedded in each script's id
+  // ("scr_" + Date.now()) instead.
   useEffect(() => {
     if (scripts && scripts.length > 0 && !selectedScriptId) {
-      const firstScript = scripts[0];
-      setSelectedScriptId(firstScript.id);
-      setPracticeTopic(firstScript.topic);
-      setSelectedScriptText(firstScript.script);
-      setTranscript(firstScript.script.substring(0, 200) + "...");
+      const latestScript = [...scripts].sort((a, b) => {
+        const aTime = Number(a.id.replace(/^scr_/, "")) || 0;
+        const bTime = Number(b.id.replace(/^scr_/, "")) || 0;
+        return bTime - aTime;
+      })[0];
+      setSelectedScriptId(latestScript.id);
+      setPracticeTopic(latestScript.topic);
+      setSelectedScriptText(latestScript.script);
+      setTranscript(latestScript.script.substring(0, 200) + "...");
     }
   }, [scripts]);
   
@@ -1274,15 +1281,15 @@ export default function PracticeScreen({
                           <div className="w-12 h-12 bg-brand/10 text-brand rounded-2xl flex items-center justify-center mx-auto">
                             <Video size={24} />
                           </div>
-                          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">카메라 및 마이크 권한 요청</h3>
-                          <p className="text-xs text-slate-400 break-keep">발표 영상 및 음성을 동시 기록하여 분석하기 위해 기기 카메라 및 마이크 권한이 꼭 필요합니다.</p>
-                          
+                          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">카메라 권한 요청</h3>
+                          <p className="text-xs text-slate-400 break-keep">발표 영상을 기록하여 분석하기 위해 기기 카메라 권한이 꼭 필요합니다.</p>
+
                           <div className="flex justify-center pt-2">
                             <button
                               onClick={handleRequestPermissions}
                               className="px-6 py-3 bg-brand hover:bg-brand-dark text-white font-black rounded-2xl text-xs cursor-pointer shadow-lg shadow-brand/20 transition-all flex items-center gap-2"
                             >
-                              <Video size={14} /> 마이크/카메라 권한 직접 허용하기
+                              <Video size={14} /> 카메라 권한 직접 허용하기
                             </button>
                           </div>
                         </div>
@@ -1294,29 +1301,29 @@ export default function PracticeScreen({
                           <div className="w-10 h-10 bg-rose-500/10 text-rose-500 rounded-2xl flex items-center justify-center mx-auto">
                             <VideoOff size={20} />
                           </div>
-                          <h3 className="text-sm font-bold text-rose-500">마이크/카메라 활성화 안내</h3>
-                          
+                          <h3 className="text-sm font-bold text-rose-500">카메라 활성화 안내</h3>
+
                           {/* Error-specific messaging */}
                           <div className="p-3 bg-slate-900 rounded-xl text-[11px] text-left text-slate-300 space-y-2 border border-slate-800/80 max-h-[180px] overflow-y-auto custom-scrollbar">
                             {permissionError === "SECURE_CONTEXT_REQUIRED" ? (
                               <p className="leading-relaxed">
                                 ⚠️ <strong>보안 환경 제한 (HTTPS)</strong><br />
-                                카메라와 마이크 기능은 보안 연결(HTTPS) 또는 로컬 환경에서만 브라우저 보안 규정상 허용됩니다. 안전한 접속 상태인지 확인해 주세요.
+                                카메라 기능은 보안 연결(HTTPS) 또는 로컬 환경에서만 브라우저 보안 규정상 허용됩니다. 안전한 접속 상태인지 확인해 주세요.
                               </p>
                             ) : permissionError === "NotAllowedError" || permissionError === "PermissionDeniedError" ? (
                               <p className="leading-relaxed">
                                 ⚠️ <strong>기기 권한 허용이 필요합니다</strong><br />
-                                웹 브라우저 혹은 앱 설정에서 마이크와 카메라 사용이 차단되었습니다. 주소창 옆의 권한 설정을 변경해 주세요.
+                                웹 브라우저 혹은 앱 설정에서 카메라 사용이 차단되었습니다. 주소창 옆의 권한 설정을 변경해 주세요.
                               </p>
                             ) : permissionError === "NotFoundError" || permissionError === "DevicesNotFoundError" ? (
                               <p className="leading-relaxed">
                                 ⚠️ <strong>기기를 찾을 수 없습니다</strong><br />
-                                사용 가능한 카메라 혹은 마이크 기기를 인식하지 못했습니다. 연결을 재확인해 주세요.
+                                사용 가능한 카메라 기기를 인식하지 못했습니다. 연결을 재확인해 주세요.
                               </p>
                             ) : permissionError === "NotReadableError" || permissionError === "TrackStartError" ? (
                               <p className="leading-relaxed">
                                 ⚠️ <strong>다른 앱에서 기기를 사용 중입니다</strong><br />
-                                카메라/마이크를 줌(Zoom), 카카오톡, 또는 다른 브라우저 탭에서 사용 중일 수 있습니다. 해당 앱들을 완전히 종료한 후 새로고침해 주세요.
+                                카메라를 줌(Zoom), 카카오톡, 또는 다른 브라우저 탭에서 사용 중일 수 있습니다. 해당 앱들을 완전히 종료한 후 새로고침해 주세요.
                               </p>
                             ) : (
                               <p className="leading-relaxed">
@@ -1330,7 +1337,7 @@ export default function PracticeScreen({
                               <ul className="list-disc pl-3 space-y-1">
                                 <li><strong>인앱 브라우저 제한:</strong> 카카오톡, 페이스북 등 앱 내부 브라우저는 하드웨어 카메라 권한을 차단할 가능성이 매우 높습니다.</li>
                                 <li><strong>확실한 해결 방법:</strong> 화면 우측 상단의 <strong className="text-brand">"새 창에서 열기" (Launch)</strong> 버튼을 눌러 모바일의 정식 브라우저(<strong>Chrome</strong> 또는 <strong>삼성 인터넷</strong>)에서 해당 웹사이트를 다시 실행하시면 즉시 정상 작동합니다!</li>
-                                <li><strong>앱별 기기 권한:</strong> 스마트폰 [설정] &gt; [애플리케이션] &gt; [사용 중인 브라우저 앱] &gt; [권한]에서 카메라와 마이크 권한이 '허용' 상태인지 꼭 확인해 주세요.</li>
+                                <li><strong>앱별 기기 권한:</strong> 스마트폰 [설정] &gt; [애플리케이션] &gt; [사용 중인 브라우저 앱] &gt; [권한]에서 카메라 권한이 '허용' 상태인지 꼭 확인해 주세요.</li>
                               </ul>
                             </div>
                           </div>
@@ -1737,7 +1744,7 @@ export default function PracticeScreen({
                 </motion.div>
 
                 <div className="space-y-1">
-                  <h3 className="text-lg font-black tracking-tight-sf">카메라 및 마이크 권한 안내</h3>
+                  <h3 className="text-lg font-black tracking-tight-sf">카메라 권한 안내</h3>
                   <p className="text-xs text-brand font-bold">발표 분석을 위해 꼭 권한이 필요해요!</p>
                 </div>
 
@@ -1749,7 +1756,7 @@ export default function PracticeScreen({
                     <strong>똑(Tok) AI 발표 연습</strong> 기능은 사용자의 발표 자세, 시선 처리, 표정 및 목소리 성량을 실시간으로 분석하여 고품질의 채점 피드백을 전달합니다.
                   </p>
                   <p className="font-semibold text-rose-500">
-                    현재 카메라 또는 마이크에 대한 접근이 차단되어 있어 AI 연습 모드를 시작할 수 없습니다.
+                    현재 카메라에 대한 접근이 차단되어 있어 AI 연습 모드를 시작할 수 없습니다.
                   </p>
                 </div>
 
@@ -1760,7 +1767,7 @@ export default function PracticeScreen({
                       📱 안드로이드 앱 사용자 추가 안내
                     </p>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                      '다시 묻지 않음' 등으로 권한 요청이 영구 차단된 경우, 아래 <strong>[앱 설정 열기]</strong> 버튼을 눌러 안드로이드 애플리케이션 정보 화면에서 카메라와 마이크 권한을 직접 <strong>'허용'</strong>으로 활성화해 주셔야 합니다.
+                      '다시 묻지 않음' 등으로 권한 요청이 영구 차단된 경우, 아래 <strong>[앱 설정 열기]</strong> 버튼을 눌러 안드로이드 애플리케이션 정보 화면에서 카메라 권한을 직접 <strong>'허용'</strong>으로 활성화해 주셔야 합니다.
                     </p>
                   </div>
                 )}
