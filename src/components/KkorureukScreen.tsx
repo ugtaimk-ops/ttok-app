@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { syncAllNotifications } from "../services/notificationService";
+import GlassSelect, { HOUR_OPTIONS, MINUTE_OPTIONS } from "./GlassSelect";
 
 interface KkorureukScreenProps {
   user: UserProfile;
@@ -915,33 +916,25 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
               
               <div className="flex items-center gap-2 justify-end w-full sm:w-auto">
                 {/* Hour Select */}
-                <div className="relative flex-1 sm:flex-initial">
-                  <select
+                <div className="flex-1 sm:flex-initial min-w-[92px]">
+                  <GlassSelect
                     value={mealNotifHour}
-                    onChange={(e) => handleSaveMealAlarm(mealNotifEnabled, e.target.value, mealNotifMinute)}
-                    className="appearance-none w-full bg-slate-50 dark:bg-slate-950/85 border border-slate-200 dark:border-slate-800 h-12 px-4 pr-10 rounded-xl text-fluid-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand"
-                  >
-                    {Array.from({ length: 24 }).map((_, i) => {
-                      const h = String(i).padStart(2, "0");
-                      return <option key={h} value={h}>{h}시</option>;
-                    })}
-                  </select>
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[9px] text-slate-400 font-bold">▼</span>
+                    onChange={(v) => handleSaveMealAlarm(mealNotifEnabled, v, mealNotifMinute)}
+                    options={HOUR_OPTIONS}
+                    darkMode={darkMode}
+                    triggerClassName="w-full flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-950/85 border border-slate-200 dark:border-slate-800 h-12 px-4 rounded-xl text-fluid-sm font-bold text-slate-800 dark:text-slate-100 cursor-pointer"
+                  />
                 </div>
 
                 {/* Minute Select */}
-                <div className="relative flex-1 sm:flex-initial">
-                  <select
+                <div className="flex-1 sm:flex-initial min-w-[92px]">
+                  <GlassSelect
                     value={mealNotifMinute}
-                    onChange={(e) => handleSaveMealAlarm(mealNotifEnabled, mealNotifHour, e.target.value)}
-                    className="appearance-none w-full bg-slate-50 dark:bg-slate-950/85 border border-slate-200 dark:border-slate-800 h-12 px-4 pr-10 rounded-xl text-fluid-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand"
-                  >
-                    {Array.from({ length: 12 }).map((_, i) => {
-                      const m = String(i * 5).padStart(2, "0");
-                      return <option key={m} value={m}>{m}분</option>;
-                    })}
-                  </select>
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[9px] text-slate-400 font-bold">▼</span>
+                    onChange={(v) => handleSaveMealAlarm(mealNotifEnabled, mealNotifHour, v)}
+                    options={MINUTE_OPTIONS}
+                    darkMode={darkMode}
+                    triggerClassName="w-full flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-950/85 border border-slate-200 dark:border-slate-800 h-12 px-4 rounded-xl text-fluid-sm font-bold text-slate-800 dark:text-slate-100 cursor-pointer"
+                  />
                 </div>
               </div>
             </div>

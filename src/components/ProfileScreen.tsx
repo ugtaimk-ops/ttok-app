@@ -4,6 +4,7 @@ import { Sparkles, Check, School, Award, User, Camera, Smile, X, Pencil, Trash2,
 import { motion, AnimatePresence } from "motion/react";
 import { isNativeApp, openNativeSettings } from "../lib/capacitor";
 import { robustFetch } from "../lib/api";
+import GlassSelect from "./GlassSelect";
 
 interface SchoolSearchItem {
   schoolName: string;
@@ -538,15 +539,16 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
         <div className="grid grid-cols-2 gap-5">
           <div>
             <label className="block text-fluid-sm font-bold text-slate-550 dark:text-slate-400 mb-1.5">학년</label>
-            <select
+            <GlassSelect
               value={grade}
-              onChange={(e) => setGrade(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-fluid-base font-bold focus:outline-none focus:ring-2 focus:ring-brand text-slate-700 dark:text-slate-300"
-            >
-              {Array.from({ length: maxGrade }, (_, i) => i + 1).map((g) => (
-                <option key={g} value={String(g)}>{g}학년</option>
-              ))}
-            </select>
+              onChange={setGrade}
+              options={Array.from({ length: maxGrade }, (_, i) => i + 1).map((g) => ({
+                value: String(g),
+                label: `${g}학년`
+              }))}
+              darkMode={darkMode}
+              triggerClassName="w-full flex items-center justify-between gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-fluid-base font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
+            />
           </div>
 
           <div>

@@ -24,6 +24,14 @@ import {
   Pencil
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import GlassSelect from "./GlassSelect";
+
+const SCHEDULE_TYPE_OPTIONS = [
+  { value: "study", label: "공부 📚" },
+  { value: "assessment", label: "수행평가 📝" },
+  { value: "exam", label: "시험 ✏️" },
+  { value: "homework", label: "숙제 🗂️" }
+];
 
 interface ShortcutItem {
   id: string;
@@ -762,16 +770,15 @@ export default function HomeScreen({
                       </div>
 
                       <div className="flex gap-2">
-                        <select
-                          value={newSchedType}
-                          onChange={(e: any) => setNewSchedType(e.target.value)}
-                          className="flex-1 px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl text-sm focus:outline-none text-slate-600 dark:text-slate-300"
-                        >
-                          <option value="study">공부 📚</option>
-                          <option value="assessment">수행평가 📝</option>
-                          <option value="exam">시험 ✏️</option>
-                          <option value="homework">숙제 🗂️</option>
-                        </select>
+                        <div className="flex-1">
+                          <GlassSelect
+                            value={newSchedType}
+                            onChange={(v) => setNewSchedType(v as "assessment" | "exam" | "study" | "homework")}
+                            options={SCHEDULE_TYPE_OPTIONS}
+                            darkMode={darkMode}
+                            triggerClassName="w-full flex items-center justify-between gap-2 px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl text-sm text-slate-600 dark:text-slate-300 cursor-pointer"
+                          />
+                        </div>
                         <button
                           type="submit"
                           className="px-4 py-2 bg-brand text-white font-black rounded-xl text-sm cursor-pointer shadow-sm"
@@ -832,16 +839,15 @@ export default function HomeScreen({
                       </div>
 
                       <div className="flex gap-2">
-                        <select
-                          value={editSchedType}
-                          onChange={(e: any) => setEditSchedType(e.target.value)}
-                          className="flex-1 px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl text-sm focus:outline-none text-slate-600 dark:text-slate-300"
-                        >
-                          <option value="study">공부 📚</option>
-                          <option value="assessment">수행평가 📝</option>
-                          <option value="exam">시험 ✏️</option>
-                          <option value="homework">숙제 🗂️</option>
-                        </select>
+                        <div className="flex-1">
+                          <GlassSelect
+                            value={editSchedType}
+                            onChange={(v) => setEditSchedType(v as "assessment" | "exam" | "study" | "homework")}
+                            options={SCHEDULE_TYPE_OPTIONS}
+                            darkMode={darkMode}
+                            triggerClassName="w-full flex items-center justify-between gap-2 px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl text-sm text-slate-600 dark:text-slate-300 cursor-pointer"
+                          />
+                        </div>
                         <button
                           type="submit"
                           className="px-4 py-2 bg-amber-500 text-white font-black rounded-xl text-sm cursor-pointer shadow-sm"

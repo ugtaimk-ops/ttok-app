@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { UserProfile } from "../types";
+import GlassSelect, { HOUR_OPTIONS, MINUTE_OPTIONS } from "./GlassSelect";
 
 interface SettingsScreenProps {
   darkMode: boolean;
@@ -218,28 +219,28 @@ export default function SettingsScreen({
                 <span className="text-fluid-sm font-bold text-slate-500 dark:text-slate-400">급식 알림 시간 설정</span>
                 <div className="flex items-center gap-2">
                   {/* Hour dropdown */}
-                  <select
-                    value={mealNotifHour}
-                    onChange={(e) => setMealNotifHour(e.target.value)}
-                    className="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl text-fluid-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none"
-                  >
-                    {Array.from({ length: 24 }).map((_, i) => {
-                      const h = String(i).padStart(2, "0");
-                      return <option key={h} value={h}>{h}시</option>;
-                    })}
-                  </select>
+                  <div className="min-w-[76px]">
+                    <GlassSelect
+                      value={mealNotifHour}
+                      onChange={setMealNotifHour}
+                      options={HOUR_OPTIONS}
+                      darkMode={darkMode}
+                      align="right"
+                      triggerClassName="w-full flex items-center justify-between gap-1.5 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl text-fluid-xs font-bold text-slate-800 dark:text-slate-100 cursor-pointer"
+                    />
+                  </div>
 
                   {/* Minute dropdown */}
-                  <select
-                    value={mealNotifMinute}
-                    onChange={(e) => setMealNotifMinute(e.target.value)}
-                    className="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl text-fluid-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none"
-                  >
-                    {Array.from({ length: 12 }).map((_, i) => {
-                      const m = String(i * 5).padStart(2, "0");
-                      return <option key={m} value={m}>{m}분</option>;
-                    })}
-                  </select>
+                  <div className="min-w-[76px]">
+                    <GlassSelect
+                      value={mealNotifMinute}
+                      onChange={setMealNotifMinute}
+                      options={MINUTE_OPTIONS}
+                      darkMode={darkMode}
+                      align="right"
+                      triggerClassName="w-full flex items-center justify-between gap-1.5 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl text-fluid-xs font-bold text-slate-800 dark:text-slate-100 cursor-pointer"
+                    />
+                  </div>
                 </div>
               </div>
             )}

@@ -26,6 +26,7 @@ import {
   FolderOpen
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import GlassSelect from "./GlassSelect";
 import { 
   Radar, 
   RadarChart, 
@@ -672,16 +673,18 @@ export default function PracticeScreen({
                       </div>
                       <div>
                         <label className="block text-fluid-sm font-bold text-slate-500 dark:text-slate-400 mb-1.5">희망 시간</label>
-                        <select
+                        <GlassSelect
                           value={time}
-                          onChange={(e) => setTime(e.target.value)}
-                          className="w-full h-12 px-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-fluid-base focus:outline-none focus:ring-2 focus:ring-brand text-slate-800 dark:text-slate-100 transition-all"
-                        >
-                          <option value="2분">2분</option>
-                          <option value="3분">3분</option>
-                          <option value="5분">5분</option>
-                          <option value="7분">7분</option>
-                        </select>
+                          onChange={setTime}
+                          options={[
+                            { value: "2분", label: "2분" },
+                            { value: "3분", label: "3분" },
+                            { value: "5분", label: "5분" },
+                            { value: "7분", label: "7분" }
+                          ]}
+                          darkMode={darkMode}
+                          triggerClassName="w-full flex items-center justify-between gap-2 h-12 px-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-fluid-base text-slate-800 dark:text-slate-100 transition-all cursor-pointer"
+                        />
                       </div>
                     </div>
 

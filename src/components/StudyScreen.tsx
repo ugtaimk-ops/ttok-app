@@ -23,6 +23,7 @@ import {
   Pencil
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import GlassSelect from "./GlassSelect";
 
 interface StudyScreenProps {
   schedules: ScheduleItem[];
@@ -646,17 +647,19 @@ export default function StudyScreen({
                         {[1, 2, 3].map((num) => (
                           <div key={num} className="space-y-1">
                             <span className="text-xs text-slate-500 font-bold block">{num}번 문제 정답</span>
-                            <select
-                              value={selectedAnswers[num] || ""}
-                              onChange={(e) => setSelectedAnswers({ ...selectedAnswers, [num]: parseInt(e.target.value) })}
-                              className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none"
-                            >
-                              <option value="">선택</option>
-                              <option value="1">1번</option>
-                              <option value="2">2번</option>
-                              <option value="3">3번</option>
-                              <option value="4">4번</option>
-                            </select>
+                            <GlassSelect
+                              value={selectedAnswers[num] ? String(selectedAnswers[num]) : ""}
+                              onChange={(v) => setSelectedAnswers({ ...selectedAnswers, [num]: parseInt(v, 10) })}
+                              options={[
+                                { value: "1", label: "1번" },
+                                { value: "2", label: "2번" },
+                                { value: "3", label: "3번" },
+                                { value: "4", label: "4번" }
+                              ]}
+                              darkMode={darkMode}
+                              placeholder="선택"
+                              triggerClassName="w-full flex items-center justify-between gap-2 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm cursor-pointer"
+                            />
                           </div>
                         ))}
                       </div>
