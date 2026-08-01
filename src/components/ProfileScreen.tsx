@@ -1,8 +1,18 @@
 import React, { useState, useRef, useEffect } from "react";
 import { UserProfile } from "../types";
-import { Sparkles, Check, School, Award, User, RefreshCw, Camera, Smile, Palette, Image, X, Pencil, Trash2, Shuffle } from "lucide-react";
+import { Sparkles, Check, School, Award, User, Camera, Smile, X, Pencil, Trash2, Shuffle, Search, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { isNativeApp, openNativeSettings } from "../lib/capacitor";
+import { robustFetch } from "../lib/api";
+
+interface SchoolSearchItem {
+  schoolName: string;
+  schoolCode: string;
+  officeCode: string;
+  officeName: string;
+  schoolKind: string;
+  location: string;
+}
 
 const RANDOM_GOALS = [
   "매일 30분 이상 공부하기",
@@ -46,11 +56,74 @@ interface ProfileScreenProps {
 export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileScreenProps) {
   const [name, setName] = useState(user.name);
   const [school, setSchool] = useState(user.school);
+  const [schoolCode, setSchoolCode] = useState(user.schoolCode || "");
+  const [officeCode, setOfficeCode] = useState(user.officeCode || "");
+  const [officeName, setOfficeName] = useState(user.officeName || "");
+  const [schoolKind, setSchoolKind] = useState(user.schoolKind || "");
   const [grade, setGrade] = useState(user.grade);
   const [classNum, setClassNum] = useState(user.classNum);
   const [goal, setGoal] = useState(user.goal);
   const [avatar, setAvatar] = useState(user.avatarUrl);
   const [showSavedToast, setShowSavedToast] = useState(false);
+
+  // Grade options depend on school level: elementary goes to 6th grade, middle/high to 3rd
+  const maxGrade = schoolKind.includes("초등학교") ? 6 : 3;
+
+  // School search
+  const [isSchoolSearchOpen, setIsSchoolSearchOpen] = useState(false);
+  const [schoolSearchQuery, setSchoolSearchQuery] = useState("");
+  const [schoolSearchResults, setSchoolSearchResults] = useState<SchoolSearchItem[]>([]);
+  const [isSearchingSchools, setIsSearchingSchools] = useState(false);
+  const [schoolSearchError, setSchoolSearchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isSchoolSearchOpen) return;
+    if (schoolSearchQuery.trim().length < 2) {
+      setSchoolSearchResults([]);
+      setSchoolSearchError(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingSchools(true);
+      setSchoolSearchError(null);
+      try {
+        const res = await robustFetch(`/api/school/search?keyword=${encodeURIComponent(schoolSearchQuery)}`);
+        if (res.ok) {
+          const contentType = res.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            throw new Error("정상적인 JSON 응답이 아닙니다.");
+          }
+          setSchoolSearchResults(await res.json());
+        } else {
+          setSchoolSearchError("학교 정보를 불러올 수 없습니다.");
+        }
+      } catch (err) {
+        console.error("Failed to search schools:", err);
+        setSchoolSearchError("학교 정보를 불러올 수 없습니다.");
+      } finally {
+        setIsSearchingSchools(false);
+      }
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [schoolSearchQuery, isSchoolSearchOpen]);
+
+  const handleSelectSchool = (item: SchoolSearchItem) => {
+    setSchool(item.schoolName);
+    setSchoolCode(item.schoolCode);
+    setOfficeCode(item.officeCode);
+    setOfficeName(item.officeName);
+    setSchoolKind(item.schoolKind);
+
+    const newMaxGrade = item.schoolKind.includes("초등학교") ? 6 : 3;
+    setGrade(prev => {
+      const n = parseInt(prev, 10);
+      return prev && n >= 1 && n <= newMaxGrade ? prev : "1";
+    });
+
+    setIsSchoolSearchOpen(false);
+    setSchoolSearchQuery("");
+    setSchoolSearchResults([]);
+  };
 
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [directGoalInput, setDirectGoalInput] = useState(user.goal || "");
@@ -168,26 +241,24 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
     "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=256"
   ];
 
+  const buildProfileUpdate = (overrides: Partial<UserProfile> = {}): UserProfile => ({
+    ...user,
+    name,
+    school,
+    schoolCode,
+    officeCode,
+    officeName,
+    schoolKind,
+    grade,
+    classNum,
+    goal,
+    avatarUrl: avatar,
+    ...overrides
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const isSchoolUnchanged = school.trim() === (user.school || "").trim();
-    
-    onUpdateUser({
-      ...user,
-      name,
-      school,
-      grade,
-      classNum,
-      goal,
-      avatarUrl: avatar,
-      ...(isSchoolUnchanged ? {} : {
-        schoolCode: "",
-        officeCode: "",
-        officeName: "",
-        schoolKind: ""
-      })
-    });
-    
+    onUpdateUser(buildProfileUpdate());
     setShowSavedToast(true);
     setTimeout(() => setShowSavedToast(false), 2000);
   };
@@ -197,19 +268,10 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
     const listToUse = possibleGoals.length > 0 ? possibleGoals : RANDOM_GOALS;
     const randomIndex = Math.floor(Math.random() * listToUse.length);
     const newGoal = listToUse[randomIndex];
-    
+
     setGoal(newGoal);
-    
-    onUpdateUser({
-      ...user,
-      name,
-      school,
-      grade,
-      classNum,
-      goal: newGoal,
-      avatarUrl: avatar
-    });
-    
+    onUpdateUser(buildProfileUpdate({ goal: newGoal }));
+
     setShowSavedToast(true);
     setTimeout(() => setShowSavedToast(false), 2000);
   };
@@ -218,17 +280,8 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
     const trimmed = directGoalInput.trim();
     setGoal(trimmed);
     setIsEditingGoal(false);
-    
-    onUpdateUser({
-      ...user,
-      name,
-      school,
-      grade,
-      classNum,
-      goal: trimmed,
-      avatarUrl: avatar
-    });
-    
+    onUpdateUser(buildProfileUpdate({ goal: trimmed }));
+
     setShowSavedToast(true);
     setTimeout(() => setShowSavedToast(false), 2000);
   };
@@ -237,17 +290,8 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
     setGoal("");
     setDirectGoalInput("");
     setIsEditingGoal(false);
-    
-    onUpdateUser({
-      ...user,
-      name,
-      school,
-      grade,
-      classNum,
-      goal: "",
-      avatarUrl: avatar
-    });
-    
+    onUpdateUser(buildProfileUpdate({ goal: "" }));
+
     setShowSavedToast(true);
     setTimeout(() => setShowSavedToast(false), 2000);
   };
@@ -422,17 +466,72 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
             />
           </div>
 
-          <div>
+          <div className="relative">
             <label className="block text-fluid-sm font-bold text-slate-550 dark:text-slate-400 mb-1.5 flex items-center gap-1">
               <School size={14} /> 소속 학교명
             </label>
-            <input
-              type="text"
-              required
-              value={school}
-              onChange={(e) => setSchool(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-fluid-base font-bold focus:outline-none focus:ring-2 focus:ring-brand"
-            />
+            {isSchoolSearchOpen ? (
+              <>
+                <div className="relative">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={schoolSearchQuery}
+                    onChange={(e) => setSchoolSearchQuery(e.target.value)}
+                    placeholder="학교 이름을 검색해 주세요 (예: 서울고)"
+                    className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-fluid-base font-bold focus:outline-none focus:ring-2 focus:ring-brand"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSchoolSearchOpen(false);
+                      setSchoolSearchQuery("");
+                      setSchoolSearchResults([]);
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {(isSearchingSchools || schoolSearchError || schoolSearchQuery.trim().length >= 2) && (
+                  <div className="absolute z-20 mt-2 w-full max-h-64 overflow-y-auto rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg">
+                    {isSearchingSchools ? (
+                      <div className="p-4 flex items-center justify-center gap-2 text-fluid-sm text-slate-400">
+                        <Loader2 size={14} className="animate-spin" /> 검색 중...
+                      </div>
+                    ) : schoolSearchError ? (
+                      <div className="p-4 text-center text-fluid-sm text-rose-500">{schoolSearchError}</div>
+                    ) : schoolSearchResults.length === 0 ? (
+                      <div className="p-4 text-center text-fluid-sm text-slate-400">검색 결과가 없습니다.</div>
+                    ) : (
+                      schoolSearchResults.map((item) => (
+                        <button
+                          key={item.schoolCode}
+                          type="button"
+                          onClick={() => handleSelectSchool(item)}
+                          className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b last:border-b-0 border-slate-50 dark:border-slate-800/60 cursor-pointer"
+                        >
+                          <p className="text-fluid-sm font-bold text-slate-800 dark:text-slate-100">{item.schoolName}</p>
+                          <p className="text-fluid-xs text-slate-400">{item.schoolKind} · {item.location}</p>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsSchoolSearchOpen(true)}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-fluid-base font-bold text-left focus:outline-none focus:ring-2 focus:ring-brand flex items-center justify-between cursor-pointer"
+              >
+                <span className={school ? "text-slate-800 dark:text-slate-100" : "text-slate-400 font-normal"}>
+                  {school || "학교를 검색해 주세요"}
+                </span>
+                <Search size={16} className="text-slate-400 shrink-0" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -444,9 +543,9 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
               onChange={(e) => setGrade(e.target.value)}
               className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-fluid-base font-bold focus:outline-none focus:ring-2 focus:ring-brand text-slate-700 dark:text-slate-300"
             >
-              <option value="1">1학년</option>
-              <option value="2">2학년</option>
-              <option value="3">3학년</option>
+              {Array.from({ length: maxGrade }, (_, i) => i + 1).map((g) => (
+                <option key={g} value={String(g)}>{g}학년</option>
+              ))}
             </select>
           </div>
 
