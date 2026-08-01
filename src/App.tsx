@@ -25,6 +25,7 @@ import ProfileScreen from "./components/ProfileScreen";
 import SettingsScreen from "./components/SettingsScreen";
 import BottomNavigationBar from "./components/BottomNavigationBar";
 import LoginScreen from "./components/LoginScreen";
+import EmailVerificationScreen from "./components/EmailVerificationScreen";
 
 const INITIAL_USER: UserProfile = {
   name: "",
@@ -65,6 +66,17 @@ export default function App() {
       clearTimeout(timeoutId);
     };
   }, []);
+
+  // Google/Apple sign-in already comes back with emailVerified: true, so this
+  // only ever gates password-provider accounts. Tracked separately from
+  // authUser because reloading the Firebase User object to pick up a fresh
+  // emailVerified value doesn't change its reference, so React wouldn't
+  // otherwise notice the update.
+  const [emailVerified, setEmailVerified] = useState(true);
+  useEffect(() => {
+    setEmailVerified(authUser?.emailVerified ?? true);
+  }, [authUser]);
+  const isPasswordAccount = authUser?.providerData.some(p => p.providerId === "password") ?? false;
 
   const [tokTab, setTokTab] = useState<string>("home");
   const [kkorureukTab, setKkorureukTab] = useState<string>("meal-today");
@@ -425,6 +437,18 @@ export default function App() {
   // Not signed in - show the login screen
   if (authUser === null) {
     return <LoginScreen onLogin={handleLoginSuccess} darkMode={darkMode} />;
+  }
+
+  // Signed in with email/password but hasn't clicked the verification link yet
+  if (isPasswordAccount && !emailVerified) {
+    return (
+      <EmailVerificationScreen
+        email={authUser?.email}
+        darkMode={darkMode}
+        onVerified={() => setEmailVerified(true)}
+        onLogout={handleLogout}
+      />
+    );
   }
 
   return (

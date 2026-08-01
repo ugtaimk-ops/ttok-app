@@ -6,6 +6,7 @@ import {
   signInWithEmailAndPassword as fbSignInWithEmailAndPassword,
   createUserWithEmailAndPassword as fbCreateUserWithEmailAndPassword,
   sendPasswordResetEmail as fbSendPasswordResetEmail,
+  sendEmailVerification as fbSendEmailVerification,
   signOut,
   User,
   getAuth
@@ -146,11 +147,20 @@ export const authService = {
   },
 
   /**
-   * Email/password sign-up (new account)
+   * Email/password sign-up (new account). Firebase only validates the
+   * email's format, not whether the address actually exists - so a
+   * verification email is sent immediately, and App.tsx blocks app usage
+   * for password-provider accounts until the user clicks the link. An
+   * address that doesn't really exist will never receive that email.
    */
   async signUpWithEmail(email: string, password: string): Promise<User> {
     try {
       const result = await fbCreateUserWithEmailAndPassword(auth, email, password);
+      try {
+        await fbSendEmailVerification(result.user);
+      } catch (verifyErr) {
+        console.error("Failed to send verification email:", verifyErr);
+      }
       return result.user;
     } catch (error: any) {
       console.error("Email sign-up failed:", error);
@@ -181,6 +191,11 @@ export const authService = {
   async signInOrSignUpWithEmail(email: string, password: string): Promise<User> {
     try {
       const result = await fbCreateUserWithEmailAndPassword(auth, email, password);
+      try {
+        await fbSendEmailVerification(result.user);
+      } catch (verifyErr) {
+        console.error("Failed to send verification email:", verifyErr);
+      }
       return result.user;
     } catch (error: any) {
       if (error.code === "auth/email-already-in-use") {
@@ -189,6 +204,26 @@ export const authService = {
       console.error("Email sign-in/sign-up failed:", error);
       throw error;
     }
+  },
+
+  /**
+   * Re-sends the verification email to the currently signed-in user.
+   */
+  async resendVerificationEmail(): Promise<void> {
+    if (!auth.currentUser) throw new Error("로그인 상태가 아닙니다.");
+    await fbSendEmailVerification(auth.currentUser);
+  },
+
+  /**
+   * Reloads the current user's token and returns the freshest emailVerified
+   * status. The `User` object Firebase hands out doesn't update this field
+   * in real time - it has to be explicitly refreshed after the user clicks
+   * the verification link.
+   */
+  async refreshEmailVerified(): Promise<boolean> {
+    if (!auth.currentUser) return false;
+    await auth.currentUser.reload();
+    return auth.currentUser.emailVerified;
   },
 
   /**
