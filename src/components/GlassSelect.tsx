@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { Capacitor } from "@capacitor/core";
 
 export interface GlassSelectOption {
   value: string;
@@ -28,9 +29,10 @@ interface GlassSelectProps {
 }
 
 /**
- * Custom dropdown replacing native <select>, which on Android renders as the
- * OS's own plain system picker (clashing hard with the app's glass/blur
- * visual language) instead of anything CSS can style.
+ * Custom dropdown replacing native <select> - but only on Android, where it
+ * renders as the OS's own plain system picker, clashing hard with the app's
+ * glass/blur visual language. iOS's native <select> (a blurred sheet/wheel
+ * picker) already matches that look, so it's left alone there.
  */
 export default function GlassSelect({
   value,
@@ -43,9 +45,10 @@ export default function GlassSelect({
 }: GlassSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isIOS = Capacitor.getPlatform() === "ios";
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (isIOS || !isOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
@@ -53,7 +56,26 @@ export default function GlassSelect({
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  }, [isIOS, isOpen]);
+
+  if (isIOS) {
+    return (
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={triggerClassName}
+      >
+        {!options.some((o) => o.value === value) && (
+          <option value="" disabled hidden>{placeholder}</option>
+        )}
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {typeof opt.label === "string" || typeof opt.label === "number" ? opt.label : opt.value}
+          </option>
+        ))}
+      </select>
+    );
+  }
 
   const selected = options.find((o) => o.value === value);
 
