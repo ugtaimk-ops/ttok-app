@@ -37,6 +37,11 @@ import {
   ResponsiveContainer 
 } from "recharts";
 
+// Live subtitle (STT) is built and working but held back from this release —
+// it's earmarked as a paid feature to switch on later. Flip to true to
+// re-enable; the implementation itself is untouched.
+const STT_FEATURE_ENABLED = false;
+
 interface PracticeScreenProps {
   user: any;
   scripts: ScriptItem[];
@@ -445,35 +450,38 @@ export default function PracticeScreen({
     // 1. Start native Speech Recognition (works inside the packaged app, unlike the
     // browser Web Speech API which iOS WKWebView doesn't implement at all and Android's
     // embedded WebView can't reliably reach without this plugin's native bridge).
-    try {
-      const { available } = await SpeechRecognition.available();
-      if (!available) throw new Error("not-available");
+    // Gated behind STT_FEATURE_ENABLED — held back as a future paid feature.
+    if (STT_FEATURE_ENABLED) {
+      try {
+        const { available } = await SpeechRecognition.available();
+        if (!available) throw new Error("not-available");
 
-      const permission = await SpeechRecognition.requestPermissions();
-      if (permission.speechRecognition !== "granted") throw new Error("permission-denied");
+        const permission = await SpeechRecognition.requestPermissions();
+        if (permission.speechRecognition !== "granted") throw new Error("permission-denied");
 
-      const listener = await SpeechRecognition.addListener("partialResults", (data) => {
-        if (data.matches?.length) {
-          setTranscript(data.matches[0]);
+        const listener = await SpeechRecognition.addListener("partialResults", (data) => {
+          if (data.matches?.length) {
+            setTranscript(data.matches[0]);
+          }
+        });
+        speechListenerRef.current = listener;
+        isListeningRef.current = true;
+
+        SpeechRecognition.start({
+          language: "ko-KR",
+          partialResults: true,
+          popup: false
+        }).catch((err) => console.log("Speech recognition ended:", err));
+      } catch (err: any) {
+        console.log("Speech recognition unavailable:", err);
+        const reason = err?.message || String(err);
+        if (reason === "not-available") {
+          setTranscript("이 기기에서 음성 인식 서비스를 찾을 수 없어요. Google 앱(또는 음성 서비스)이 설치·활성화되어 있는지 확인해주세요.");
+        } else if (reason === "permission-denied") {
+          setTranscript("음성 인식 권한이 꺼져 있어요. 아이폰은 설정 > 똑 에서 '마이크'와 별개로 '음성 인식' 권한도 따로 켜야 해요. 안드로이드는 설정 > 앱 > 똑 > 권한에서 '마이크'를 허용해주세요.");
+        } else {
+          setTranscript(`음성 인식을 시작하지 못했어요 (${reason}). 말한 내용에 어울리는 똑똑한 AI 분석이 진행됩니다.`);
         }
-      });
-      speechListenerRef.current = listener;
-      isListeningRef.current = true;
-
-      SpeechRecognition.start({
-        language: "ko-KR",
-        partialResults: true,
-        popup: false
-      }).catch((err) => console.log("Speech recognition ended:", err));
-    } catch (err: any) {
-      console.log("Speech recognition unavailable:", err);
-      const reason = err?.message || String(err);
-      if (reason === "not-available") {
-        setTranscript("이 기기에서 음성 인식 서비스를 찾을 수 없어요. Google 앱(또는 음성 서비스)이 설치·활성화되어 있는지 확인해주세요.");
-      } else if (reason === "permission-denied") {
-        setTranscript("음성 인식 권한이 꺼져 있어요. 아이폰은 설정 > 똑 에서 '마이크'와 별개로 '음성 인식' 권한도 따로 켜야 해요. 안드로이드는 설정 > 앱 > 똑 > 권한에서 '마이크'를 허용해주세요.");
-      } else {
-        setTranscript(`음성 인식을 시작하지 못했어요 (${reason}). 말한 내용에 어울리는 똑똑한 AI 분석이 진행됩니다.`);
       }
     }
 
@@ -1193,12 +1201,14 @@ export default function PracticeScreen({
                   {/* Bottom area containing Live Subtitle STT and Control Buttons */}
                   <div className="relative z-10 flex flex-col items-center gap-4 w-full max-w-2xl mx-auto mt-auto pb-4">
                     {/* Floating TV-style subtitle card at the bottom to never cover the face */}
-                    <div className="bg-slate-950/80 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/10 shadow-2xl space-y-1.5 w-full text-center">
-                      <span className="text-[9px] text-brand uppercase font-black tracking-widest block">실시간 자막 (STT)</span>
-                      <p className={`text-slate-100 leading-relaxed font-semibold break-keep ${getTextSizeClass(prompterTextSize)}`}>
-                        {transcript || "소리 내어 말해보세요. 음성 자막이 이곳에 표시됩니다..."}
-                      </p>
-                    </div>
+                    {STT_FEATURE_ENABLED && (
+                      <div className="bg-slate-950/80 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/10 shadow-2xl space-y-1.5 w-full text-center">
+                        <span className="text-[9px] text-brand uppercase font-black tracking-widest block">실시간 자막 (STT)</span>
+                        <p className={`text-slate-100 leading-relaxed font-semibold break-keep ${getTextSizeClass(prompterTextSize)}`}>
+                          {transcript || "소리 내어 말해보세요. 음성 자막이 이곳에 표시됩니다..."}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Topic Indicator & End Practice button */}
                     <div className="flex flex-col items-center gap-2.5 w-full max-w-md mx-auto">
