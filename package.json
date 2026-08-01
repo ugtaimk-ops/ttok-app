@@ -13,6 +13,7 @@
     "cap:add-android": "cap add android"
   },
   "dependencies": {
+    "@capacitor-community/speech-recognition": "^7.0.1",
     "@capacitor-firebase/authentication": "^8.3.0",
     "@capacitor/core": "^8.4.1",
     "@capacitor/ios": "^8.4.2",

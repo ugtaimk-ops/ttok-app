@@ -26,6 +26,7 @@ import {
   FolderOpen
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { SpeechRecognition } from "@capacitor-community/speech-recognition";
 import GlassSelect from "./GlassSelect";
 import { 
   Radar, 
@@ -172,16 +173,26 @@ export default function PracticeScreen({
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<any>(null);
-  const recognitionRef = useRef<any>(null);
+  const speechListenerRef = useRef<{ remove: () => Promise<void> } | null>(null);
+  const isListeningRef = useRef(false);
+
+  const stopSpeechRecognition = async () => {
+    if (speechListenerRef.current) {
+      try { await speechListenerRef.current.remove(); } catch (e) {}
+      speechListenerRef.current = null;
+    }
+    if (isListeningRef.current) {
+      isListeningRef.current = false;
+      try { await SpeechRecognition.stop(); } catch (e) {}
+    }
+  };
 
   // Clean up media streams and timers
   useEffect(() => {
     return () => {
       stopStreams();
       if (timerRef.current) clearInterval(timerRef.current);
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) {}
-      }
+      stopSpeechRecognition();
     };
   }, []);
 
@@ -435,46 +446,45 @@ export default function PracticeScreen({
     }
   };
 
-  const startPracticeRecording = () => {
+  const startPracticeRecording = async () => {
     setIsRecording(true);
     setSeconds(0);
     setTranscript("");
     setAnalysisResult(null);
     setAnalysisError(null);
 
-    // 1. Start Speech Recognition if supported
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const rec = new SpeechRecognition();
-      rec.continuous = true;
-      rec.interimResults = true;
-      rec.lang = "ko-KR";
-      
-      rec.onresult = (event: any) => {
-        let currentTranscript = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          currentTranscript += event.results[i][0].transcript;
-        }
-        setTranscript(currentTranscript);
-      };
+    // 1. Start native Speech Recognition (works inside the packaged app, unlike the
+    // browser Web Speech API which iOS WKWebView doesn't implement at all and Android's
+    // embedded WebView can't reliably reach without this plugin's native bridge).
+    try {
+      const { available } = await SpeechRecognition.available();
+      if (!available) throw new Error("not-available");
 
-      rec.onerror = (e: any) => console.log("Speech recognition error:", e);
-      rec.onend = () => {
-        if (isRecording) {
-          try { rec.start(); } catch (err) {}
-        }
-      };
+      const permission = await SpeechRecognition.requestPermissions();
+      if (permission.speechRecognition !== "granted") throw new Error("permission-denied");
 
-      recognitionRef.current = rec;
-      rec.start();
-    } else {
+      const listener = await SpeechRecognition.addListener("partialResults", (data) => {
+        if (data.matches?.length) {
+          setTranscript(data.matches[0]);
+        }
+      });
+      speechListenerRef.current = listener;
+      isListeningRef.current = true;
+
+      SpeechRecognition.start({
+        language: "ko-KR",
+        partialResults: true,
+        popup: false
+      }).catch((err) => console.log("Speech recognition ended:", err));
+    } catch (err) {
+      console.log("Speech recognition unavailable:", err);
       setTranscript("음성 인식이 지원되지 않는 환경입니다. 말한 내용에 어울리는 똑똑한 AI 분석이 진행됩니다.");
     }
 
     // 2. Start stats timer
     timerRef.current = setInterval(() => {
       setSeconds(prev => prev + 1);
-      
+
       // Simulate pulsating microphone levels
       setAudioLevel(Array.from({ length: 12 }, () => Math.floor(Math.random() * 45) + 10));
     }, 1000);
@@ -482,12 +492,10 @@ export default function PracticeScreen({
 
   const stopPracticeRecording = async () => {
     setIsRecording(false);
-    
+
     // Stop recording timer & stream
     if (timerRef.current) clearInterval(timerRef.current);
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) {}
-    }
+    await stopSpeechRecognition();
     stopStreams();
 
     // Trigger AI Analysis
