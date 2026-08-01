@@ -172,6 +172,26 @@ export const authService = {
   },
 
   /**
+   * Single entry point for email/password: creates the account if it doesn't
+   * exist yet (and signs in), or signs in to the existing account. Tries
+   * sign-up first since "email-already-in-use" is a reliable signal even
+   * when Firebase's email enumeration protection is on (which can make
+   * sign-in's own errors ambiguous about whether the account exists).
+   */
+  async signInOrSignUpWithEmail(email: string, password: string): Promise<User> {
+    try {
+      const result = await fbCreateUserWithEmailAndPassword(auth, email, password);
+      return result.user;
+    } catch (error: any) {
+      if (error.code === "auth/email-already-in-use") {
+        return authService.signInWithEmail(email, password);
+      }
+      console.error("Email sign-in/sign-up failed:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Sends a password reset email
    */
   async resetPassword(email: string): Promise<void> {

@@ -55,7 +55,6 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<"google" | "apple" | "email" | null>(null);
 
-  const [emailMode, setEmailMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -99,10 +98,7 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
     setSelectedProvider("email");
 
     try {
-      const user = emailMode === "signup"
-        ? await authService.signUpWithEmail(email.trim(), password)
-        : await authService.signInWithEmail(email.trim(), password);
-
+      const user = await authService.signInOrSignUpWithEmail(email.trim(), password);
       const userProfile = await authService.handleUserSession(user);
       onLogin(userProfile);
     } catch (err: any) {
@@ -225,12 +221,12 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
               }`}
             >
               <div className="flex items-center gap-3">
-                {/* Google SVG Icon */}
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#EA4335"
-                    d="M12.24 10.285V14.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.859-3.578-7.859-8s3.53-8 7.859-8c2.46 0 4.105 1.025 5.047 1.926l3.245-3.125C18.232 1.56 15.45 1 12.24 1 6.059 1 1 6.059 1 12.24s5.059 11.24 11.24 11.24c6.458 0 10.766-4.537 10.766-10.95 0-.738-.078-1.3-.176-1.805H12.24z"
-                  />
+                {/* Official Google "G" logo */}
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 48 48">
+                  <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12 c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24 c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" />
+                  <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657 C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" />
+                  <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36 c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" />
+                  <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571 c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z" />
                 </svg>
                 <span className="font-black">Google 로그인</span>
               </div>
@@ -301,7 +297,7 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
               <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 ${darkMode ? "text-slate-500" : "text-slate-400"}`} />
               <input
                 type={showPassword ? "text" : "password"}
-                autoComplete={emailMode === "signup" ? "new-password" : "current-password"}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="비밀번호 (6자 이상)"
@@ -322,18 +318,16 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
               </button>
             </div>
 
-            {emailMode === "signin" && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handlePasswordReset}
-                  disabled={isLoading}
-                  className={`text-fluid-xs font-bold ${darkMode ? "text-slate-400 hover:text-slate-200" : "text-slate-500 hover:text-slate-700"}`}
-                >
-                  비밀번호를 잊으셨나요?
-                </button>
-              </div>
-            )}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handlePasswordReset}
+                disabled={isLoading}
+                className={`text-fluid-xs font-bold ${darkMode ? "text-slate-400 hover:text-slate-200" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                비밀번호를 잊으셨나요?
+              </button>
+            </div>
 
             <button
               type="submit"
@@ -345,26 +339,12 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
               {isLoading && selectedProvider === "email" ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <span>{emailMode === "signup" ? "회원가입" : "이메일로 로그인"}</span>
+                <span>이메일로 계속하기</span>
               )}
             </button>
-
-            <div className="flex items-center justify-center gap-1.5 pt-1">
-              <span className={`text-fluid-xs ${darkMode ? "text-slate-500" : "text-slate-400"}`}>
-                {emailMode === "signup" ? "이미 계정이 있으신가요?" : "아직 계정이 없으신가요?"}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmailMode((m) => (m === "signup" ? "signin" : "signup"));
-                  setError(null);
-                  setInfoMessage(null);
-                }}
-                className={`text-fluid-xs font-black ${darkMode ? "text-blue-400" : "text-brand"}`}
-              >
-                {emailMode === "signup" ? "로그인" : "회원가입"}
-              </button>
-            </div>
+            <p className={`text-fluid-xs text-center ${darkMode ? "text-slate-500" : "text-slate-400"}`}>
+              처음이면 자동으로 회원가입, 이미 계정이 있으면 로그인됩니다
+            </p>
           </form>
         </div>
       </motion.div>
