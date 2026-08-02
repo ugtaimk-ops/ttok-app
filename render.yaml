@@ -20,3 +20,5 @@ services:
         sync: false
       - key: APP_SHARED_SECRET
         sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_KEY
+        sync: false
