@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import GlassSelect from "./GlassSelect";
+import AiReportCard from "./AiReportCard";
 
 const SCHEDULE_TYPE_OPTIONS = [
   { value: "study", label: "공부 📚" },
@@ -430,6 +431,11 @@ export default function HomeScreen({
           </div>
         </div>
       </div>
+
+      {/* AI 리포트 (PRO 전용) */}
+      {user.isPremium && (
+        <AiReportCard todos={todos} schedules={schedules} darkMode={darkMode} />
+      )}
 
       {/* 스마트 단축키 데스크 */}
       <div className="p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border-[1.5px] border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm space-y-4">

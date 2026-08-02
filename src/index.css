@@ -71,9 +71,13 @@
     margin-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Safe padding for screen layouts, accommodating BottomNavigationBar + safe areas */
+  /* Safe padding for screen layouts, accommodating BottomNavigationBar + safe areas.
+     Bumped from 96px - buttons near the end of longer screens (e.g. Settings, after
+     the Premium section was added) were still getting clipped by the floating nav
+     bar on real devices, where env(safe-area-inset-bottom) can under-report inside
+     an Android WebView. */
   .pb-safe-layout {
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 16px));
+    padding-bottom: calc(140px + env(safe-area-inset-bottom, 24px));
   }
 
   /* Positioning offset for FABs, toasts, or bottom buttons to sit beautifully above the floating bottom navigation */

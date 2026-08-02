@@ -69,7 +69,7 @@ const aiLimiter = rateLimit({
 
 app.use("/api/", apiLimiter);
 
-const AI_ROUTES = ["/api/script/generate", "/api/practice/analyze", "/api/assessment/extract", "/api/study/action"];
+const AI_ROUTES = ["/api/script/generate", "/api/practice/analyze", "/api/assessment/extract", "/api/study/action", "/api/home/ai-report"];
 app.use(AI_ROUTES, aiLimiter);
 
 // Free/premium monthly AI usage cap, tracked per signed-in user in Firestore
@@ -78,10 +78,15 @@ app.use(AI_ROUTES, aiLimiter);
 // missing/invalid or FIREBASE_SERVICE_ACCOUNT_KEY isn't configured on this
 // deployment yet, requests are allowed through unmetered rather than locking
 // everyone out - this is a usage cap for cost control, not an auth gate.
+// Also stashes uid/isPremium on the request for routes that need to gate a
+// feature to premium users specifically (e.g. /api/home/ai-report below),
+// so they don't need a second Firestore read.
 app.use(AI_ROUTES, async (req, res, next) => {
   try {
     const uid = await verifyRequestUser(req);
     const result = await checkAndConsumeUsage(uid);
+    (req as any).uid = uid;
+    (req as any).isPremium = result.isPremium;
     if (!result.allowed) {
       return res.status(403).json({
         error: result.isPremium
@@ -792,6 +797,56 @@ app.post("/api/study/action", async (req, res) => {
     const is429 = error.status === 429 || error.message?.includes("RESOURCE_EXHAUSTED_429");
     res.status(is429 ? 429 : 500).json({ 
       error: is429 ? "RESOURCE_EXHAUSTED_429" : (error.message || "공부 도우미 처리 중 오류가 발생했습니다.")
+    });
+  }
+});
+
+// Home screen "AI 리포트" - PRO-only. Gives a short personalized recommendation
+// based on the user's current todos/schedules. Gated on isPremium (stashed by
+// the usage-limit middleware above), not just the monthly usage count, since
+// this is meant to be an exclusive PRO perk rather than something free users
+// can reach by staying under their limit.
+app.post("/api/home/ai-report", async (req, res) => {
+  if (!(req as any).isPremium) {
+    return res.status(403).json({
+      error: "AI 리포트는 똑 PRO 전용 기능이에요. 구독하면 이용할 수 있어요.",
+      code: "PREMIUM_REQUIRED"
+    });
+  }
+
+  try {
+    const { todos, schedules } = req.body;
+    const ai = getAIService();
+
+    const todoList = Array.isArray(todos)
+      ? todos.filter((t: any) => !t.completed).slice(0, 15).map((t: any) => `- [${t.category || "일반"}] ${t.text}${t.dueDate ? ` (마감: ${t.dueDate})` : ""}`).join("\n")
+      : "";
+    const scheduleList = Array.isArray(schedules)
+      ? schedules.slice(0, 15).map((s: any) => `- [${s.type || "일정"}] ${s.title}${s.subject ? ` (${s.subject})` : ""}${s.date ? ` - ${s.date}` : ""}`).join("\n")
+      : "";
+
+    const prompt = `
+      당신은 중고등학생을 위한 친근하고 격려하는 학습 코치입니다.
+      아래 학생의 현재 할 일과 일정을 보고, 지금 무엇에 집중하면 좋을지 짧고 실용적인 조언을 2~3문장으로 해주세요.
+      너무 형식적이지 않고, 다정하면서도 구체적으로 다음 행동을 제안해 주세요.
+
+      [미완료 할 일 목록]
+      ${todoList || "(없음)"}
+
+      [최근 일정]
+      ${scheduleList || "(없음)"}
+
+      할 일과 일정이 모두 없다면, 꾸준한 학습 습관을 만들라는 긍정적인 메시지를 짧게 전해주세요.
+      순수한 텍스트로만 답변하고, 마크다운이나 따옴표로 감싸지 마세요.
+    `;
+
+    const report = await ai.generateContent({ prompt, temperature: 0.8 });
+    res.json({ report: report.trim() });
+  } catch (error: any) {
+    console.error("AI report error:", error);
+    const is429 = error.status === 429 || error.message?.includes("RESOURCE_EXHAUSTED_429");
+    res.status(is429 ? 429 : 500).json({
+      error: is429 ? "RESOURCE_EXHAUSTED_429" : (error.message || "AI 리포트를 생성하지 못했습니다.")
     });
   }
 });

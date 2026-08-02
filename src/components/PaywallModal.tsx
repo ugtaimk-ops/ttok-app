@@ -12,9 +12,7 @@ interface PaywallModalProps {
 
 const FEATURES = [
   { label: "월 AI 사용량", free: "50회", pro: "150회" },
-  { label: "발표 대본 생성", free: "O", pro: "O" },
-  { label: "AI 발표 분석", free: "O", pro: "O" },
-  { label: "학습 도우미(요약·퀴즈·질문)", free: "O", pro: "O" },
+  { label: "AI 추천 기능", free: "X", pro: "O" },
 ];
 
 function findPackage(offering: any, type: "MONTHLY" | "ANNUAL") {
