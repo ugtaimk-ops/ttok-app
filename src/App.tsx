@@ -521,8 +521,12 @@ export default function App() {
         
         {serviceMode === "tok" ? (
           <div className="w-full animate-fade-in">
-            {tokTab === "home" && (
-              <HomeScreen 
+            {/* All tabs stay mounted (hidden via CSS, not unmounted) so an
+                in-flight AI request and its result survive the user
+                switching tabs or backgrounding the app mid-request - see
+                usageService "increments but never shows a result" bug. */}
+            <div className={tokTab === "home" ? "" : "hidden"}>
+              <HomeScreen
                 user={user}
                 todos={todos}
                 schedules={schedules}
@@ -535,10 +539,10 @@ export default function App() {
                 onDeleteSchedule={handleDeleteSchedule}
                 onUpdateSchedule={handleUpdateSchedule}
               />
-            )}
+            </div>
 
-            {tokTab === "assessment" && (
-              <AssessmentScreen 
+            <div className={tokTab === "assessment" ? "" : "hidden"}>
+              <AssessmentScreen
                 schedules={schedules}
                 onAddSchedule={handleAddSchedule}
                 onAddTodo={handleAddTodo}
@@ -547,10 +551,10 @@ export default function App() {
                 darkMode={darkMode}
                 initialMode={assessmentMode}
               />
-            )}
+            </div>
 
-            {tokTab === "practice" && (
-              <PracticeScreen 
+            <div className={tokTab === "practice" ? "" : "hidden"}>
+              <PracticeScreen
                 user={user}
                 scripts={scripts}
                 onAddScript={handleAddScript}
@@ -561,10 +565,10 @@ export default function App() {
                 darkMode={darkMode}
                 initialSubTab={practiceSubTab}
               />
-            )}
+            </div>
 
-            {tokTab === "study" && (
-              <StudyScreen 
+            <div className={tokTab === "study" ? "" : "hidden"}>
+              <StudyScreen
                 schedules={schedules}
                 onAddSchedule={handleAddSchedule}
                 onDeleteSchedule={handleDeleteSchedule}
@@ -573,18 +577,18 @@ export default function App() {
                 initialSubTab={studySubTab}
                 initialHelperMode={studyHelperMode}
               />
-            )}
+            </div>
 
-            {tokTab === "profile" && (
-              <ProfileScreen 
+            <div className={tokTab === "profile" ? "" : "hidden"}>
+              <ProfileScreen
                 user={user}
                 onUpdateUser={handleUpdateUser}
                 darkMode={darkMode}
               />
-            )}
+            </div>
 
-            {tokTab === "settings" && (
-              <SettingsScreen 
+            <div className={tokTab === "settings" ? "" : "hidden"}>
+              <SettingsScreen
                 darkMode={darkMode}
                 onToggleDarkMode={handleToggleDarkMode}
                 onLogout={handleLogout}
@@ -595,7 +599,7 @@ export default function App() {
                 onToggleAutoDeleteExpired={handleToggleAutoDeleteExpired}
                 onSyncNotifications={() => syncAllNotifications(schedules)}
               />
-            )}
+            </div>
           </div>
         ) : (
           <div className="w-full animate-fade-in">

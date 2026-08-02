@@ -8,8 +8,8 @@ import {
   FileQuestion, 
   BookMarked, 
   HelpCircle, 
-  Upload, 
   Image as ImageIcon,
+  Camera as CameraIcon,
   CheckCircle, 
   Loader2, 
   AlertCircle,
@@ -23,6 +23,7 @@ import {
   Pencil
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import GlassSelect from "./GlassSelect";
 
 interface StudyScreenProps {
@@ -170,6 +171,22 @@ export default function StudyScreen({
       const rawBase64 = base64String.split(",")[1];
       setUploadedBase64(rawBase64);
     };
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const photo = await Camera.getPhoto({
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera,
+        quality: 80
+      });
+      if (!photo.base64String) return;
+      setUploadedFileName("camera_photo.jpg");
+      setUploadedMime(`image/${photo.format || "jpeg"}`);
+      setUploadedBase64(photo.base64String);
+    } catch (err) {
+      // User cancelled the camera or denied permission - nothing to do.
+    }
   };
 
   // Submit study action to backend Express API
@@ -515,21 +532,37 @@ export default function StudyScreen({
                 <form onSubmit={handleStudyAction} className="space-y-4">
                   <div className="text-left">
                     <span className="text-xs text-slate-500 font-bold block mb-1.5">교과서 사진 등록</span>
-                    <div 
-                      onClick={() => fileInputRef.current?.click()}
-                      className="p-4 border border-dashed border-slate-200 dark:border-slate-800 hover:border-brand rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-colors"
-                    >
-                      <input
-                        type="file"
-                        accept="image/*"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                      <Upload size={18} className="text-slate-400 mb-1" />
-                      <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
-                        {uploadedFileName ? `선택됨: ${uploadedFileName}` : "교과서/오답 프린트 스캔"}
-                      </span>
+                    {uploadedFileName && (
+                      <div className="mb-2 px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 truncate">
+                        선택됨: {uploadedFileName}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="p-4 border border-dashed border-slate-200 dark:border-slate-800 hover:border-brand rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={fileInputRef}
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                        <ImageIcon size={18} className="text-slate-400 mb-1" />
+                        <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+                          사진 선택
+                        </span>
+                      </div>
+                      <div
+                        onClick={handleTakePhoto}
+                        className="p-4 border border-dashed border-slate-200 dark:border-slate-800 hover:border-brand rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-colors"
+                      >
+                        <CameraIcon size={18} className="text-slate-400 mb-1" />
+                        <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+                          촬영
+                        </span>
+                      </div>
                     </div>
                   </div>
 
