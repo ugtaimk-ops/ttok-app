@@ -52,18 +52,20 @@ interface PracticeScreenProps {
   onAddPracticeLog: (log: Omit<PracticeLog, "id" | "date">) => void;
   darkMode: boolean;
   initialSubTab?: "script" | "practice";
+  isActive?: boolean;
 }
 
-export default function PracticeScreen({ 
+export default function PracticeScreen({
   user,
-  scripts, 
-  onAddScript, 
+  scripts,
+  onAddScript,
   onDeleteScript,
   onUpdateScript,
-  practiceLogs, 
-  onAddPracticeLog, 
+  practiceLogs,
+  onAddPracticeLog,
   darkMode,
-  initialSubTab
+  initialSubTab,
+  isActive = true
 }: PracticeScreenProps) {
   const [subTab, setSubTab] = useState<"script" | "practice">("script");
 
@@ -208,6 +210,18 @@ export default function PracticeScreen({
     };
   }, []);
 
+  // The screen now stays mounted (hidden) instead of unmounting when the
+  // user leaves this tab, so the camera/mic must be released explicitly
+  // here too - otherwise they'd stay held in the background indefinitely.
+  useEffect(() => {
+    if (!isActive) {
+      stopStreams();
+      if (timerRef.current) clearInterval(timerRef.current);
+      stopSpeechRecognition();
+      setIsRecording(false);
+    }
+  }, [isActive]);
+
   // Re-bind active camera stream to videoRef element when it mounts/remounts (fullscreen toggle)
   useEffect(() => {
     if (videoRef.current && mediaStreamRef.current) {
@@ -216,11 +230,12 @@ export default function PracticeScreen({
   }, [isRecording, hasPermission]);
 
   // Auto-restart camera preview when resetting the analysis result or returning to rehearsal dashboard
+  // (also fires when isActive flips back to true, since the tab-hidden effect above just released the stream)
   useEffect(() => {
-    if (subTab === "practice" && !analysisResult && !isRecording && !mediaStreamRef.current && hasPermission) {
+    if (isActive && subTab === "practice" && !analysisResult && !isRecording && !mediaStreamRef.current && hasPermission) {
       handleRequestPermissions();
     }
-  }, [subTab, analysisResult, isRecording]);
+  }, [isActive, subTab, analysisResult, isRecording]);
 
   const stopStreams = () => {
     if (mediaStreamRef.current) {

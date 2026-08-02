@@ -564,6 +564,7 @@ export default function App() {
                 onAddPracticeLog={handleAddPracticeLog}
                 darkMode={darkMode}
                 initialSubTab={practiceSubTab}
+                isActive={tokTab === "practice"}
               />
             </div>
 
