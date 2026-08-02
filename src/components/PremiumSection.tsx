@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Crown, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { UserProfile } from "../types";
 import { purchaseService } from "../services/purchaseService";
+import PaywallModal from "./PaywallModal";
 
 interface PremiumSectionProps {
   user: UserProfile;
@@ -14,8 +15,8 @@ const PREMIUM_LIMIT = 150;
 export default function PremiumSection({ user, darkMode }: PremiumSectionProps) {
   const [offering, setOffering] = useState<any>(null);
   const [isLoadingOffering, setIsLoadingOffering] = useState(false);
-  const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
 
@@ -30,33 +31,6 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
       .then(setOffering)
       .finally(() => setIsLoadingOffering(false));
   }, [isPremium]);
-
-  const handlePurchase = async () => {
-    const pkg = offering?.availablePackages?.[0];
-    if (!pkg) {
-      setMessage("현재 구매 가능한 상품이 없어요. 잠시 후 다시 시도해 주세요.");
-      setMessageIsError(true);
-      return;
-    }
-    setIsPurchasing(true);
-    setMessage(null);
-    try {
-      const customerInfo = await purchaseService.purchasePackage(pkg);
-      if (purchaseService.isEntitlementActive(customerInfo)) {
-        setMessage("구매가 완료됐어요! 반영까지 몇 초 정도 걸릴 수 있어요.");
-        setMessageIsError(false);
-      }
-    } catch (err: any) {
-      if (err?.userCancelled) {
-        // Silent - the user just closed the purchase dialog.
-      } else {
-        setMessage("구매 처리 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.");
-        setMessageIsError(true);
-      }
-    } finally {
-      setIsPurchasing(false);
-    }
-  };
 
   const handleRestore = async () => {
     setIsRestoring(true);
@@ -89,7 +63,7 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
       <div className="flex items-center justify-between text-fluid-sm font-semibold">
         <span className="text-slate-400">현재 플랜</span>
         <span className={`font-bold flex items-center gap-1.5 ${isPremium ? "text-amber-500" : "text-slate-800 dark:text-slate-200"}`}>
-          {isPremium && <Crown size={14} />} {isPremium ? "프리미엄" : "무료"}
+          {isPremium && <Crown size={14} />} {isPremium ? "똑 PRO" : "일반"}
         </span>
       </div>
 
@@ -106,14 +80,14 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
 
       {!isPremium && (
         <button
-          onClick={handlePurchase}
-          disabled={isPurchasing || isLoadingOffering}
+          onClick={() => setShowPaywall(true)}
+          disabled={isLoadingOffering}
           className={`w-full py-3.5 rounded-2xl flex items-center justify-center gap-1.5 text-fluid-sm font-black text-white transition-all cursor-pointer ${
-            isPurchasing || isLoadingOffering ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.01] active:scale-[0.99]"
+            isLoadingOffering ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.01] active:scale-[0.99]"
           } bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-amber-500/25`}
         >
-          {isPurchasing ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-          프리미엄 구독하기
+          <Sparkles size={16} />
+          똑 PRO 구독하기
         </button>
       )}
 
@@ -127,6 +101,18 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
         {isRestoring ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
         구매 내역 복원
       </button>
+
+      {showPaywall && (
+        <PaywallModal
+          offering={offering}
+          darkMode={darkMode}
+          onClose={() => setShowPaywall(false)}
+          onPurchaseComplete={(msg) => {
+            setMessage(msg);
+            setMessageIsError(false);
+          }}
+        />
+      )}
     </div>
   );
 }

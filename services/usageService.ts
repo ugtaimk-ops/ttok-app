@@ -90,7 +90,12 @@ export interface UsageCheckResult {
  */
 export async function checkAndConsumeUsage(uid: string | null): Promise<UsageCheckResult> {
   const app = getAdminApp();
-  if (!app || !uid) {
+  if (!app) {
+    console.warn("[UsageService] Skipping usage tracking: Admin SDK unavailable (see FIREBASE_SERVICE_ACCOUNT_KEY warning above).");
+    return { allowed: true, isPremium: false, limit: FREE_MONTHLY_LIMIT, used: 0 };
+  }
+  if (!uid) {
+    console.warn("[UsageService] Skipping usage tracking: caller has no valid uid (missing/invalid Authorization header, or ID token verification failed - see warning above if the latter).");
     return { allowed: true, isPremium: false, limit: FREE_MONTHLY_LIMIT, used: 0 };
   }
 
@@ -101,7 +106,7 @@ export async function checkAndConsumeUsage(uid: string | null): Promise<UsageChe
     const userRef = db.collection("users").doc(uid);
     const month = currentMonthKey();
 
-    return await db.runTransaction(async (tx: any) => {
+    const result = await db.runTransaction(async (tx: any) => {
       const snap = await tx.get(userRef);
       const data = snap.exists ? snap.data() || {} : {};
 
@@ -124,8 +129,10 @@ export async function checkAndConsumeUsage(uid: string | null): Promise<UsageChe
 
       return { allowed: true, isPremium, limit, used: currentCount + 1 };
     });
+    console.log(`[UsageService] uid=${uid} usage now ${result.used}/${result.limit} (premium=${result.isPremium}, allowed=${result.allowed})`);
+    return result;
   } catch (err) {
-    console.error("[UsageService] Usage check failed, allowing request through unmetered:", err);
+    console.error(`[UsageService] Usage check failed for uid=${uid}, allowing request through unmetered:`, err);
     return { allowed: true, isPremium: false, limit: FREE_MONTHLY_LIMIT, used: 0 };
   }
 }
