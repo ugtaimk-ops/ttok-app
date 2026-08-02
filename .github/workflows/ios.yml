@@ -27,6 +27,7 @@ jobs:
         run: npx vite build
         env:
           APP_URL: ${{ vars.APP_URL }}
+          REVENUECAT_API_KEY_ANDROID: ${{ vars.REVENUECAT_API_KEY_ANDROID }}
           APP_SHARED_SECRET: ${{ secrets.APP_SHARED_SECRET }}
 
       - name: Add iOS platform (if missing)

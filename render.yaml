@@ -22,3 +22,7 @@ services:
         sync: false
       - key: FIREBASE_SERVICE_ACCOUNT_KEY
         sync: false
+      - key: REVENUECAT_WEBHOOK_SECRET
+        sync: false
+      - key: REVENUECAT_SECRET_API_KEY
+        sync: false

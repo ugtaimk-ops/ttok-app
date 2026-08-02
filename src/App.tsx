@@ -14,6 +14,7 @@ import { getTodayDateString } from "./lib/api";
 import { auth, onAuthStateChanged } from "./lib/firebase";
 import { authService } from "./services/authService";
 import { dataSyncService } from "./services/dataSyncService";
+import { purchaseService } from "./services/purchaseService";
 
 // Screens imports
 import HomeScreen from "./components/HomeScreen";
@@ -182,6 +183,12 @@ export default function App() {
   useEffect(() => { todosRef.current = todos; }, [todos]);
   useEffect(() => { scriptsRef.current = scripts; }, [scripts]);
   useEffect(() => { practiceLogsRef.current = practiceLogs; }, [practiceLogs]);
+
+  // Identifies this user to RevenueCat as app_user_id, so a purchase maps
+  // back to the right users/{uid} doc when the subscription webhook fires.
+  useEffect(() => {
+    if (authUser?.uid) purchaseService.configure(authUser.uid);
+  }, [authUser?.uid]);
 
   // Cloud sync: once signed in, upload any local-only data (first login on this
   // device only - skipped if the cloud side already has data), then keep local

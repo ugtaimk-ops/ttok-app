@@ -16,6 +16,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { UserProfile } from "../types";
 import GlassSelect, { HOUR_OPTIONS, MINUTE_OPTIONS } from "./GlassSelect";
+import PremiumSection from "./PremiumSection";
 
 interface SettingsScreenProps {
   darkMode: boolean;
@@ -271,6 +272,9 @@ export default function SettingsScreen({
             </button>
           </div>
         </div>
+
+        {/* 2.5. PREMIUM / SUBSCRIPTION */}
+        <PremiumSection user={user} darkMode={darkMode} />
 
         {/* 3. PLATFORM & SECURITY */}
         <div className={`p-5 sm:p-6 rounded-[24px] sm:rounded-[32px] border ${

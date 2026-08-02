@@ -19,6 +19,7 @@
     "@capacitor/local-notifications": "^8.2.1",
     "@capgo/capacitor-speech-recognition": "^8.1.10",
     "@google/genai": "^2.4.0",
+    "@revenuecat/purchases-capacitor": "^13.3.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",

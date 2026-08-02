@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import { getAIService, parseJSONResponse } from "./services/ai";
 import { verifyRequestUser, checkAndConsumeUsage } from "./services/usageService";
+import { verifyWebhookAuth, handleWebhookEvent } from "./services/revenueCatService";
 
 dotenv.config();
 
@@ -792,6 +793,26 @@ app.post("/api/study/action", async (req, res) => {
     res.status(is429 ? 429 : 500).json({ 
       error: is429 ? "RESOURCE_EXHAUSTED_429" : (error.message || "공부 도우미 처리 중 오류가 발생했습니다.")
     });
+  }
+});
+
+// RevenueCat subscription webhook - flips isPremium in Firestore when a
+// purchase/renewal/cancellation/expiration happens. Not gated behind the
+// X-App-Secret/apiLimiter middleware above (those only apply to /api/* paths
+// this app's own client calls) since RevenueCat's servers call this
+// directly; instead it's authenticated via its own shared secret header,
+// configured in the RevenueCat dashboard (Project Settings > Webhooks).
+app.post("/revenuecat/webhook", async (req, res) => {
+  if (!verifyWebhookAuth(req.header("authorization"))) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  try {
+    await handleWebhookEvent(req.body);
+    res.status(200).json({ received: true });
+  } catch (err) {
+    console.error("[RevenueCat] Webhook handling failed:", err);
+    // Still 200 so RevenueCat doesn't endlessly retry a permanently-failing event.
+    res.status(200).json({ received: true, error: true });
   }
 });
 
