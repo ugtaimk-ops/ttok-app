@@ -12,13 +12,20 @@ const clientCache = new Map<string, GoogleGenAI>();
 function getApiKeys(): string[] {
   if (cachedApiKeys) return cachedApiKeys;
 
-  // GEMINI_API_KEYS (plural) holds a comma-separated list of keys to rotate
-  // through when one runs out of quota - e.g. several free-tier keys from
-  // different Google accounts. Falls back to the single GEMINI_API_KEY for
-  // backward compatibility.
+  // GEMINI_API_KEYS (plural) holds a list of keys to rotate through when one
+  // runs out of quota - e.g. several free-tier keys from different Google
+  // accounts. Splits on commas, newlines, or any run of whitespace, since
+  // it's easy to paste keys one-per-line into a dashboard's env var editor
+  // instead of comma-separating them. Falls back to the single
+  // GEMINI_API_KEY for backward compatibility.
   const multi = process.env.GEMINI_API_KEYS;
   if (multi && multi.trim()) {
-    cachedApiKeys = multi.split(",").map((k) => k.trim()).filter(Boolean);
+    cachedApiKeys = multi.split(/[,\s]+/).map((k) => k.trim()).filter(Boolean);
+    const malformed = cachedApiKeys.filter((k) => !/^AIza[A-Za-z0-9_-]{10,}$/.test(k));
+    console.log(`[Gemini] Parsed ${cachedApiKeys.length} key(s) from GEMINI_API_KEYS.`);
+    if (malformed.length > 0) {
+      console.warn(`[Gemini] ${malformed.length} parsed key(s) don't look like a valid Gemini API key format (expected to start with "AIza"). Check GEMINI_API_KEYS for stray characters or a bad separator.`);
+    }
   } else if (process.env.GEMINI_API_KEY) {
     cachedApiKeys = [process.env.GEMINI_API_KEY];
   } else {
