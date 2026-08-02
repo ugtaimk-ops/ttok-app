@@ -31,7 +31,7 @@ jobs:
         run: npm run build
         env:
           APP_URL: ${{ vars.APP_URL }}
-          APP_SHARED_SECRET: ${{ vars.APP_SHARED_SECRET }}
+          APP_SHARED_SECRET: ${{ secrets.APP_SHARED_SECRET }}
 
       - name: Sync Capacitor Android
         run: |

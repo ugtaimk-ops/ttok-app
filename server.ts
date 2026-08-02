@@ -338,14 +338,14 @@ app.get("/api/meal/info", async (req, res) => {
 
     // Parallel fetch: We fetch the main SFIC page in the background to verify portal status,
     // and query the official NEIS database to retrieve structured real meal dataset (Calories, Origin, Allergies, Nutrition)
-    let url = `https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json&pIndex=1&pSize=100&ATPT_OFCDC_SC_CODE=${officeCode}&SD_SCHUL_CODE=${schoolCode}`;
+    let url = `https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json&pIndex=1&pSize=100&ATPT_OFCDC_SC_CODE=${encodeURIComponent(String(officeCode))}&SD_SCHUL_CODE=${encodeURIComponent(String(schoolCode))}`;
     if (process.env.NEIS_API_KEY) {
-      url += `&KEY=${process.env.NEIS_API_KEY}`;
+      url += `&KEY=${encodeURIComponent(process.env.NEIS_API_KEY)}`;
     }
     if (startDate && endDate) {
-      url += `&MLSV_FROM_YMD=${startDate}&MLSV_TO_YMD=${endDate}`;
+      url += `&MLSV_FROM_YMD=${encodeURIComponent(String(startDate))}&MLSV_TO_YMD=${encodeURIComponent(String(endDate))}`;
     } else if (date) {
-      url += `&MLSV_YMD=${date}`;
+      url += `&MLSV_YMD=${encodeURIComponent(String(date))}`;
     } else {
       return res.status(400).json({ error: "Either date or startDate/endDate is required" });
     }
