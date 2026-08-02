@@ -45,6 +45,30 @@ function isQuotaError(error: any): boolean {
   );
 }
 
+// A key that's invalid, disabled, or unauthorized fails the exact same way on
+// every model - no point cycling through the rest of modelsToTry with it. This
+// is also what should trigger rotating to the NEXT key, same as quota
+// exhaustion, since a single bad key at the front of GEMINI_API_KEYS
+// shouldn't block otherwise-working keys later in the list.
+function isKeyError(error: any): boolean {
+  const errorMsg = String(error?.message || error);
+  return (
+    errorMsg.includes("401") ||
+    errorMsg.includes("403") ||
+    errorMsg.includes("UNAUTHENTICATED") ||
+    errorMsg.includes("PERMISSION_DENIED") ||
+    errorMsg.includes("API_KEY_INVALID") ||
+    error?.status === 401 ||
+    error?.status === 403 ||
+    error?.statusCode === 401 ||
+    error?.statusCode === 403
+  );
+}
+
+function shouldTryNextKey(error: any): boolean {
+  return isQuotaError(error) || isKeyError(error);
+}
+
 export class GeminiProvider implements AIService {
   private getClient(apiKey: string): GoogleGenAI {
     let client = clientCache.get(apiKey);
@@ -103,9 +127,9 @@ export class GeminiProvider implements AIService {
   }
 
   // Tries each candidate model in order, using the given API key. Throws a
-  // tagged RESOURCE_EXHAUSTED_429 error immediately on quota errors (instead
-  // of wasting time on remaining models under the same exhausted key), and
-  // lets the caller decide whether to rotate to the next key.
+  // tagged KEY_UNUSABLE error immediately on quota/auth errors (instead of
+  // wasting time on remaining models under the same bad key), and lets the
+  // caller decide whether to rotate to the next key.
   private async generateWithKey(
     apiKey: string,
     modelsToTry: string[],
@@ -134,12 +158,13 @@ export class GeminiProvider implements AIService {
         console.warn(`Gemini generation with ${modelName} failed:`, error.message || error);
         lastError = error;
 
-        if (isQuotaError(error)) {
-          console.error(`[BACKEND] Detected 429 Quota Exceeded error with ${modelName}. Stopping model fallback for this key.`);
-          const quotaError = new Error("RESOURCE_EXHAUSTED_429");
-          (quotaError as any).status = 429;
-          (quotaError as any).originalMessage = error.message || String(error);
-          throw quotaError;
+        if (shouldTryNextKey(error)) {
+          const reason = isQuotaError(error) ? "quota exceeded" : "auth/key error";
+          console.error(`[BACKEND] Detected ${reason} with ${modelName}. Stopping model fallback for this key.`);
+          const keyError = new Error("KEY_UNUSABLE");
+          (keyError as any).status = error?.status || (isQuotaError(error) ? 429 : 401);
+          (keyError as any).originalMessage = error.message || String(error);
+          throw keyError;
         }
       }
     }
@@ -208,9 +233,11 @@ export class GeminiProvider implements AIService {
     let lastError: any = null;
 
     // Start from whichever key last worked, and rotate forward through the
-    // rest of the list on quota exhaustion. Only a genuine quota error moves
-    // to the next key - any other error (bad prompt, network blip) fails
-    // immediately instead of burning through every key pointlessly.
+    // rest of the list on quota exhaustion OR an auth/invalid-key error - a
+    // single bad key at the front of GEMINI_API_KEYS must not block otherwise
+    // valid keys later in the list. Any other error (bad prompt, network
+    // blip) fails immediately instead of burning through every key
+    // pointlessly, since those would fail identically for every key.
     for (let attempt = 0; attempt < apiKeys.length; attempt++) {
       const keyIndex = (currentKeyIndex + attempt) % apiKeys.length;
       const apiKey = apiKeys[keyIndex];
@@ -221,8 +248,9 @@ export class GeminiProvider implements AIService {
         return result;
       } catch (error: any) {
         lastError = error;
-        if (isQuotaError(error) && apiKeys.length > 1) {
-          console.error(`[BACKEND] API key #${keyIndex + 1}/${apiKeys.length} exhausted, rotating to the next key.`);
+        if (shouldTryNextKey(error) && apiKeys.length > 1) {
+          const reason = isQuotaError(error) ? "exhausted" : "unusable (auth/key error)";
+          console.error(`[BACKEND] API key #${keyIndex + 1}/${apiKeys.length} ${reason}, rotating to the next key.`);
           continue;
         }
         throw error;
