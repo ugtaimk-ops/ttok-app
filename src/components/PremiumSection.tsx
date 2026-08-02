@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Crown, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { Crown, Loader2, RefreshCw, Sparkles, Settings2 } from "lucide-react";
 import { UserProfile } from "../types";
 import { purchaseService } from "../services/purchaseService";
 import PaywallModal from "./PaywallModal";
@@ -16,6 +16,7 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
   const [offering, setOffering] = useState<any>(null);
   const [isLoadingOffering, setIsLoadingOffering] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isOpeningManage, setIsOpeningManage] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
@@ -31,6 +32,15 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
       .then(setOffering)
       .finally(() => setIsLoadingOffering(false));
   }, [isPremium]);
+
+  const handleManageSubscription = async () => {
+    setIsOpeningManage(true);
+    try {
+      await purchaseService.openManageSubscription();
+    } finally {
+      setIsOpeningManage(false);
+    }
+  };
 
   const handleRestore = async () => {
     setIsRestoring(true);
@@ -78,7 +88,7 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
         </p>
       )}
 
-      {!isPremium && (
+      {!isPremium ? (
         <button
           onClick={() => setShowPaywall(true)}
           disabled={isLoadingOffering}
@@ -88,6 +98,17 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
         >
           <Sparkles size={16} />
           똑 PRO 구독하기
+        </button>
+      ) : (
+        <button
+          onClick={handleManageSubscription}
+          disabled={isOpeningManage}
+          className={`w-full py-3.5 rounded-2xl flex items-center justify-center gap-1.5 text-fluid-sm font-black transition-all cursor-pointer border-2 ${
+            isOpeningManage ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.01] active:scale-[0.99]"
+          } ${darkMode ? "border-slate-700 text-slate-200" : "border-slate-200 text-slate-700"}`}
+        >
+          {isOpeningManage ? <Loader2 size={16} className="animate-spin" /> : <Settings2 size={16} />}
+          구독 관리 / 해지
         </button>
       )}
 

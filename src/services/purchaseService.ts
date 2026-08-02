@@ -1,7 +1,12 @@
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import type { PurchasesOffering, CustomerInfo } from "@revenuecat/purchases-capacitor";
+import { Browser } from "@capacitor/browser";
 
-const ENTITLEMENT_ID = "premium";
+const ENTITLEMENT_ID = "똑 Pro";
+// Fallback if RevenueCat doesn't hand back a subscription-specific
+// managementURL (e.g. before a real purchase has ever gone through) - takes
+// the user to their general Play Store subscriptions list instead.
+const PLAY_STORE_SUBSCRIPTIONS_URL = "https://play.google.com/store/account/subscriptions?package=com.ttok.schoolmate";
 
 let configuredForUid: string | null = null;
 
@@ -56,5 +61,21 @@ export const purchaseService = {
    */
   isEntitlementActive(customerInfo: CustomerInfo): boolean {
     return !!customerInfo.entitlements.active[ENTITLEMENT_ID];
+  },
+
+  /**
+   * Opens Google Play's native subscription management page, where the user
+   * can cancel or change their plan - Play Billing policy requires directing
+   * users there rather than implementing custom cancel/refund flows in-app.
+   */
+  async openManageSubscription(): Promise<void> {
+    let url = PLAY_STORE_SUBSCRIPTIONS_URL;
+    try {
+      const { customerInfo } = await Purchases.getCustomerInfo();
+      if (customerInfo.managementURL) url = customerInfo.managementURL;
+    } catch (err) {
+      console.warn("[purchaseService] Failed to fetch managementURL, falling back to generic subscriptions page:", err);
+    }
+    await Browser.open({ url });
   }
 };

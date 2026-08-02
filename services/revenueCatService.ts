@@ -4,7 +4,7 @@
 // type alone, which is easy to get subtly wrong across renewals/
 // cancellations/grace periods/refunds) and writes isPremium accordingly.
 
-const ENTITLEMENT_ID = "premium";
+const ENTITLEMENT_ID = "똑 Pro";
 const FIRESTORE_DATABASE_ID = "ai-studio-22fbd27c-5516-4028-bd17-a6d4ba99710b";
 
 export function verifyWebhookAuth(authHeader: string | undefined): boolean {
@@ -33,8 +33,18 @@ async function fetchIsEntitlementActive(appUserId: string): Promise<boolean | nu
   }
 
   const data = await res.json();
-  const entitlement = data?.subscriber?.entitlements?.[ENTITLEMENT_ID];
-  if (!entitlement) return false;
+  const allEntitlements = data?.subscriber?.entitlements ?? {};
+  const entitlement = allEntitlements[ENTITLEMENT_ID];
+  if (!entitlement) {
+    console.warn(
+      `[RevenueCat] Subscriber ${appUserId} has no "${ENTITLEMENT_ID}" entitlement. ` +
+      `Entitlements present: [${Object.keys(allEntitlements).join(", ") || "none"}]. ` +
+      `If the purchase went through but this list is empty or has a different name, ` +
+      `the RevenueCat dashboard's Entitlement isn't set up/attached to the product yet, ` +
+      `or ENTITLEMENT_ID here doesn't match its identifier.`
+    );
+    return false;
+  }
 
   // No expires_date means a non-expiring (lifetime) entitlement - active.
   if (!entitlement.expires_date) return true;
@@ -71,6 +81,7 @@ async function setIsPremium(uid: string, isPremium: boolean): Promise<void> {
 export async function handleWebhookEvent(body: any): Promise<void> {
   const appUserId: string | undefined = body?.event?.app_user_id;
   const eventType: string | undefined = body?.event?.type;
+  console.log(`[RevenueCat] Webhook event received: type=${eventType} app_user_id=${appUserId}`);
   if (!appUserId) {
     console.warn("[RevenueCat] Webhook event missing app_user_id, ignoring:", eventType);
     return;

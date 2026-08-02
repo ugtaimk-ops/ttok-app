@@ -426,7 +426,7 @@ export default function SettingsScreen({
                   </div>
                   <div>
                     <h3 className="text-base font-black tracking-tight-sf">똑(TTOK) 서비스 이용약관</h3>
-                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">최종 개정일: 2026년 6월 27일</p>
+                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">최종 개정일: 2026년 8월 2일</p>
                   </div>
                 </div>
                 <button
@@ -495,7 +495,33 @@ export default function SettingsScreen({
                 </div>
 
                 <div>
-                  <p className="font-extrabold text-slate-800 dark:text-slate-100 text-sm mb-1">제 6 조 (준거법 및 관할법원)</p>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-100 text-sm mb-1">제 6 조 (똑 PRO 유료 구독 및 결제)</p>
+                  <div className="space-y-2">
+                    <p>
+                      1. 똑(TTOK)은 무료로 제공되는 기본 서비스 외에, 유료 구독 상품인 <strong className="text-brand font-bold">"똑 PRO"</strong>를 제공합니다. 똑 PRO 구독 시 월간 AI 기능 이용 횟수가 확대되며, AI 추천 리포트 등 PRO 전용 기능을 이용할 수 있습니다.
+                    </p>
+                    <p>
+                      2. 구독 상품 및 가격은 다음과 같습니다. (부가세 포함, Google Play 정책에 따라 변경될 수 있습니다)<br />
+                      • 월간 구독: 2,900원 / 월<br />
+                      • 연간 구독: 29,000원 / 년
+                    </p>
+                    <p>
+                      3. 결제는 <strong>Google Play 인앱 결제 시스템</strong>을 통해서만 이루어지며, 똑(TTOK)은 결제 정보를 직접 수집하거나 저장하지 않습니다.
+                    </p>
+                    <p>
+                      4. 구독은 별도로 해지하지 않는 한 각 결제 주기(월간/연간)가 끝날 때 자동으로 갱신되며, 자동 갱신 전 Google Play를 통해 이용자에게 사전 고지됩니다.
+                    </p>
+                    <p>
+                      5. 구독 해지는 앱 내 설정 화면의 <strong>"구독 관리 / 해지"</strong> 메뉴 또는 Google Play 스토어의 구독 관리 화면에서 언제든지 직접 진행할 수 있습니다. 해지 시에도 이미 결제된 기간 동안은 계속 PRO 혜택을 이용할 수 있습니다.
+                    </p>
+                    <p>
+                      6. 결제 취소 및 환불은 <strong>Google Play의 환불 정책 및 절차</strong>를 따르며, 똑(TTOK)이 자체적으로 환불을 처리하지 않습니다. 환불 요청은 Google Play 고객센터를 통해 진행해 주시기 바랍니다.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-100 text-sm mb-1">제 7 조 (준거법 및 관할법원)</p>
                   <p>
                     본 약관의 해석 및 이용자와 똑(TTOK) 서비스 간의 분쟁이 발생할 경우 대한민국 관계 법령을 준거법으로 하며, 법이 정한 관할 법원을 통하여 원만하고 합리적인 해결을 도모합니다.
                   </p>
