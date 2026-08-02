@@ -18,7 +18,19 @@ service cloud.firestore {
 
     // Rules for Users collection and subcollections
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      // isPremium/aiUsageCount/aiUsageMonth are server-managed (services/usageService.ts,
+      // via the Admin SDK which bypasses these rules) - the client must never be able to
+      // set them itself, or anyone could grant themselves premium for free.
+      function touchesServerManagedFields() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['isPremium', 'aiUsageCount', 'aiUsageMonth']);
+      }
+
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && !request.resource.data.keys().hasAny(['isPremium', 'aiUsageCount', 'aiUsageMonth']);
+      allow update: if isOwner(userId) && !touchesServerManagedFields();
+      allow delete: if isOwner(userId);
 
       match /schedules/{scheduleId} {
         allow read, write: if isOwner(userId);
