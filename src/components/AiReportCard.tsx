@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Crown, Sparkles, RefreshCw, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import { TodoItem, ScheduleItem } from "../types";
-import { robustFetch } from "../lib/api";
+import { robustFetch, getTodayDateString } from "../lib/api";
 
 interface AiReportCardProps {
   todos: TodoItem[];
@@ -10,8 +10,24 @@ interface AiReportCardProps {
   darkMode: boolean;
 }
 
+const CACHE_KEY = "ttok_ai_report_cache";
+
+// The report stays as-is for the rest of the day once generated (rather
+// than needing to be regenerated on every visit) - the refresh icon next
+// to the title lets the user regenerate it on demand at any time.
+function readCachedReport(): string | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    return cached.date === getTodayDateString() ? cached.report : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function AiReportCard({ todos, schedules, darkMode }: AiReportCardProps) {
-  const [report, setReport] = useState<string | null>(null);
+  const [report, setReport] = useState<string | null>(readCachedReport);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +46,9 @@ export default function AiReportCard({ todos, schedules, darkMode }: AiReportCar
       }
       const data = await res.json();
       setReport(data.report);
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ date: getTodayDateString(), report: data.report }));
+      } catch {}
     } catch (err: any) {
       setError(err.message || "AI 리포트를 생성하지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
