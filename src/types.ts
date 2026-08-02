@@ -13,6 +13,11 @@ export interface UserProfile {
   displayName?: string;
   email?: string;
   photoURL?: string;
+  // Server-managed (services/usageService.ts) - the client never writes these,
+  // only reads them for display. Absent until the first AI call of a given month.
+  isPremium?: boolean;
+  aiUsageCount?: number;
+  aiUsageMonth?: string;
 }
 
 export type TodoCategory = "homework" | "general" | "exam" | "assessment";

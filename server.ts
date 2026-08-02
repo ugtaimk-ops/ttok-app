@@ -5,6 +5,7 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import { getAIService, parseJSONResponse } from "./services/ai";
+import { verifyRequestUser, checkAndConsumeUsage } from "./services/usageService";
 
 dotenv.config();
 
@@ -66,7 +67,37 @@ const aiLimiter = rateLimit({
 });
 
 app.use("/api/", apiLimiter);
-app.use(["/api/script/generate", "/api/practice/analyze", "/api/assessment/extract", "/api/study/action"], aiLimiter);
+
+const AI_ROUTES = ["/api/script/generate", "/api/practice/analyze", "/api/assessment/extract", "/api/study/action"];
+app.use(AI_ROUTES, aiLimiter);
+
+// Free/premium monthly AI usage cap, tracked per signed-in user in Firestore
+// (see services/usageService.ts). Identifies the caller from the Firebase ID
+// token the client sends on Authorization: Bearer <token>. If that token is
+// missing/invalid or FIREBASE_SERVICE_ACCOUNT_KEY isn't configured on this
+// deployment yet, requests are allowed through unmetered rather than locking
+// everyone out - this is a usage cap for cost control, not an auth gate.
+app.use(AI_ROUTES, async (req, res, next) => {
+  try {
+    const uid = await verifyRequestUser(req);
+    const result = await checkAndConsumeUsage(uid);
+    if (!result.allowed) {
+      return res.status(403).json({
+        error: result.isPremium
+          ? "이번 달 이용 횟수를 모두 사용했어요. 다음 달에 다시 이용해 주세요."
+          : "이번 달 무료 이용 횟수를 모두 사용했어요. 프리미엄으로 업그레이드하면 훨씬 더 많이 이용할 수 있어요.",
+        code: "MONTHLY_LIMIT_EXCEEDED",
+        limit: result.limit,
+        used: result.used,
+        isPremium: result.isPremium
+      });
+    }
+    next();
+  } catch (err) {
+    console.error("[UsageLimit] Check failed, allowing request through:", err);
+    next();
+  }
+});
 
 // ==========================================
 // API ENDPOINTS

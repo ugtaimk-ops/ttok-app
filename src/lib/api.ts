@@ -4,6 +4,8 @@
  * We resolve them to the hosted HTTPS server.
  */
 
+import { auth } from "./firebase";
+
 export function getTodayDateString(): string {
   const d = new Date();
   const year = d.getFullYear();
@@ -122,11 +124,15 @@ export async function robustFetch(path: string, options?: RequestInit): Promise<
         console.log(`[ANDROID_LOGCAT_API] [REQUEST_DETAILS] Method: ${options?.method || 'GET'}, Headers: ${JSON.stringify(options?.headers || {})}`);
 
         const appSecret = (import.meta as any).env?.VITE_APP_SHARED_SECRET;
+        // Identifies the caller for the server's per-user AI usage cap. Harmless to
+        // attach on every request - the server only checks it on the AI endpoints.
+        const idToken = await auth.currentUser?.getIdToken().catch(() => undefined);
         const fetchOptions: RequestInit = {
           ...options,
           headers: {
             ...(options?.headers || {}),
             ...(appSecret ? { "X-App-Secret": appSecret } : {}),
+            ...(idToken ? { "Authorization": `Bearer ${idToken}` } : {}),
           },
           signal: controller.signal
         };
