@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>계정 및 데이터 삭제 요청</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #e74c3c;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #e74c3c;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #c0392b;
+        }
+        .success {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            display: none;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #3498db;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>계정 및 데이터 삭제 요청</h1>
+
+    <div class="warning">
+        <strong>⚠️ 중요 안내</strong><br>
+        계정 삭제 요청은 되돌릴 수 없습니다. 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
+    </div>
+
+    <h2>삭제될 데이터 항목</h2>
+    <p>계정 삭제 시 다음 데이터가 영구적으로 삭제됩니다:</p>
+    <ul>
+        <li>계정 정보 (이메일, 사용자명)</li>
+        <li>학적 정보 (학교명, 학년, 반 등)</li>
+        <li>학습 목표 및 공부 계획 정보</li>
+        <li>수행평가 계획 및 스케줄링 데이터</li>
+        <li>시험 카운트다운 정보</li>
+        <li>AI 스크립트 작성 기록</li>
+        <li>발표 연습 및 피드백 기록</li>
+        <li>사용자 설정 및 환경 설정</li>
+        <li>모든 활동 기록</li>
+    </ul>
+
+    <h2>삭제 요청 양식</h2>
+    <p>계정 삭제를 요청하려면 아래 양식을 작성해 주세요:</p>
+
+    <form id="deletionForm">
+        <div class="form-group">
+            <label for="email">이메일 주소 *</label>
+            <input type="email" id="email" name="email" required placeholder="계정에 연결된 이메일 주소">
+        </div>
+
+        <div class="form-group">
+            <label for="username">사용자명 *</label>
+            <input type="text" id="username" name="username" required placeholder="앱 내 사용자명">
+        </div>
+
+        <div class="form-group">
+            <label for="reason">삭제 사유 (선택)</label>
+            <textarea id="reason" name="reason" rows="4" placeholder="삭제를 요청하는 이유를 알려주세요 (선택사항)"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="confirmation" required>
+                위 내용을 이해했으며, 계정 삭제 요청을 진행하는 것에 동의합니다.
+            </label>
+        </div>
+
+        <button type="submit">삭제 요청 제출</button>
+    </form>
+
+    <div class="success" id="successMessage">
+        <strong>✅ 삭제 요청이 접수되었습니다.</strong><br>
+        요청은 7일 이내에 처리됩니다. 처리 완료 시 이메일로 알려드립니다.
+    </div>
+
+    <a href="privacy-policy.html" class="back-link">← 개인정보처리방침으로 돌아가기</a>
+
+    <script>
+        document.getElementById('deletionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 실제 구현에서는 서버로 데이터를 전송해야 합니다
+            // 현재는 데모를 위해 메일to 링크를 생성합니다
+            const email = document.getElementById('email').value;
+            const username = document.getElementById('username').value;
+            const reason = document.getElementById('reason').value;
+            
+            const subject = encodeURIComponent('계정 및 데이터 삭제 요청');
+            const body = encodeURIComponent(
+                `이메일: ${email}\n` +
+                `사용자명: ${username}\n` +
+                `삭제 사유: ${reason}\n\n` +
+                `계정 및 관련 데이터의 삭제를 요청합니다.`
+            );
+            
+            // 실제 이메일 주소로 변경 필요
+            window.location.href = `mailto:your-email@example.com?subject=${subject}&body=${body}`;
+            
+            // 성공 메시지 표시
+            document.getElementById('successMessage').style.display = 'block';
+            document.getElementById('deletionForm').style.display = 'none';
+        });
+    </script>
+</body>
+</html>
