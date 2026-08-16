@@ -58,6 +58,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "725925538766-6hk4ofjprbdoldvm9lvedhiigfoq89m4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ttokapp.app",
+            "certificate_hash": "e8efd6baa03da338b1cd1ca720a9aae6f02854f6"
+          }
+        },
+        {
+          "client_id": "725925538766-b7j0r51dm84o080rmskv5jin8i2forl5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ttokapp.app",
+            "certificate_hash": "7bd89f39d6d442193a238bd97c3f80d128d9c450"
+          }
+        },
+        {
           "client_id": "725925538766-pq252c15et29al0q7q1l4pp4ss3u6dk8.apps.googleusercontent.com",
           "client_type": 3
         }
