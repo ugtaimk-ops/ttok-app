@@ -48,6 +48,42 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:725925538766:android:a8e0b07f687f832ea8d99f",
+        "android_client_info": {
+          "package_name": "com.ttokapp.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "725925538766-pq252c15et29al0q7q1l4pp4ss3u6dk8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAOhYK2JYZ1ozUM8qupuh6ByVSt7Ta_AmY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "725925538766-pq252c15et29al0q7q1l4pp4ss3u6dk8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "725925538766-v4tfkg3hod8gunarvkeclfhmpu6p8715.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ttok.schoolmate"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"
