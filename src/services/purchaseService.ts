@@ -7,7 +7,7 @@ const ENTITLEMENT_ID = "똑 Pro";
 // Fallback if RevenueCat doesn't hand back a subscription-specific
 // managementURL (e.g. before a real purchase has ever gone through) - takes
 // the user to their general Play Store subscriptions list instead.
-const PLAY_STORE_SUBSCRIPTIONS_URL = "https://play.google.com/store/account/subscriptions?package=com.ttok.schoolmate";
+const PLAY_STORE_SUBSCRIPTIONS_URL = "https://play.google.com/store/account/subscriptions?package=com.ttokapp.app";
 
 let configuredForUid: string | null = null;
 

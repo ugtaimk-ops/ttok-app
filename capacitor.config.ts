@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.ttok.schoolmate',
+  appId: 'com.ttokapp.app',
   appName: '똑',
   webDir: 'dist',
   server: {

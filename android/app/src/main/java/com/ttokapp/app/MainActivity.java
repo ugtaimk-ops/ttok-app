@@ -1,4 +1,4 @@
-package com.ttok.schoolmate;
+package com.ttokapp.app;
 
 import com.getcapacitor.BridgeActivity;
 
