@@ -13,6 +13,7 @@ export default defineConfig(() => {
       // ship inside the app (it can only initiate purchases/read entitlements for the
       // configured app_user_id, not access account-wide secrets).
       'import.meta.env.VITE_REVENUECAT_API_KEY_ANDROID': JSON.stringify(process.env.REVENUECAT_API_KEY_ANDROID || 'test_hbymLKCPywOoVKMDsPqkqvymckS'),
+      'import.meta.env.VITE_REVENUECAT_API_KEY_IOS': JSON.stringify(process.env.REVENUECAT_API_KEY_IOS || ''),
     },
     resolve: {
       alias: {

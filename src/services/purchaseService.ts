@@ -1,6 +1,7 @@
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import type { PurchasesOffering, CustomerInfo } from "@revenuecat/purchases-capacitor";
 import { Browser } from "@capacitor/browser";
+import { Capacitor } from "@capacitor/core";
 
 const ENTITLEMENT_ID = "똑 Pro";
 // Fallback if RevenueCat doesn't hand back a subscription-specific
@@ -19,9 +20,14 @@ export const purchaseService = {
    */
   async configure(uid: string): Promise<void> {
     if (configuredForUid === uid) return;
-    const apiKey = (import.meta as any).env?.VITE_REVENUECAT_API_KEY_ANDROID;
+    // RevenueCat ties each public API key to one platform (Apple App Store vs
+    // Google Play) - using the Android key on iOS (or vice versa) fails with
+    // an "invalid API key" error from the SDK.
+    const env = (import.meta as any).env;
+    const isIOS = Capacitor.getPlatform() === "ios";
+    const apiKey = isIOS ? env?.VITE_REVENUECAT_API_KEY_IOS : env?.VITE_REVENUECAT_API_KEY_ANDROID;
     if (!apiKey) {
-      console.warn("[purchaseService] VITE_REVENUECAT_API_KEY_ANDROID is not set, skipping configure.");
+      console.warn(`[purchaseService] VITE_REVENUECAT_API_KEY_${isIOS ? "IOS" : "ANDROID"} is not set, skipping configure.`);
       return;
     }
     try {
