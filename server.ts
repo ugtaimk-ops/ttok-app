@@ -411,7 +411,23 @@ app.get("/api/meal/info", async (req, res) => {
 
     const data = resNeis.value as any;
     console.log(`[Proxy] Meal response received`, JSON.stringify(data).substring(0, 200));
-    
+
+    // NEIS reports both "no data for this date" and genuine errors (bad key,
+    // malformed school/office code, rate limit, etc.) via a RESULT.CODE field
+    // at the top level rather than an HTTP error status. Previously only the
+    // client's direct-fetch path checked this - the proxy just fell through
+    // to `return res.json([])`, silently presenting real API errors as an
+    // empty "no meal today" result.
+    if (data && data.RESULT) {
+      if (data.RESULT.CODE === "INFO-200") {
+        return res.json([]);
+      }
+      if (data.RESULT.CODE !== "INFO-000") {
+        console.error(`[Proxy Error] NEIS returned an error code: ${data.RESULT.CODE} - ${data.RESULT.MESSAGE}`);
+        return res.status(502).json({ error: `급식 정보를 불러오지 못했습니다. (NEIS: ${data.RESULT.CODE})` });
+      }
+    }
+
     if (data && data.mealServiceDietInfo && data.mealServiceDietInfo[1] && data.mealServiceDietInfo[1].row) {
       const meals = data.mealServiceDietInfo[1].row.map((item: any) => ({
         mealType: item.MMEAL_SC_NM,     // 조식, 중식, 석식
