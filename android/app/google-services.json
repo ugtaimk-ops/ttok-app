@@ -74,6 +74,14 @@
           }
         },
         {
+          "client_id": "725925538766-ddqrvovevl11q9jp5lb247mghh2fue2s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ttokapp.app",
+            "certificate_hash": "852c90f6de0b3f617ad535a1e10c7303f5a13e3b"
+          }
+        },
+        {
           "client_id": "725925538766-pq252c15et29al0q7q1l4pp4ss3u6dk8.apps.googleusercontent.com",
           "client_type": 3
         }
