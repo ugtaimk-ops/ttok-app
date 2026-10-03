@@ -47,7 +47,10 @@ export const auth = initializeAuth(app, {
   popupRedirectResolver: browserPopupRedirectResolver
 });
 export const db = initializeFirestore(app, {
-  ignoreUndefinedProperties: true
+  ignoreUndefinedProperties: true,
+  // Firestore's default WebChannel streaming transport can hang indefinitely inside
+  // iOS WKWebView; this lets the SDK detect that and fall back to long polling.
+  experimentalAutoDetectLongPolling: true
 }, "ai-studio-22fbd27c-5516-4028-bd17-a6d4ba99710b");
 
 export {
