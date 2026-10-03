@@ -40,6 +40,19 @@ jobs:
       - name: Sync Capacitor iOS
         run: npx cap sync ios
 
+      - name: Pin iOS bundle ID to the one registered in Firebase's GoogleService-Info.plist
+        run: |
+          # capacitor.config.ts's appId (com.ttokapp.app) was changed to match the Google Play
+          # package, but the Firebase iOS app / OAuth iOS client (and the plist injected below)
+          # are still registered for com.ttok.schoolmate. Google Sign-In on iOS requires the app's
+          # bundle ID to match them, otherwise the sign-in sheet never completes and the app is
+          # left stuck on "logging in". Move this back to com.ttokapp.app only after adding a
+          # new iOS app for it in Firebase and updating GOOGLE_SERVICE_INFO_PLIST.
+          PBX=ios/App/App.xcodeproj/project.pbxproj
+          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = com\.ttokapp\.app;/PRODUCT_BUNDLE_IDENTIFIER = com.ttok.schoolmate;/g' "$PBX"
+          grep -c "PRODUCT_BUNDLE_IDENTIFIER = com.ttok.schoolmate;" "$PBX"
+          if grep -q "PRODUCT_BUNDLE_IDENTIFIER = com.ttokapp.app;" "$PBX"; then echo "bundle id override failed"; exit 1; fi
+
       - name: Configure camera/microphone/speech permission descriptions
         run: |
           PLIST=ios/App/App/Info.plist
