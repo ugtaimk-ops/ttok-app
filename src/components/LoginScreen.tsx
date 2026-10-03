@@ -54,25 +54,20 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<"google" | "apple" | "email" | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<"google" | "email" | null>(null);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSignIn = async (provider: "google" | "apple") => {
+  const handleSignIn = async (provider: "google") => {
     setIsLoading(true);
     setError(null);
     setInfoMessage(null);
     setSelectedProvider(provider);
 
     try {
-      let user;
-      if (provider === "google") {
-        user = await authService.signInWithGoogle();
-      } else {
-        user = await authService.signInWithApple();
-      }
+      const user = await authService.signInWithGoogle();
 
       // Handle user session setup and get merged profile
       const userProfile = await authService.handleUserSession(user);
@@ -242,34 +237,6 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
                 <span className="text-fluid-xs uppercase font-black text-slate-400 dark:text-slate-500">Google</span>
               )}
             </button>
-
-            {/* Apple Login Button */}
-            <button
-              onClick={() => handleSignIn("apple")}
-              disabled={isLoading}
-              className={`w-full py-4.5 px-6 rounded-2xl font-black text-fluid-base flex items-center justify-between transition-all duration-200 cursor-pointer ${
-                isLoading 
-                  ? "opacity-50 cursor-not-allowed" 
-                  : "hover:scale-[1.01] active:scale-[0.99]"
-              } ${
-                darkMode 
-                  ? "bg-slate-100 text-slate-950 hover:bg-white" 
-                  : "bg-slate-950 text-white hover:bg-slate-900 shadow-md shadow-slate-950/10"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                {/* Apple SVG Icon */}
-                <svg className="w-5 h-5 shrink-0 fill-current" viewBox="0 0 24 24">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-.96.04-2.13.64-2.82 1.45-.6.7-1.13 1.84-1.01 2.95 1.07.08 2.18-.53 2.84-1.34z" />
-                </svg>
-                <span className="font-black">Apple 로그인</span>
-              </div>
-              {isLoading && selectedProvider === "apple" ? (
-                <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
-              ) : (
-                <span className="text-fluid-xs uppercase font-black text-slate-400">Apple</span>
-              )}
-            </button>
           </div>
 
           {/* Divider */}
@@ -354,14 +321,6 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
           </form>
         </div>
       </motion.div>
-
-      {/* Modern footer with material text */}
-      <p className={`text-fluid-xs text-center font-medium tracking-tight mt-8 max-w-sm leading-relaxed ${
-        darkMode ? "text-slate-500" : "text-slate-400"
-      }`}>
-        똑꼬르륵은 NEIS 교육망 API 연동 학업 정보 대시보드입니다.<br />
-        로그인 시 이용약관 및 개인정보 처리방침에 동의한 것으로 간주됩니다.
-      </p>
     </div>
   );
 }

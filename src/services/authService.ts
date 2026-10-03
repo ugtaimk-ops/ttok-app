@@ -1,6 +1,5 @@
 import {
   GoogleAuthProvider,
-  OAuthProvider,
   signInWithPopup,
   signInWithCredential,
   signInWithEmailAndPassword as fbSignInWithEmailAndPassword,
@@ -115,33 +114,6 @@ export const authService = {
       return result.user;
     } catch (error: any) {
       console.error("Google login failed:", error);
-      throw error;
-    }
-  },
-
-  /**
-   * Apple Sign-In. Same native-first strategy as signInWithGoogle above.
-   */
-  async signInWithApple(): Promise<User> {
-    try {
-      if (isNative()) {
-        const result = await FirebaseAuthentication.signInWithApple();
-        if (!result.credential?.idToken) {
-          throw new Error("Apple 로그인에 실패했습니다. 다시 시도해 주세요.");
-        }
-        const provider = new OAuthProvider("apple.com");
-        const credential = provider.credential({
-          idToken: result.credential.idToken,
-          rawNonce: result.credential.nonce,
-        });
-        const userCred = await signInWithCredential(auth, credential);
-        return userCred.user;
-      }
-      const provider = new OAuthProvider("apple.com");
-      const result = await signInWithPopup(auth, provider);
-      return result.user;
-    } catch (error: any) {
-      console.error("Apple login failed:", error);
       throw error;
     }
   },

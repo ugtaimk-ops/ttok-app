@@ -68,7 +68,7 @@ export default function App() {
     };
   }, []);
 
-  // Google/Apple sign-in already comes back with emailVerified: true, so this
+  // Google sign-in already comes back with emailVerified: true, so this
   // only ever gates password-provider accounts. Tracked separately from
   // authUser because reloading the Firebase User object to pick up a fresh
   // emailVerified value doesn't change its reference, so React wouldn't
