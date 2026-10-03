@@ -3,6 +3,7 @@ import {
   initializeAuth,
   browserLocalPersistence,
   indexedDBLocalPersistence,
+  browserPopupRedirectResolver,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -37,8 +38,13 @@ const app = initializeApp(firebaseConfig);
 
 // Explicit persistence list (rather than the default auto-detection) avoids a hang some
 // WKWebView/Capacitor setups hit while Firebase Auth probes for IndexedDB support on launch.
+// popupRedirectResolver is required for signInWithPopup (the web/localhost Google
+// sign-in path) - initializeAuth() doesn't wire it up by default the way getAuth()
+// does, and without it signInWithPopup throws auth/argument-error. Native builds sign
+// in through the Capacitor plugin instead, so this has no effect on them.
 export const auth = initializeAuth(app, {
-  persistence: [indexedDBLocalPersistence, browserLocalPersistence]
+  persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+  popupRedirectResolver: browserPopupRedirectResolver
 });
 export const db = initializeFirestore(app, {
   ignoreUndefinedProperties: true
