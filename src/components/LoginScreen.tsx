@@ -54,6 +54,7 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [stage, setStage] = useState<string>("");
   const [selectedProvider, setSelectedProvider] = useState<"google" | "email" | null>(null);
 
   const [email, setEmail] = useState("");
@@ -67,9 +68,10 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
     setSelectedProvider(provider);
 
     try {
-      const user = await authService.signInWithGoogle();
+      const user = await authService.signInWithGoogle(setStage);
 
       // Handle user session setup and get merged profile
+      setStage("3단계: 프로필 불러오는 중");
       const userProfile = await authService.handleUserSession(user);
       onLogin(userProfile);
     } catch (err: any) {
@@ -237,6 +239,11 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
                 <span className="text-fluid-xs uppercase font-black text-slate-400 dark:text-slate-500">Google</span>
               )}
             </button>
+            {isLoading && selectedProvider === "google" && stage && (
+              <p className={`text-center text-fluid-xs font-bold ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
+                {stage}
+              </p>
+            )}
           </div>
 
           {/* Divider */}

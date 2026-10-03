@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+import { Capacitor } from "@capacitor/core";
 import {
   initializeAuth,
   browserLocalPersistence,
@@ -42,8 +43,11 @@ const app = initializeApp(firebaseConfig);
 // sign-in path) - initializeAuth() doesn't wire it up by default the way getAuth()
 // does, and without it signInWithPopup throws auth/argument-error. Native builds sign
 // in through the Capacitor plugin instead, so this has no effect on them.
+// On iOS, IndexedDB inside the Capacitor WKWebView can leave Auth's initialization (and so
+// signInWithCredential / onAuthStateChanged) pending forever, so use localStorage only there.
+const isIos = Capacitor.getPlatform() === "ios";
 export const auth = initializeAuth(app, {
-  persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+  persistence: isIos ? [browserLocalPersistence] : [indexedDBLocalPersistence, browserLocalPersistence],
   popupRedirectResolver: browserPopupRedirectResolver
 });
 export const db = initializeFirestore(app, {

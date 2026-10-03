@@ -32,7 +32,10 @@ export function isNativeApp(): boolean {
  */
 export async function getAppDiagnostics(): Promise<string | null> {
   try {
-    const info = await AppSettings.getAppInfo();
+    const info = await Promise.race([
+      AppSettings.getAppInfo(),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
+    ]);
     return `pkg=${info.packageName} v${info.versionName}(${info.versionCode}) installer=${info.installer} SHA1=${info.signingSha1.join(",")}`;
   } catch {
     return null;

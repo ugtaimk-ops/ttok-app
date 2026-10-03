@@ -103,10 +103,11 @@ export const authService = {
    * onAuthStateChanged() see the same signed-in user. Falls back to the web popup flow when
    * running in a regular browser (e.g. `npm run dev`).
    */
-  async signInWithGoogle(): Promise<User> {
+  async signInWithGoogle(onStage?: (stage: string) => void): Promise<User> {
     try {
       if (isNative()) {
         let result;
+        onStage?.("1단계: 구글 계정 선택 중");
         try {
           // Android's Credential Manager API (default) requires Google to recognize the
           // app's install provenance and can fail with "no credentials available" on
@@ -124,6 +125,7 @@ export const authService = {
         if (!result.credential?.idToken) {
           throw new Error("Google 로그인에 실패했습니다. 다시 시도해 주세요.");
         }
+        onStage?.("2단계: Firebase 로그인 처리 중");
         const credential = GoogleAuthProvider.credential(result.credential.idToken, result.credential.accessToken);
         const userCred = await withTimeout(signInWithCredential(auth, credential), 30000, "2단계: Firebase 로그인 처리");
         return userCred.user;
