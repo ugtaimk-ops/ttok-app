@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Sparkles, Loader2, AlertCircle, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { authService } from "../services/authService";
+import { getAppDiagnostics } from "../lib/capacitor";
 import { UserProfile } from "../types";
 
 interface LoginScreenProps {
@@ -78,7 +79,12 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
       onLogin(userProfile);
     } catch (err: any) {
       console.error(`${provider} sign in error:`, err);
-      setError(friendlyAuthError(err));
+      // Native sign-in failures (e.g. Google error 10) depend on how this exact
+      // install was signed - surface that alongside the error so it can be diagnosed.
+      const diagnostics = await getAppDiagnostics();
+      setError(friendlyAuthError(err) + (diagnostics ? `
+
+[진단] ${diagnostics}` : ""));
     } finally {
       setIsLoading(false);
       setSelectedProvider(null);
@@ -184,7 +190,7 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
                 className="w-full text-left p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-fluid-sm font-semibold flex items-start gap-2.5"
               >
                 <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
-                <span className="break-keep leading-relaxed">{error}</span>
+                <span className="whitespace-pre-wrap break-words leading-relaxed">{error}</span>
               </motion.div>
             )}
           </AnimatePresence>

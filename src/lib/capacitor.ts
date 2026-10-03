@@ -2,6 +2,13 @@ import { registerPlugin } from "@capacitor/core";
 
 export interface AppSettingsPlugin {
   open(): Promise<{ success: boolean }>;
+  getAppInfo(): Promise<{
+    packageName: string;
+    versionName: string;
+    versionCode: number;
+    signingSha1: string[];
+    installer: string;
+  }>;
 }
 
 export const AppSettings = registerPlugin<AppSettingsPlugin>("AppSettings");
@@ -16,6 +23,20 @@ export function isNativeApp(): boolean {
     window.location.protocol === "file:" ||
     !!(window as any).Capacitor
   );
+}
+
+/**
+ * One-line description of the running install (package, version, signing
+ * certificate SHA-1, installer) for diagnosing sign-in / billing problems
+ * that depend on exactly how the app was signed and distributed.
+ */
+export async function getAppDiagnostics(): Promise<string | null> {
+  try {
+    const info = await AppSettings.getAppInfo();
+    return `pkg=${info.packageName} v${info.versionName}(${info.versionCode}) installer=${info.installer} SHA1=${info.signingSha1.join(",")}`;
+  } catch {
+    return null;
+  }
 }
 
 /**
