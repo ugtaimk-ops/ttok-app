@@ -21,10 +21,6 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Inject google-services.json (for Google Sign-In)
-        if: ${{ vars.GOOGLE_SERVICES_JSON != '' }}
-        run: echo '${{ vars.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
-
       - name: Build Web Application
         run: npm run build
         env:
