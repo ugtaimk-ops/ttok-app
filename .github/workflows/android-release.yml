@@ -65,6 +65,18 @@ jobs:
         run: ./gradlew bundleRelease
         working-directory: android
 
+      - name: Verify Play upload signing certificate
+        shell: bash
+        run: |
+          bundle=android/app/build/outputs/bundle/release/app-release.aab
+          actual_sha1=$(keytool -printcert -jarfile "$bundle" | sed -n 's/^[[:space:]]*SHA1: //p' | head -n 1)
+          expected_sha1='E8:EF:D6:BA:A0:3D:A3:38:B1:CD:1C:A7:20:A9:AA:E6:F0:28:54:F6'
+          echo "AAB signing SHA-1: $actual_sha1"
+          if [[ "$actual_sha1" != "$expected_sha1" ]]; then
+            echo 'AAB signing key does not match the Google Play upload certificate.' >&2
+            exit 1
+          fi
+
       - name: Upload AAB Artifact
         uses: actions/upload-artifact@v4
         with:
