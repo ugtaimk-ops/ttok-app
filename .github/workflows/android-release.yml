@@ -62,7 +62,7 @@ jobs:
         working-directory: android
 
       - name: Build Signed Release AAB
-        run: ./gradlew bundleRelease
+        run: ./gradlew bundleRelease assembleRelease
         working-directory: android
 
       - name: Verify Play upload signing certificate
@@ -77,8 +77,23 @@ jobs:
             exit 1
           fi
 
+      - name: Verify APK signing certificate
+        shell: bash
+        run: |
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          actual_sha1=$("$signer" verify --print-certs android/app/build/outputs/apk/release/app-release.apk | sed -n 's/^Signer #1 certificate SHA-1 digest: //p')
+          expected_sha1='e8efd6baa03da338b1cd1ca720a9aae6f02854f6'
+          echo "APK signing SHA-1: $actual_sha1"
+          [[ "$actual_sha1" == "$expected_sha1" ]]
+
       - name: Upload AAB Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ttok-release-aab
           path: android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ttok-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk

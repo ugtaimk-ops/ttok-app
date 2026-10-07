@@ -1,3 +1,5 @@
+import BackButton from "./BackButton";
+import { useScreenBack } from "../lib/screenBack";
 import { useState, useEffect } from "react";
 import { 
   Moon, 
@@ -108,6 +110,12 @@ export default function SettingsScreen({
     }
     setTimeout(() => setShowToast(false), 2000);
   };
+
+  useScreenBack(() => {
+    if (showTermsModal) { setShowTermsModal(false); return true; }
+    if (showPurgeModal) { setShowPurgeModal(false); return true; }
+    return false;
+  });
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in pb-safe-layout">
@@ -367,6 +375,7 @@ export default function SettingsScreen({
                 darkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"
               }`}
             >
+              <div className="text-left"><BackButton label="취소" onClick={() => setShowPurgeModal(false)} className="mb-3" /></div>
               <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle size={24} />
               </div>
@@ -418,6 +427,7 @@ export default function SettingsScreen({
                 darkMode ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-100 text-slate-800"
               } shadow-2xl`}
             >
+              <BackButton label="취소" onClick={() => setShowTermsModal(false)} className="mb-3 self-start" />
               {/* Modal Header */}
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">

@@ -1,3 +1,4 @@
+import BackButton from "./BackButton";
 import { useState } from "react";
 import { Mail, Loader2, CheckCircle2, LogOut } from "lucide-react";
 import { motion } from "motion/react";
@@ -60,6 +61,7 @@ export default function EmailVerificationScreen({ email, darkMode, onVerified, o
             : "bg-white border-slate-200/60 shadow-xl shadow-slate-100/70"
         }`}
       >
+        <div className="text-left"><BackButton label="취소" onClick={onLogout} className="mb-4" /></div>
         <div className={`w-16 h-16 mx-auto rounded-[24px] flex items-center justify-center ${
           darkMode ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" : "bg-brand/10 text-brand border border-brand/20"
         }`}>

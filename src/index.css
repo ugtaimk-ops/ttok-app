@@ -184,3 +184,12 @@ body {
 .wave-bar:nth-child(6) { animation-delay: 0.05s; }
 .wave-bar:nth-child(7) { animation-delay: 0.25s; }
 .wave-bar:nth-child(8) { animation-delay: 0.1s; }
+
+/* Keep the pinned purchase button clear of Android gesture and 3-button bars.
+   A fixed minimum is needed on WebViews that report a zero safe-area inset. */
+.paywall-overlay {
+  padding: max(16px, env(safe-area-inset-top, 0px)) 12px calc(64px + env(safe-area-inset-bottom, 0px));
+  height: 100dvh;
+  box-sizing: border-box;
+}
+.paywall-card { max-height: 100%; }

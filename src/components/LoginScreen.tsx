@@ -1,3 +1,4 @@
+import BackButton from "./BackButton";
 import React, { useState } from "react";
 import { Sparkles, Loader2, AlertCircle, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -147,6 +148,7 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
             : "bg-white border-slate-200/60 shadow-xl shadow-slate-100/70"
         } relative overflow-hidden`}
       >
+        <BackButton label="취소" disabled={isLoading || (!selectedProvider && !error)} onClick={() => { setSelectedProvider(null); setError(null); setInfoMessage(null); setStage(""); setPassword(""); }} className="mb-4" />
         {/* Glow effect on hover/focus */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-1 bg-gradient-to-r from-transparent via-brand to-transparent opacity-80" />
 

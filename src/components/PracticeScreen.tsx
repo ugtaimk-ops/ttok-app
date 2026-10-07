@@ -1,6 +1,8 @@
+import BackButton from "./BackButton";
+import { useScreenBack } from "../lib/screenBack";
 import React, { useState, useEffect, useRef } from "react";
 import { ScriptItem, PracticeLog } from "../types";
-import { getApiUrl, robustFetch, getTodayDateString } from "../lib/api";
+import { getApiUrl, robustFetch, getTodayDateString, readApiJson, ApiError } from "../lib/api";
 import { isNativeApp, openNativeSettings } from "../lib/capacitor";
 import { 
   Sparkles, 
@@ -74,37 +76,6 @@ export default function PracticeScreen({
       setSubTab(initialSubTab);
     }
   }, [initialSubTab]);
-
-  // Automatically check and request runtime permissions when first switching to practice tab
-  useEffect(() => {
-    const autoRequestPermissions = async () => {
-      if (subTab === "practice") {
-        try {
-          if (navigator.permissions && navigator.permissions.query) {
-            const camQuery = await navigator.permissions.query({ name: "camera" as any });
-            const micQuery = await navigator.permissions.query({ name: "microphone" as any });
-
-            if (camQuery.state === "denied" || micQuery.state === "denied") {
-              // Permissions were blocked previously. Show the permission guide modal directly.
-              setHasPermission(false);
-              setPermissionError("PermissionDeniedError");
-              setShowPermissionModal(true);
-            } else {
-              // Permission is either granted or prompt, request/initialize it
-              handleRequestPermissions();
-            }
-          } else {
-            // Permissions API not supported, request via standard getUserMedia call
-            handleRequestPermissions();
-          }
-        } catch (e) {
-          console.warn("Auto-checking permissions failed, requesting via fallback:", e);
-          handleRequestPermissions();
-        }
-      }
-    };
-    autoRequestPermissions();
-  }, [subTab]);
 
   // ==========================================
   // 1. SCRIPT GENERATION STATE
@@ -187,6 +158,10 @@ export default function PracticeScreen({
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<any>(null);
+  const cameraRequest = useRef(0);
+  const acquiringCamera = useRef(false);
+  const activeCameraScreen = useRef(false);
+  activeCameraScreen.current = isActive && subTab === "practice";
   const speechListenerRef = useRef<{ remove: () => Promise<void> } | null>(null);
   const isListeningRef = useRef(false);
 
@@ -214,13 +189,13 @@ export default function PracticeScreen({
   // user leaves this tab, so the camera/mic must be released explicitly
   // here too - otherwise they'd stay held in the background indefinitely.
   useEffect(() => {
-    if (!isActive) {
+    if (!isActive || subTab !== "practice") {
       stopStreams();
       if (timerRef.current) clearInterval(timerRef.current);
       stopSpeechRecognition();
       setIsRecording(false);
     }
-  }, [isActive]);
+  }, [isActive, subTab]);
 
   // Re-bind active camera stream to videoRef element when it mounts/remounts (fullscreen toggle)
   useEffect(() => {
@@ -232,12 +207,13 @@ export default function PracticeScreen({
   // Auto-restart camera preview when resetting the analysis result or returning to rehearsal dashboard
   // (also fires when isActive flips back to true, since the tab-hidden effect above just released the stream)
   useEffect(() => {
-    if (isActive && subTab === "practice" && !analysisResult && !isRecording && !mediaStreamRef.current && hasPermission) {
+    if (isActive && subTab === "practice" && !analysisResult && !isRecording && !isAnalyzing && !mediaStreamRef.current) {
       handleRequestPermissions();
     }
-  }, [isActive, subTab, analysisResult, isRecording]);
+  }, [isActive, subTab, analysisResult, isRecording, isAnalyzing]);
 
   const stopStreams = () => {
+    cameraRequest.current += 1;
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => track.stop());
       mediaStreamRef.current = null;
@@ -268,24 +244,7 @@ export default function PracticeScreen({
 
       console.log(`[PracticeScreen] Script generation response status: ${res.status} (${res.statusText})`);
 
-      if (!res.ok) {
-        let errorDetails = "";
-        try {
-          const errData = await res.json();
-          errorDetails = errData.error || errData.message || JSON.stringify(errData);
-        } catch (e) {
-          try {
-            errorDetails = await res.text();
-          } catch (textErr) {
-            errorDetails = `HTTP status ${res.status}`;
-          }
-        }
-        console.error(`[PracticeScreen] Script generation failed. Server status: ${res.status}. Details: ${errorDetails}`);
-        throw new Error(`대본 생성 실패 (서버 상태코드 ${res.status}): ${errorDetails || "상태 설명 없음"}`);
-      }
-      
-      const data = await res.json();
-      console.log("[PracticeScreen] Received script successfully:", data);
+      const data = await readApiJson(res);
 
       const generatedId = "scr_" + Date.now();
       const todayStr = new Date().toISOString().split('T')[0];
@@ -316,18 +275,7 @@ export default function PracticeScreen({
 
     } catch (err: any) {
       console.error("[PracticeScreen] script generation error:", err);
-      const is429 = err.message?.includes("RESOURCE_EXHAUSTED_429") || 
-                    err.message?.includes("429") || 
-                    err.status === 429;
-      if (is429) {
-        setScriptError(
-          "⚠️ AI 서비스 할당량 초과 안내 (429 Quota Exceeded)\n" +
-          "현재 무료 AI 기능의 일시적인 사용량 제한을 초과했습니다. 똑(TTOK) 서비스는 비용 걱정 없이 언제나 무료로 사용할 수 있도록 영구 무료 AI 모델을 제공하고 있습니다.\n\n" +
-          "이 오류는 자동으로 재시도되지 않으며, 잠시 후(약 1~2분 후) 다시 아래 '대본 자동 생성' 버튼을 눌러주시면 정상 처리됩니다."
-        );
-      } else {
-        setScriptError(err.message || "대본을 생성하는 중 예기치 못한 네트워크 오류가 발생했습니다.");
-      }
+      if (err?.name !== "AbortError") setScriptError(err instanceof ApiError ? err.message : "대본을 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setIsGeneratingScript(false);
     }
@@ -397,68 +345,41 @@ export default function PracticeScreen({
   // 2. REHEARSAL ACTIONS
   // ==========================================
   const handleRequestPermissions = async () => {
-    setPermissionError(null);
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      console.warn("navigator.mediaDevices is not supported in this browser or context.");
+    if (acquiringCamera.current || !activeCameraScreen.current) return;
+    if (!navigator.mediaDevices?.getUserMedia) {
       setPermissionError("SECURE_CONTEXT_REQUIRED");
       setHasPermission(false);
       setShowPermissionModal(true);
       return;
     }
-
-    // 1. Pre-check standard web permissions API if available. Microphone isn't
-    // requested here anymore (the native SpeechRecognition plugin owns it), so
-    // only the camera's state should gate the video preview.
+    acquiringCamera.current = true;
+    const request = ++cameraRequest.current;
+    setPermissionError(null);
     try {
-      if (navigator.permissions && navigator.permissions.query) {
-        const camQuery = await navigator.permissions.query({ name: "camera" as any });
-
-        if (camQuery.state === "denied") {
-          console.warn("Camera permission is explicitly denied.");
-          setPermissionError("PermissionDeniedError");
-          setHasPermission(false);
-          setShowPermissionModal(true);
-          return;
-        }
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      } catch (error: any) {
+        if (error?.name !== "OverconstrainedError") throw error;
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
       }
-    } catch (e) {
-      console.warn("Permissions API check not supported or threw an error:", e);
-    }
-
-    // Video-only: the microphone is captured separately by the native
-    // SpeechRecognition plugin (see startPracticeRecording). Also requesting
-    // audio here would make the WebView hold the mic via getUserMedia at the
-    // same time the native recognizer opens its own audio session, which
-    // silently starves the recognizer of input on both iOS (AVAudioSession
-    // conflict) and Android — the subtitle would never update even though
-    // nothing throws an error.
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      // Permission dialogs can finish after the user has left or cancelled.
+      if (request !== cameraRequest.current || !activeCameraScreen.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      mediaStreamRef.current?.getTracks().forEach(track => track.stop());
       mediaStreamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      if (videoRef.current) videoRef.current.srcObject = stream;
       setHasPermission(true);
       setShowPermissionModal(false);
-    } catch (err: any) {
-      console.warn("Initial getUserMedia failed, attempting fallback...", err);
-
-      // Fallback: generic video constraints
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        mediaStreamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        setHasPermission(true);
-        setShowPermissionModal(false);
-        return;
-      } catch (err2: any) {
-        console.error("All media requests failed:", err2);
-        setPermissionError(err2.name || err2.message || "UnknownError");
-        setHasPermission(false);
-        setShowPermissionModal(true);
-      }
+    } catch (error: any) {
+      if (request !== cameraRequest.current || !activeCameraScreen.current) return;
+      setPermissionError(error?.name || "UnknownError");
+      setHasPermission(false);
+      setShowPermissionModal(true);
+    } finally {
+      acquiringCamera.current = false;
     }
   };
 
@@ -516,63 +437,75 @@ export default function PracticeScreen({
     }, 1000);
   };
 
-  const stopPracticeRecording = async () => {
+  const analysisController = useRef<AbortController | null>(null);
+  const pendingPractice = useRef<{topic: string; transcript: string; duration: number} | null>(null);
+  useEffect(() => () => analysisController.current?.abort(), []);
+  const cancelPractice = () => {
+    analysisController.current?.abort();
+    if (timerRef.current) clearInterval(timerRef.current);
+    stopStreams();
+    void stopSpeechRecognition();
+    setIsRecording(false);
+    setAnalysisError(null);
+    setSeconds(0);
+  };
+  useScreenBack(() => {
+    if (showPermissionModal) { setShowPermissionModal(false); return true; }
+    if (isRecording) { cancelPractice(); return true; }
+    if (isAnalyzing) { analysisController.current?.abort(); return true; }
+    if (isEditingScriptText) { setIsEditingScriptText(false); setEditedScriptContent(generatedScript?.script || ""); return true; }
+    if (analysisResult) { setAnalysisResult(null); return true; }
+    if (generatedScript && subTab === "script") { setGeneratedScript(null); return true; }
+    if (subTab === "practice") { setSubTab("script"); return true; }
+    return false;
+  });
+
+  const stopPracticeRecording = async (retry = false) => {
+    if (analysisController.current) return;
+    const controller = new AbortController();
+    analysisController.current = controller;
+    setIsAnalyzing(true);
     setIsRecording(false);
 
     // Stop recording timer & stream
     if (timerRef.current) clearInterval(timerRef.current);
-    await stopSpeechRecognition();
+    void stopSpeechRecognition();
     stopStreams();
 
     // Trigger AI Analysis
     setIsAnalyzing(true);
     setAnalysisError(null);
 
-    const finalTranscript = transcript.trim() || `${practiceTopic || "자유 발표"} 발표를 힘차게 진행했습니다. 전체 시간은 ${seconds}초이고 바른 시선과 목소리를 냈습니다.`;
+    if (!retry || !pendingPractice.current) {
+      pendingPractice.current = {
+        topic: practiceTopic || "자유 발표 주제",
+        transcript: (STT_FEATURE_ENABLED ? transcript.trim() : "") || selectedScriptText || "음성 기록 없음. 발표 주제와 연습 시간을 바탕으로 다음 연습 방법을 안내해주세요.",
+        duration: seconds
+      };
+    }
+    const payload = pendingPractice.current;
     const path = "/api/practice/analyze";
-    console.log(`[PracticeScreen] [stopPracticeRecording] Initiating robust API call to: ${path}`);
-    console.log(`[PracticeScreen] Request payload:`, {
-      topic: practiceTopic || "자유 발표 주제",
-      transcript: finalTranscript,
-      duration: seconds
-    });
 
     try {
       const res = await robustFetch(path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topic: practiceTopic || "자유 발표 주제",
-          transcript: finalTranscript,
-          duration: seconds
-        })
+        signal: controller.signal,
+        body: JSON.stringify(payload)
       });
 
       console.log(`[PracticeScreen] Practice analysis response status: ${res.status} (${res.statusText})`);
 
-      if (!res.ok) {
-        let errorDetails = "";
-        try {
-          const errData = await res.json();
-          errorDetails = errData.error || errData.message || JSON.stringify(errData);
-        } catch (e) {
-          try {
-            errorDetails = await res.text();
-          } catch (textErr) {
-            errorDetails = `HTTP status ${res.status}`;
-          }
-        }
-        console.error(`[PracticeScreen] Practice analysis failed. Server status: ${res.status}. Details: ${errorDetails}`);
-        throw new Error(`분석 실패 (서버 상태코드 ${res.status}): ${errorDetails || "상태 설명 없음"}`);
+      const data = await readApiJson(res);
+      if (controller.signal.aborted) return;
+      if (!data || typeof data.totalScore !== "number" || !data.scores || !data.feedback) {
+        throw new ApiError("분석 결과가 완성되지 않았어요. 다시 시도해 주세요.");
       }
 
-      const data = await res.json();
-      console.log("[PracticeScreen] Received analysis data successfully:", data);
-      
       const logPayload = {
-        topic: practiceTopic || "자유 발표 주제",
+        topic: payload.topic,
         totalScore: data.totalScore,
-        duration: seconds,
+        duration: payload.duration,
         scores: data.scores,
         voiceAnalysis: data.voiceAnalysis,
         videoAnalysis: data.videoAnalysis,
@@ -586,22 +519,9 @@ export default function PracticeScreen({
 
     } catch (err: any) {
       console.error("[PracticeScreen] Practice analysis fetch error:", err);
-      const is429 = err.message?.includes("RESOURCE_EXHAUSTED_429") || 
-                    err.message?.includes("429") || 
-                    err.status === 429;
-      if (is429) {
-        setAnalysisError(
-          "⚠️ AI 서비스 할당량 초과 안내 (429 Quota Exceeded)\n" +
-          "현재 무료 AI 발표 분석의 사용 한도를 일시적으로 초과했습니다.\n\n" +
-          "이 오류는 자동으로 재시도되지 않으며, 잠시 후(약 1~2분 후) 다시 '연습 종료 및 AI 종합 분석' 버튼을 눌러 시도해 주세요."
-        );
-      } else {
-        setAnalysisError(
-          `${err.message || "발표 분석 처리 도중 예기치 못한 오류가 발생했습니다."}\n` +
-          `대상 경로: /api/practice/analyze`
-        );
-      }
+      if (err?.name !== "AbortError") setAnalysisError(err instanceof ApiError ? err.message : "분석을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
+      analysisController.current = null;
       setIsAnalyzing(false);
     }
   };
@@ -1120,7 +1040,7 @@ export default function PracticeScreen({
             {!analysisResult && !isAnalyzing && (
               isRecording ? (
                 /* FULLSCREEN REHEARSAL RECORDING VIEW */
-                <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col justify-between p-4 sm:p-6 md:p-8 pt-[calc(16px+env(safe-area-inset-top,0px))] pb-[calc(24px+env(safe-area-inset-bottom,0px))] px-[calc(16px+env(safe-area-inset-left,0px))] animate-fade-in text-left">
+                <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col justify-between p-4 sm:p-6 md:p-8 pt-[calc(16px+env(safe-area-inset-top,0px))] pb-[calc(64px+env(safe-area-inset-bottom,0px))] px-[calc(16px+env(safe-area-inset-left,0px))] animate-fade-in text-left">
                   {/* Camera Track covering the entire display */}
                   <video 
                     ref={videoRef} 
@@ -1134,10 +1054,11 @@ export default function PracticeScreen({
                   <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/85 pointer-events-none" />
 
                   {/* Top bar indicators */}
-                  <div className="relative z-10 flex justify-between items-center w-full">
+                  <div className="relative z-10 flex flex-wrap gap-2 justify-between items-center w-full">
+                    <BackButton label="취소" onClick={cancelPractice} />
                     <div className="bg-rose-500 text-white font-black text-[9px] sm:text-xs tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1.5 animate-pulse shadow-lg shadow-rose-500/30">
                       <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
-                      <span>LIVE REHEARSAL RECORDING</span>
+                      <span>발표 연습 중</span>
                     </div>
 
                     <div className="bg-slate-900/90 text-white border border-slate-800/60 backdrop-blur-md px-3 py-1.5 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-1.5 shadow-md">
@@ -1241,7 +1162,7 @@ export default function PracticeScreen({
                       )}
 
                       <button
-                        onClick={stopPracticeRecording}
+                        onClick={() => stopPracticeRecording()}
                         className="w-full sm:w-auto px-8 py-3.5 sm:py-4 bg-rose-600 hover:bg-rose-700 active:scale-98 text-white font-black rounded-[20px] sm:rounded-[24px] text-xs sm:text-sm flex items-center justify-center gap-2 shadow-2xl shadow-rose-600/40 transition-all cursor-pointer"
                       >
                         <Square size={14} className="fill-current" />
@@ -1257,8 +1178,9 @@ export default function PracticeScreen({
                     <div className="p-4 bg-rose-50 border border-rose-100 dark:bg-rose-500/5 dark:border-rose-500/10 text-rose-600 dark:text-rose-400 rounded-2xl flex gap-3 items-center">
                       <AlertCircle size={18} className="shrink-0 text-rose-500" />
                       <div className="flex-1">
-                        <p className="text-xs font-bold">발표 분석 중 오류가 발생했습니다</p>
+                        <p className="text-xs font-bold">분석을 완료하지 못했어요</p>
                         <p className="text-[11px] text-rose-500/80 mt-0.5">{analysisError}</p>
+                        <button type="button" disabled={isAnalyzing} onClick={() => stopPracticeRecording(true)} className="mt-2 min-h-11 px-3 rounded-xl bg-white dark:bg-slate-800 font-bold text-xs">분석 다시 시도</button>
                       </div>
                       <button 
                         onClick={() => setAnalysisError(null)} 
@@ -1749,6 +1671,7 @@ export default function PracticeScreen({
                 darkMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-900"
               }`}
             >
+              <BackButton label="취소" onClick={() => setShowPermissionModal(false)} className="mb-4" />
               <div className="flex flex-col items-center text-center space-y-4">
                 <motion.div 
                   animate={{ y: [0, -6, 0] }}

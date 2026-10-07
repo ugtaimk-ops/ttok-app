@@ -13,9 +13,6 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-// Enable JSON payload with a large limit for base64 image uploads
-app.use(express.json({ limit: "25mb" }));
-
 // Enable lightweight CORS middleware to prevent any browser cross-origin blocks
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
@@ -26,6 +23,9 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Enable JSON parsing after CORS so parse errors also have CORS headers.
+app.use(express.json({ limit: "25mb" }));
 
 // Reject requests that don't carry the shared app secret, so the AI/school-search
 // endpoints (which cost real API quota) aren't wide open to anyone who finds the
@@ -111,7 +111,7 @@ app.use(AI_ROUTES, async (req, res, next) => {
 
 // Health Check Endpoint
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", message: "TTOK Backend Server is running!", timestamp: new Date().toISOString() });
+  res.json({ status: "ok", version: "1.0.10", message: "TTOK Backend Server is running!", timestamp: new Date().toISOString() });
 });
 
 // School Search Endpoint (SchoolInfo.go.kr Integration & Fallback)
@@ -890,6 +890,16 @@ app.post("/revenuecat/webhook", async (req, res) => {
 // ==========================================
 // VITE OR STATIC FILES SERVING MIDDLEWARE & SERVER STARTUP
 // ==========================================
+
+// API misses must never fall through to the SPA HTML document.
+app.use("/api", (_req, res) => {
+  res.status(404).json({ code: "API_NOT_FOUND", error: "요청한 기능을 찾을 수 없어요. 앱을 업데이트해 주세요." });
+});
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (!req.path.startsWith("/api/")) return next(err);
+  const status = err?.status === 413 ? 413 : err?.status === 400 ? 400 : 500;
+  res.status(status).json({ code: "API_REQUEST_FAILED", error: status === 413 ? "첨부한 파일이 너무 커요." : "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요." });
+});
 
 async function startServer() {
   const server = http.createServer(app);

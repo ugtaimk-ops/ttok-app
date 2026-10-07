@@ -1,3 +1,5 @@
+import BackButton from "./BackButton";
+import { useScreenBack } from "../lib/screenBack";
 import React, { useState, useRef, useEffect } from "react";
 import { UserProfile } from "../types";
 import { Sparkles, Check, School, Award, User, Camera, Smile, X, Pencil, Trash2, Shuffle, Search, Loader2 } from "lucide-react";
@@ -317,6 +319,12 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
     setShowSavedToast(true);
     setTimeout(() => setShowSavedToast(false), 2000);
   };
+
+  useScreenBack(() => {
+    if (isSchoolSearchOpen) { setIsSchoolSearchOpen(false); return true; }
+    if (isEditingGoal) { setIsEditingGoal(false); return true; }
+    return false;
+  });
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in pb-safe-layout">

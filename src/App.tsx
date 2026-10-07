@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "motion/react";
+import BackButton from "./components/BackButton";
+import { ScreenScope, handleScreenBack } from "./lib/screenBack";
 import { Loader2 } from "lucide-react";
 import type { User } from "firebase/auth";
 import {
@@ -83,6 +85,33 @@ export default function App() {
   const [kkorureukTab, setKkorureukTab] = useState<string>("meal-today");
   const [serviceMode, setServiceMode] = useState<"tok" | "kkorureuk">("tok");
   const [darkMode, setDarkMode] = useState<boolean>(false);
+  const navigationHistory = useRef<Array<{ mode: "tok" | "kkorureuk"; tab: string }>>([]);
+  const previousRoute = useRef({ mode: serviceMode, tab: tokTab });
+  const restoringRoute = useRef(false);
+  const visibleTab = serviceMode === "tok" ? tokTab : kkorureukTab;
+  useEffect(() => {
+    const previous = previousRoute.current;
+    if (previous.mode === serviceMode && previous.tab === visibleTab) return;
+    if (!restoringRoute.current) navigationHistory.current.push(previous);
+    restoringRoute.current = false;
+    previousRoute.current = { mode: serviceMode, tab: visibleTab };
+  }, [serviceMode, visibleTab]);
+
+  const handleBack = () => {
+    if (handleScreenBack()) return;
+    const previous = navigationHistory.current.pop();
+    if (previous) {
+      restoringRoute.current = true;
+      setServiceMode(previous.mode);
+      if (previous.mode === "tok") setTokTab(previous.tab);
+      else setKkorureukTab(previous.tab);
+    } else {
+      setServiceMode("tok");
+      setTokTab("home");
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
 
   // Deep navigation sub-states
   const [assessmentMode, setAssessmentMode] = useState<"list" | "direct" | "photo">("list");
@@ -301,6 +330,11 @@ export default function App() {
     } catch (e) {
       console.error("Sign out failed:", e);
     }
+    navigationHistory.current = [];
+    previousRoute.current = { mode: "tok", tab: "home" };
+    restoringRoute.current = false;
+    setServiceMode("tok");
+    setTokTab("home");
     // Clear local state/refs so that if a different account signs in on this
     // same device, the cloud-sync effect's migrate-if-empty step doesn't read
     // stale refs still holding the previous user's data and upload it into
@@ -468,12 +502,13 @@ export default function App() {
         darkMode ? "bg-slate-950/80 border-slate-900" : "bg-white/80 border-slate-100"
       }`}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-3 flex justify-between items-center">
-          <div className="flex items-center">
+          <div className="flex min-w-0 items-center gap-2">
+            <BackButton onClick={handleBack} />
             {/* 파란색 네모로 둘러싸인 '똑 | 꼬르륵' 큰 글씨 서비스 전환 메뉴 */}
             <div className="border-2 border-brand/80 dark:border-blue-500/80 rounded-2xl p-0.5 bg-brand/5 dark:bg-blue-500/5 flex items-center gap-0.5 select-none shadow-sm">
               <button
                 onClick={() => setServiceMode("tok")}
-                className={`px-3.5 sm:px-5 py-1 sm:py-1.5 text-base sm:text-lg md:text-xl font-black rounded-xl transition-all duration-150 cursor-pointer ${
+                className={`px-2 sm:px-5 py-1 sm:py-1.5 text-base sm:text-lg md:text-xl font-black rounded-xl transition-all duration-150 cursor-pointer ${
                   serviceMode === "tok"
                     ? "bg-brand text-white shadow-md shadow-brand/15"
                     : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400"
@@ -483,7 +518,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setServiceMode("kkorureuk")}
-                className={`px-3.5 sm:px-5 py-1 sm:py-1.5 text-base sm:text-lg md:text-xl font-black rounded-xl transition-all duration-150 cursor-pointer ${
+                className={`px-2 sm:px-5 py-1 sm:py-1.5 text-base sm:text-lg md:text-xl font-black rounded-xl transition-all duration-150 cursor-pointer ${
                   serviceMode === "kkorureuk"
                     ? "bg-brand text-white shadow-md shadow-brand/15"
                     : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400"
@@ -495,7 +530,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-[11px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 max-w-[120px] sm:max-w-none truncate">
+            <span className="text-[11px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 hidden min-[400px]:block max-w-[90px] sm:max-w-none truncate">
               {user.school ? `${user.school} ${user.grade || "1"}학년` : "프로필 미설정"}
             </span>
             <div className="w-7 h-7 sm:w-8 sm:h-8 bg-brand-light dark:bg-brand/10 border border-brand/5 rounded-full overflow-hidden shrink-0 flex items-center justify-center">
@@ -525,7 +560,7 @@ export default function App() {
                 in-flight AI request and its result survive the user
                 switching tabs or backgrounding the app mid-request - see
                 usageService "increments but never shows a result" bug. */}
-            <div className={tokTab === "home" ? "" : "hidden"}>
+            <ScreenScope active={tokTab === "home"}>
               <HomeScreen
                 user={user}
                 todos={todos}
@@ -539,9 +574,9 @@ export default function App() {
                 onDeleteSchedule={handleDeleteSchedule}
                 onUpdateSchedule={handleUpdateSchedule}
               />
-            </div>
+            </ScreenScope>
 
-            <div className={tokTab === "assessment" ? "" : "hidden"}>
+            <ScreenScope active={tokTab === "assessment"}>
               <AssessmentScreen
                 schedules={schedules}
                 onAddSchedule={handleAddSchedule}
@@ -551,9 +586,9 @@ export default function App() {
                 darkMode={darkMode}
                 initialMode={assessmentMode}
               />
-            </div>
+            </ScreenScope>
 
-            <div className={tokTab === "practice" ? "" : "hidden"}>
+            <ScreenScope active={tokTab === "practice"}>
               <PracticeScreen
                 user={user}
                 scripts={scripts}
@@ -566,9 +601,9 @@ export default function App() {
                 initialSubTab={practiceSubTab}
                 isActive={tokTab === "practice"}
               />
-            </div>
+            </ScreenScope>
 
-            <div className={tokTab === "study" ? "" : "hidden"}>
+            <ScreenScope active={tokTab === "study"}>
               <StudyScreen
                 schedules={schedules}
                 onAddSchedule={handleAddSchedule}
@@ -578,17 +613,17 @@ export default function App() {
                 initialSubTab={studySubTab}
                 initialHelperMode={studyHelperMode}
               />
-            </div>
+            </ScreenScope>
 
-            <div className={tokTab === "profile" ? "" : "hidden"}>
+            <ScreenScope active={tokTab === "profile"}>
               <ProfileScreen
                 user={user}
                 onUpdateUser={handleUpdateUser}
                 darkMode={darkMode}
               />
-            </div>
+            </ScreenScope>
 
-            <div className={tokTab === "settings" ? "" : "hidden"}>
+            <ScreenScope active={tokTab === "settings"}>
               <SettingsScreen
                 darkMode={darkMode}
                 onToggleDarkMode={handleToggleDarkMode}
@@ -600,7 +635,7 @@ export default function App() {
                 onToggleAutoDeleteExpired={handleToggleAutoDeleteExpired}
                 onSyncNotifications={() => syncAllNotifications(schedules)}
               />
-            </div>
+            </ScreenScope>
           </div>
         ) : (
           <div className="w-full animate-fade-in">

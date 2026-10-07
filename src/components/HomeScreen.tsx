@@ -1,3 +1,5 @@
+import BackButton from "./BackButton";
+import { useScreenBack } from "../lib/screenBack";
 import React, { useState, useEffect } from "react";
 import { UserProfile, TodoItem, ScheduleItem } from "../types";
 import { 
@@ -368,6 +370,15 @@ export default function HomeScreen({
 
 
 
+  useScreenBack(() => {
+    if (editingShortcut) { setEditingShortcut(null); return true; }
+    if (editingSchedule) { setEditingSchedule(null); return true; }
+    if (isAddingTodo) { setIsAddingTodo(false); return true; }
+    if (isAddingSchedule) { setIsAddingSchedule(false); return true; }
+    if (isEditingShortcuts) { setIsEditingShortcuts(false); return true; }
+    return false;
+  });
+
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in pb-safe-layout">
       
@@ -506,7 +517,8 @@ export default function HomeScreen({
             <div className={`w-full max-w-md p-6 rounded-[28px] border shadow-2xl transition-all ${
               darkMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
             }`}>
-              <h3 className="text-base font-extrabold tracking-tight-sf mb-1 text-left">단축키 기능 연결</h3>
+              <BackButton label="취소" onClick={() => setEditingShortcut(null)} className="mb-3" />
+            <h3 className="text-base font-extrabold tracking-tight-sf mb-1 text-left">단축키 기능 연결</h3>
               <p className="text-[11px] text-slate-400 font-semibold mb-4 text-left">이 단축키 클릭 시 실행할 똑(TTOK)의 기능을 선택해 주세요. 이름과 아이콘은 기능에 맞춰 자동으로 설정됩니다.</p>
               
               <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">

@@ -1,3 +1,5 @@
+import BackButton from "./BackButton";
+import { useScreenBack } from "../lib/screenBack";
 import React, { useState, useRef, useEffect } from "react";
 import { StudyItem, ScheduleItem } from "../types";
 import { getApiUrl, robustFetch, getTodayDateString } from "../lib/api";
@@ -413,6 +415,17 @@ export default function StudyScreen({
       setIsGeneratingPlan(false);
     }, 2000);
   };
+
+  useScreenBack(() => {
+    if (deletingItem) { setDeletingItem(null); return true; }
+    if (editingItem) { setEditingItem(null); return true; }
+    if (contextMenu.visible) { setContextMenu(prev => ({...prev, visible: false})); return true; }
+    if (studyResult) { setStudyResult(null); return true; }
+    if (aiStudyPlan) { setAiStudyPlan(null); return true; }
+    if (activeSubTab === "planner") { setActiveSubTab("helper"); return true; }
+    if (helperMode !== "summary") { setHelperMode("summary"); return true; }
+    return false;
+  });
 
   return (
     <div className="space-y-6 animate-fade-in pb-safe-layout">
@@ -1009,6 +1022,7 @@ export default function StudyScreen({
           <div className={`w-full max-w-md p-6 rounded-[28px] border shadow-2xl transition-all ${
             darkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"
           }`}>
+            <BackButton label="취소" onClick={() => setEditingItem(null)} className="mb-3" />
             <h3 className="text-base font-extrabold tracking-tight-sf mb-4">지필평가 일정 수정</h3>
             
             <div className="space-y-4">
@@ -1067,6 +1081,7 @@ export default function StudyScreen({
           <div className={`w-full max-w-sm p-6 rounded-[28px] border shadow-2xl text-center space-y-4 transition-all ${
             darkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"
           }`}>
+            <div className="text-left"><BackButton label="취소" onClick={() => setDeletingItem(null)} /></div>
             <div className="w-12 h-12 bg-rose-50 dark:bg-rose-950/30 text-rose-500 rounded-2xl flex items-center justify-center mx-auto">
               <Trash2 size={22} />
             </div>

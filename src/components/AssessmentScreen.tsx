@@ -1,3 +1,5 @@
+import BackButton from "./BackButton";
+import { useScreenBack } from "../lib/screenBack";
 import React, { useState, useRef, useEffect } from "react";
 import { ScheduleItem } from "../types";
 import { getApiUrl, robustFetch, getTodayDateString } from "../lib/api";
@@ -267,6 +269,15 @@ export default function AssessmentScreen({
     setScanResult(null);
     setMode("list");
   };
+
+  useScreenBack(() => {
+    if (deletingItem) { setDeletingItem(null); return true; }
+    if (editingItem) { setEditingItem(null); return true; }
+    if (contextMenu.visible) { setContextMenu(prev => ({...prev, visible: false})); return true; }
+    if (scanResult) { setScanResult(null); return true; }
+    if (mode !== "list") { setMode("list"); return true; }
+    return false;
+  });
 
   return (
     <div className="space-y-6 animate-fade-in pb-safe-layout px-1 sm:px-2">
@@ -759,6 +770,7 @@ export default function AssessmentScreen({
           <div className={`w-full max-w-md p-6 rounded-[28px] border shadow-2xl transition-all max-h-[90vh] overflow-y-auto ${
             darkMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
           }`}>
+            <BackButton label="취소" onClick={() => setEditingItem(null)} className="mb-3" />
             <h3 className="text-fluid-lg font-black tracking-tight-sf mb-5 text-left">수행평가 일정 수정</h3>
             
             <div className="space-y-4 text-left">
@@ -858,6 +870,7 @@ export default function AssessmentScreen({
           <div className={`w-full max-w-sm p-6 rounded-[28px] border shadow-2xl text-center space-y-4 transition-all ${
             darkMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-800"
           }`}>
+            <div className="text-left"><BackButton label="취소" onClick={() => setDeletingItem(null)} /></div>
             <div className="w-14 h-14 bg-rose-50 dark:bg-rose-955/30 text-rose-500 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
               <Trash2 size={24} />
             </div>
