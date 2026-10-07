@@ -81,7 +81,9 @@ jobs:
         shell: bash
         run: |
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
-          actual_sha1=$("$signer" verify --print-certs android/app/build/outputs/apk/release/app-release.apk | sed -n 's/^Signer #1 certificate SHA-1 digest: //p')
+          cert_output=$("$signer" verify --verbose --print-certs android/app/build/outputs/apk/release/app-release.apk)
+          echo "$cert_output"
+          actual_sha1=$(printf '%s\n' "$cert_output" | sed -n 's/^Signer.*certificate SHA-1 digest: //p' | head -n 1 | tr -d '\r:' | tr '[:upper:]' '[:lower:]')
           expected_sha1='e8efd6baa03da338b1cd1ca720a9aae6f02854f6'
           echo "APK signing SHA-1: $actual_sha1"
           [[ "$actual_sha1" == "$expected_sha1" ]]
