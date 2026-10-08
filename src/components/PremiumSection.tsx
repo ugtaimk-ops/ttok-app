@@ -46,9 +46,10 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
       const latest = await purchaseService.getCurrentOffering();
       setOffering(latest);
       setShowPaywall(true);
-    } catch {
+    } catch (error) {
       setOffering(null);
-      setMessage("Google Play 결제 상품을 불러오지 못했어요. Play 스토어에서 테스트 참여와 설치 계정을 확인한 뒤 다시 눌러주세요.");
+      const detail = error instanceof Error ? error.message : "";
+      setMessage(detail || "Google Play 결제 상품을 불러오지 못했어요. Play 스토어에서 테스트 참여와 설치 계정을 확인해 주세요.");
       setMessageIsError(true);
     } finally {
       setIsLoadingOffering(false);

@@ -1,5 +1,5 @@
 import { Purchases } from "@revenuecat/purchases-capacitor";
-import type { PurchasesOffering, CustomerInfo } from "@revenuecat/purchases-capacitor";
+import type { PurchasesOffering, CustomerInfo, PurchasesStoreProduct } from "@revenuecat/purchases-capacitor";
 import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 import { auth } from "../lib/firebase";
@@ -12,6 +12,26 @@ const PLAY_STORE_SUBSCRIPTIONS_URL = "https://play.google.com/store/account/subs
 
 let configuredForUid: string | null = null;
 let pendingConfiguration: Promise<void> | null = null;
+const PLAY_SUBSCRIPTIONS = [
+  { id: "ttok_pro_monthly:ttok-pro-monthly", type: "MONTHLY", packageId: "$rc_monthly" },
+  { id: "ttok_pro_yearly:ttok-pro-yearly", type: "ANNUAL", packageId: "$rc_annual" },
+] as const;
+
+type DirectProductPackage = {
+  identifier: string;
+  packageType: "MONTHLY" | "ANNUAL";
+  product: PurchasesStoreProduct;
+  directProduct: true;
+};
+
+function describePurchaseError(error: unknown): string {
+  if (error && typeof error === "object") {
+    const code = "code" in error ? String(error.code) : "";
+    const message = "message" in error ? String(error.message) : "";
+    return [code, message].filter(Boolean).join(": ").slice(0, 240);
+  }
+  return String(error).slice(0, 240);
+}
 
 export const purchaseService = {
   /**
@@ -53,20 +73,40 @@ export const purchaseService = {
       if (!uid) throw new Error("RevenueCat requested before Firebase sign-in completed");
       await this.configure(uid);
       if (configuredForUid !== uid) throw new Error("RevenueCat is not configured for this account");
-      const offerings = await Purchases.getOfferings();
-      const offering = offerings.current;
-      if (!offering?.availablePackages?.length) {
-        console.warn("[purchaseService] Google Play returned no purchasable packages for the current offering.");
-        throw new Error("No purchasable packages in current offering");
+      try {
+        const offerings = await Purchases.getOfferings();
+        if (offerings.current?.availablePackages?.length) return offerings.current;
+        console.warn("[purchaseService] Current offering has no Google Play packages; checking products directly.");
+      } catch (error) {
+        console.warn("[purchaseService] Offering lookup failed; checking Play products directly:", describePurchaseError(error));
       }
-      return offering;
+
+      // A valid RevenueCat offering can still have no resolved packages on a
+      // particular Play account. Ask Play for the two configured base plans
+      // directly before treating the subscriptions as unavailable.
+      const { products } = await Purchases.getProducts({
+        productIdentifiers: [...new Set(PLAY_SUBSCRIPTIONS.flatMap(({ id }) => [id, id.split(":")[0]]))],
+      });
+      const directPackages: DirectProductPackage[] = PLAY_SUBSCRIPTIONS.flatMap(({ id, type, packageId }) => {
+        const product = products.find((item) => item.identifier === id || item.identifier === id.split(":")[0]);
+        return product ? [{ identifier: packageId, packageType: type, product, directProduct: true }] : [];
+      });
+      if (directPackages.length === 0) {
+        throw new Error("Google Play에서 월간·연간 구독 상품을 찾지 못했어요. Play 스토어 테스트 계정, 설치 경로, 국가 설정을 확인해 주세요.");
+      }
+      console.info(`[purchaseService] Loaded ${directPackages.length} Google Play products directly.`);
+      return { availablePackages: directPackages } as unknown as PurchasesOffering;
     } catch (err) {
-      console.error("[purchaseService] Failed to fetch offerings:", err);
+      console.error("[purchaseService] Failed to fetch Play products:", describePurchaseError(err));
       throw err;
     }
   },
 
   async purchasePackage(pkg: any): Promise<CustomerInfo> {
+    if (pkg.directProduct === true) {
+      const result = await Purchases.purchaseStoreProduct({ product: pkg.product });
+      return result.customerInfo;
+    }
     const result = await Purchases.purchasePackage({ aPackage: pkg });
     return result.customerInfo;
   },
