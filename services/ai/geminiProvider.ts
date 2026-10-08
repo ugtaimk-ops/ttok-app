@@ -8,6 +8,12 @@ import { AIService, GenerateContentOptions } from "./types";
 let cachedApiKeys: string[] | null = null;
 let currentKeyIndex = 0;
 const clientCache = new Map<string, GoogleGenAI>();
+const GEMINI_ATTEMPT_TIMEOUT_MS = 25_000;
+const GEMINI_TOTAL_TIMEOUT_MS = 95_000;
+
+function aiTimeoutError(): Error & { status: number; code: string } {
+  return Object.assign(new Error("AI 응답 시간이 초과되었습니다."), { status: 504, code: "AI_TIMEOUT" });
+}
 
 function getApiKeys(): string[] {
   if (cachedApiKeys) return cachedApiKeys;
@@ -136,18 +142,24 @@ export class GeminiProvider implements AIService {
     contents: any[],
     config: any,
     prompt: string,
-    hasImage: boolean
+    hasImage: boolean,
+    signal: AbortSignal
   ): Promise<string> {
     const ai = this.getClient(apiKey);
     let lastError: any = null;
 
     for (const modelName of modelsToTry) {
+      if (signal.aborted) throw aiTimeoutError();
       try {
         console.info(`Attempting Gemini generation with model: ${modelName}`);
         const response = await ai.models.generateContent({
           model: modelName,
           contents: contents.length === 1 && !hasImage ? prompt : { parts: contents },
-          config,
+          config: {
+            ...config,
+            abortSignal: signal,
+            httpOptions: { timeout: GEMINI_ATTEMPT_TIMEOUT_MS, retryOptions: { attempts: 1 } },
+          },
         });
 
         if (response && response.text) {
@@ -155,6 +167,7 @@ export class GeminiProvider implements AIService {
           return response.text;
         }
       } catch (error: any) {
+        if (signal.aborted) throw aiTimeoutError();
         console.warn(`Gemini generation with ${modelName} failed:`, error.message || error);
         lastError = error;
 
@@ -231,6 +244,9 @@ export class GeminiProvider implements AIService {
     }
 
     let lastError: any = null;
+    // One deadline covers all model/key fallbacks and stays below the app's
+    // 120-second request timeout. The SDK signal aborts the active HTTP call.
+    const deadline = AbortSignal.timeout(GEMINI_TOTAL_TIMEOUT_MS);
 
     // Start from whichever key last worked, and rotate forward through the
     // rest of the list on quota exhaustion OR an auth/invalid-key error - a
@@ -239,14 +255,16 @@ export class GeminiProvider implements AIService {
     // blip) fails immediately instead of burning through every key
     // pointlessly, since those would fail identically for every key.
     for (let attempt = 0; attempt < apiKeys.length; attempt++) {
+      if (deadline.aborted) throw aiTimeoutError();
       const keyIndex = (currentKeyIndex + attempt) % apiKeys.length;
       const apiKey = apiKeys[keyIndex];
 
       try {
-        const result = await this.generateWithKey(apiKey, modelsToTry, contents, config, options.prompt, !!options.imageBase64);
+        const result = await this.generateWithKey(apiKey, modelsToTry, contents, config, options.prompt, !!options.imageBase64, deadline);
         currentKeyIndex = keyIndex;
         return result;
       } catch (error: any) {
+        if (deadline.aborted) throw aiTimeoutError();
         lastError = error;
         if (shouldTryNextKey(error) && apiKeys.length > 1) {
           const reason = isQuotaError(error) ? "exhausted" : "unusable (auth/key error)";

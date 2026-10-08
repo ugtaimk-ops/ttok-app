@@ -66,7 +66,7 @@ let certsExpireAt = 0;
 async function getGoogleCerts(): Promise<Record<string, string>> {
   if (cachedCerts && Date.now() < certsExpireAt) return cachedCerts;
 
-  const res = await fetch(GOOGLE_CERTS_URL);
+  const res = await fetch(GOOGLE_CERTS_URL, { signal: AbortSignal.timeout(8_000) });
   if (!res.ok) throw new Error(`Failed to fetch Google certs: ${res.status}`);
   cachedCerts = await res.json();
 

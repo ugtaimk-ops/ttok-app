@@ -111,7 +111,7 @@ app.use(AI_ROUTES, async (req, res, next) => {
 
 // Health Check Endpoint
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", version: "1.0.10", message: "TTOK Backend Server is running!", timestamp: new Date().toISOString() });
+  res.json({ status: "ok", version: "1.0.12", message: "TTOK Backend Server is running!", timestamp: new Date().toISOString() });
 });
 
 // School Search Endpoint (SchoolInfo.go.kr Integration & Fallback)
@@ -539,15 +539,13 @@ app.post("/api/script/generate", async (req, res) => {
 // 2. Presentation Practice Analysis Endpoint
 app.post("/api/practice/analyze", async (req, res) => {
   console.log(`[BACKEND] [POST /api/practice/analyze] Request received at ${new Date().toISOString()}`);
-  console.log(`[BACKEND] Request Body:`, JSON.stringify(req.body));
 
   try {
     const { topic, transcript, duration, feedbackStyle } = req.body;
     
-    const hasApiKey = !!process.env.GEMINI_API_KEY;
-    console.log(`[BACKEND] GEMINI_API_KEY available: ${hasApiKey}`);
+    const hasApiKey = !!(process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY);
     if (!hasApiKey) {
-      console.warn("[BACKEND] WARNING: GEMINI_API_KEY is not defined in the backend environment!");
+      console.warn("[BACKEND] No Gemini API key is configured.");
     }
 
     const ai = getAIService();
@@ -650,12 +648,10 @@ app.post("/api/practice/analyze", async (req, res) => {
   } catch (error: any) {
     console.error("[BACKEND] Practice analysis error:", error);
     const is429 = error.status === 429 || error.message?.includes("RESOURCE_EXHAUSTED_429");
-    res.status(is429 ? 429 : 500).json({ 
-      error: is429 ? "RESOURCE_EXHAUSTED_429" : (error.message || "발표 분석에 실패했습니다."),
-      details: error.stack || null,
-      envCheck: {
-        hasGeminiKey: !!process.env.GEMINI_API_KEY
-      }
+    const isTimeout = error.status === 504 || error.code === "AI_TIMEOUT";
+    res.status(is429 ? 429 : isTimeout ? 504 : 500).json({
+      error: is429 ? "AI 요청이 많아 잠시 이용하기 어려워요." : isTimeout ? "AI 응답이 늦어 분석을 마치지 못했어요. 잠시 후 다시 시도해 주세요." : "발표 분석에 실패했습니다.",
+      code: is429 ? "AI_QUOTA_EXCEEDED" : isTimeout ? "AI_TIMEOUT" : "PRACTICE_ANALYSIS_FAILED",
     });
   }
 });

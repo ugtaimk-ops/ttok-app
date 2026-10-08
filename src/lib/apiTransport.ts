@@ -54,6 +54,7 @@ export async function readApiJson<T = any>(response: Response): Promise<T> {
       401: "로그인을 다시 한 뒤 이용해 주세요.",
       403: "현재 계정의 이용 권한 또는 이번 달 남은 횟수를 확인해 주세요.",
       429: "AI 요청이 많아 잠시 이용하기 어려워요. 잠시 후 다시 시도해 주세요.",
+      504: "AI 응답이 늦어 분석을 마치지 못했어요. 잠시 후 다시 시도해 주세요.",
     };
     const message = data?.code === "MONTHLY_LIMIT_EXCEEDED"
       ? "이번 달 AI 이용 횟수를 모두 사용했어요. 다음 달에 다시 이용할 수 있어요."
