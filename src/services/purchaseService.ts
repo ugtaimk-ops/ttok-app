@@ -2,6 +2,7 @@ import { Purchases } from "@revenuecat/purchases-capacitor";
 import type { PurchasesOffering, CustomerInfo } from "@revenuecat/purchases-capacitor";
 import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
+import { auth } from "../lib/firebase";
 
 const ENTITLEMENT_ID = "똑 Pro";
 // Fallback if RevenueCat doesn't hand back a subscription-specific
@@ -10,6 +11,7 @@ const ENTITLEMENT_ID = "똑 Pro";
 const PLAY_STORE_SUBSCRIPTIONS_URL = "https://play.google.com/store/account/subscriptions?package=com.ttokapp.app";
 
 let configuredForUid: string | null = null;
+let pendingConfiguration: Promise<void> | null = null;
 
 export const purchaseService = {
   /**
@@ -19,6 +21,11 @@ export const purchaseService = {
    * services/revenueCatService.ts on the backend).
    */
   async configure(uid: string): Promise<void> {
+    if (configuredForUid === uid) return;
+    // Settings can request offerings while this asynchronous initialization is
+    // still running. Also serialize account switches so purchases use the
+    // currently signed-in Firebase user as RevenueCat's app user ID.
+    if (pendingConfiguration) await pendingConfiguration;
     if (configuredForUid === uid) return;
     // RevenueCat ties each public API key to one platform (Apple App Store vs
     // Google Play) - using the Android key on iOS (or vice versa) fails with
@@ -30,21 +37,32 @@ export const purchaseService = {
       console.warn(`[purchaseService] VITE_REVENUECAT_API_KEY_${isIOS ? "IOS" : "ANDROID"} is not set, skipping configure.`);
       return;
     }
-    try {
-      await Purchases.configure({ apiKey, appUserID: uid });
+    pendingConfiguration = (async () => {
+      if (configuredForUid) await Purchases.logIn({ appUserID: uid });
+      else await Purchases.configure({ apiKey, appUserID: uid });
       configuredForUid = uid;
-    } catch (err) {
+    })().catch((err) => {
       console.error("[purchaseService] Failed to configure RevenueCat:", err);
-    }
+    }).finally(() => { pendingConfiguration = null; });
+    await pendingConfiguration;
   },
 
-  async getCurrentOffering(): Promise<PurchasesOffering | null> {
+  async getCurrentOffering(): Promise<PurchasesOffering> {
     try {
+      const uid = auth.currentUser?.uid;
+      if (!uid) throw new Error("RevenueCat requested before Firebase sign-in completed");
+      await this.configure(uid);
+      if (configuredForUid !== uid) throw new Error("RevenueCat is not configured for this account");
       const offerings = await Purchases.getOfferings();
-      return offerings.current ?? null;
+      const offering = offerings.current;
+      if (!offering?.availablePackages?.length) {
+        console.warn("[purchaseService] Google Play returned no purchasable packages for the current offering.");
+        throw new Error("No purchasable packages in current offering");
+      }
+      return offering;
     } catch (err) {
       console.error("[purchaseService] Failed to fetch offerings:", err);
-      return null;
+      throw err;
     }
   },
 

@@ -21,6 +21,15 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Verify Google Play RevenueCat key
+        env:
+          RC_ANDROID_KEY: ${{ vars.REVENUECAT_API_KEY_ANDROID }}
+        run: |
+          if [[ "$RC_ANDROID_KEY" != goog_* ]]; then
+            echo 'A Google Play RevenueCat public key is required for a release build.' >&2
+            exit 1
+          fi
+
       - name: Build Web Application
         run: npm run build
         env:

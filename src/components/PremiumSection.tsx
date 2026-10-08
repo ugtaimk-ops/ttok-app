@@ -27,11 +27,33 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
 
   useEffect(() => {
     if (isPremium) return;
+    let active = true;
     setIsLoadingOffering(true);
     purchaseService.getCurrentOffering()
-      .then(setOffering)
-      .finally(() => setIsLoadingOffering(false));
+      .then((latest) => { if (active) setOffering(latest); })
+      .catch(() => { if (active) setOffering(null); })
+      .finally(() => { if (active) setIsLoadingOffering(false); });
+    return () => { active = false; };
   }, [isPremium]);
+
+  const handleOpenPaywall = async () => {
+    if (isLoadingOffering) return;
+    setIsLoadingOffering(true);
+    setMessage(null);
+    try {
+      // Recheck on every tap: a transient Play connection failure or an
+      // offering loaded before SDK initialization must not stay cached forever.
+      const latest = await purchaseService.getCurrentOffering();
+      setOffering(latest);
+      setShowPaywall(true);
+    } catch {
+      setOffering(null);
+      setMessage("Google Play 결제 상품을 불러오지 못했어요. Play 스토어에서 테스트 참여와 설치 계정을 확인한 뒤 다시 눌러주세요.");
+      setMessageIsError(true);
+    } finally {
+      setIsLoadingOffering(false);
+    }
+  };
 
   const handleManageSubscription = async () => {
     setIsOpeningManage(true);
@@ -90,7 +112,7 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
 
       {!isPremium ? (
         <button
-          onClick={() => setShowPaywall(true)}
+          onClick={handleOpenPaywall}
           disabled={isLoadingOffering}
           className={`w-full py-3.5 rounded-2xl flex items-center justify-center gap-1.5 text-fluid-sm font-black text-white transition-all cursor-pointer ${
             isLoadingOffering ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.01] active:scale-[0.99]"
