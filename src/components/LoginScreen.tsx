@@ -1,4 +1,5 @@
 import BackButton from "./BackButton";
+import { useScreenBack } from "../lib/screenBack";
 import React, { useState } from "react";
 import { Sparkles, Loader2, AlertCircle, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -61,6 +62,17 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  useScreenBack(() => {
+    if (isLoading) return true;
+    if (!selectedProvider && !error && !infoMessage && !stage) return false;
+    setSelectedProvider(null);
+    setError(null);
+    setInfoMessage(null);
+    setStage("");
+    setPassword("");
+    return true;
+  });
 
   const handleSignIn = async (provider: "google") => {
     setIsLoading(true);

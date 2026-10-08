@@ -1,4 +1,5 @@
 import BackButton from "./BackButton";
+import { useScreenBack } from "../lib/screenBack";
 import { useState } from "react";
 import { Mail, Loader2, CheckCircle2, LogOut } from "lucide-react";
 import { motion } from "motion/react";
@@ -16,6 +17,12 @@ export default function EmailVerificationScreen({ email, darkMode, onVerified, o
   const [isResending, setIsResending] = useState(false);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
+
+  useScreenBack(() => {
+    if (isChecking || isResending) return true;
+    onLogout();
+    return true;
+  });
 
   const handleCheck = async () => {
     setIsChecking(true);

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "motion/react";
 import BackButton from "./components/BackButton";
 import { ScreenScope, handleScreenBack } from "./lib/screenBack";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 import { Loader2 } from "lucide-react";
 import type { User } from "firebase/auth";
 import {
@@ -111,6 +113,33 @@ export default function App() {
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // The native system Back button and the visible Back control share the same
+  // navigation logic. The ref keeps the native listener current across renders.
+  const nativeBack = useRef<() => void>(() => {});
+  nativeBack.current = () => {
+    if (authUser === undefined) return;
+    if (authUser === null || (isPasswordAccount && !emailVerified)) {
+      handleScreenBack();
+      return;
+    }
+    handleBack();
+  };
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== "android") return;
+    let disposed = false;
+    let removeListener: (() => Promise<void>) | undefined;
+    void CapacitorApp.addListener("backButton", () => nativeBack.current())
+      .then(handle => {
+        if (disposed) void handle.remove();
+        else removeListener = () => handle.remove();
+      })
+      .catch(error => console.error("Android Back listener failed:", error));
+    return () => {
+      disposed = true;
+      if (removeListener) void removeListener();
+    };
+  }, []);
 
 
   // Deep navigation sub-states
