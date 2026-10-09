@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Capacitor } from "@capacitor/core";
+import { useScreenBack } from "../lib/screenBack";
 
 export interface GlassSelectOption {
   value: string;
@@ -46,6 +47,7 @@ export default function GlassSelect({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isIOS = Capacitor.getPlatform() === "ios";
+  useScreenBack(() => { setIsOpen(false); return true; }, !isIOS && isOpen, 80);
 
   useEffect(() => {
     if (isIOS || !isOpen) return;

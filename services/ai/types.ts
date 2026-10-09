@@ -11,6 +11,8 @@ export interface GenerateContentOptions {
   };
   imageBase64?: string;
   imageMimeType?: string;
+  videoBase64?: string;
+  videoMimeType?: string;
   temperature?: number;
   tier?: "fast" | "general" | "complex";
 }

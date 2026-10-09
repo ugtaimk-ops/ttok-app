@@ -143,7 +143,8 @@ export class GeminiProvider implements AIService {
     config: any,
     prompt: string,
     hasImage: boolean,
-    signal: AbortSignal
+    signal: AbortSignal,
+    attemptTimeoutMs: number
   ): Promise<string> {
     const ai = this.getClient(apiKey);
     let lastError: any = null;
@@ -158,7 +159,7 @@ export class GeminiProvider implements AIService {
           config: {
             ...config,
             abortSignal: signal,
-            httpOptions: { timeout: GEMINI_ATTEMPT_TIMEOUT_MS, retryOptions: { attempts: 1 } },
+            httpOptions: { timeout: attemptTimeoutMs, retryOptions: { attempts: 1 } },
           },
         });
 
@@ -194,7 +195,7 @@ export class GeminiProvider implements AIService {
     // Configure ordered fallback lists of model candidates for maximum resilience
     let modelsToTry: string[] = [];
 
-    if (options.tier === "complex" || options.imageBase64) {
+    if (options.tier === "complex" || options.imageBase64 || options.videoBase64) {
       modelsToTry = [
         "gemini-2.5-flash",       // Primary free model requested by user
         "gemini-2.5-flash-lite",  // Secondary free model requested by user
@@ -219,6 +220,13 @@ export class GeminiProvider implements AIService {
           data: options.imageBase64,
         },
       });
+    }
+
+    if (options.videoBase64) {
+      contents.push({ inlineData: {
+        mimeType: options.videoMimeType || "video/webm",
+        data: options.videoBase64,
+      } });
     }
 
     contents.push({
@@ -246,7 +254,8 @@ export class GeminiProvider implements AIService {
     let lastError: any = null;
     // One deadline covers all model/key fallbacks and stays below the app's
     // 120-second request timeout. The SDK signal aborts the active HTTP call.
-    const deadline = AbortSignal.timeout(GEMINI_TOTAL_TIMEOUT_MS);
+    const deadline = AbortSignal.timeout(options.videoBase64 ? 110_000 : GEMINI_TOTAL_TIMEOUT_MS);
+    const attemptTimeoutMs = options.videoBase64 ? 70_000 : GEMINI_ATTEMPT_TIMEOUT_MS;
 
     // Start from whichever key last worked, and rotate forward through the
     // rest of the list on quota exhaustion OR an auth/invalid-key error - a
@@ -260,7 +269,7 @@ export class GeminiProvider implements AIService {
       const apiKey = apiKeys[keyIndex];
 
       try {
-        const result = await this.generateWithKey(apiKey, modelsToTry, contents, config, options.prompt, !!options.imageBase64, deadline);
+        const result = await this.generateWithKey(apiKey, modelsToTry, contents, config, options.prompt, !!(options.imageBase64 || options.videoBase64), deadline, attemptTimeoutMs);
         currentKeyIndex = keyIndex;
         return result;
       } catch (error: any) {

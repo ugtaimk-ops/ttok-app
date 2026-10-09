@@ -4,6 +4,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { ScriptItem, PracticeLog } from "../types";
 import { getApiUrl, robustFetch, getTodayDateString, readApiJson, ApiError } from "../lib/api";
 import { isNativeApp, openNativeSettings } from "../lib/capacitor";
+import { Capacitor } from "@capacitor/core";
+import { Share } from "@capacitor/share";
+import { exportScriptPdf } from "../lib/exportScriptPdf";
 import { 
   Sparkles, 
   FileText, 
@@ -111,6 +114,8 @@ export default function PracticeScreen({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<PracticeLog | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [analysisConsent, setAnalysisConsent] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   
   // Custom Direct Script Input and Prompter states
   const [scriptInputMode, setScriptInputMode] = useState<"saved" | "direct">("saved");
@@ -145,18 +150,18 @@ export default function PracticeScreen({
       setSelectedScriptId(latestScript.id);
       setPracticeTopic(latestScript.topic);
       setSelectedScriptText(latestScript.script);
-      setTranscript(latestScript.script.substring(0, 200) + "...");
     }
   }, [scripts]);
   
   // Recording stats
   const [seconds, setSeconds] = useState(0);
   const [transcript, setTranscript] = useState("");
-  const [audioLevel, setAudioLevel] = useState<number[]>(Array(12).fill(15));
   
   // Media refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recordingRef = useRef<{ recorder: MediaRecorder; chunks: Blob[]; microphone: MediaStream } | null>(null);
+  const elapsedRef = useRef(0);
   const timerRef = useRef<any>(null);
   const cameraRequest = useRef(0);
   const acquiringCamera = useRef(false);
@@ -214,6 +219,13 @@ export default function PracticeScreen({
 
   const stopStreams = () => {
     cameraRequest.current += 1;
+    const recording = recordingRef.current;
+    recordingRef.current = null;
+    if (recording) {
+      if (recording.recorder.state !== "inactive") recording.recorder.stop();
+      recording.microphone.getTracks().forEach(track => track.stop());
+      recording.chunks.length = 0;
+    }
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => track.stop());
       mediaStreamRef.current = null;
@@ -290,55 +302,40 @@ export default function PracticeScreen({
 
   const handleShareScript = async () => {
     if (!generatedScript) return;
+    const text = `똑 AI 발표 대본: ${generatedScript.title}\n\n${editedScriptContent}`;
+    setExportError(null);
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `[똑] ${generatedScript.title}`,
-          text: `똑(Tok) AI가 작성해 준 발표 대본:\n\n${editedScriptContent}`,
-        });
+      if (Capacitor.isNativePlatform()) {
+        await Share.share({ title: `[똑] ${generatedScript.title}`, text });
+      } else if (navigator.share) {
+        await navigator.share({ title: `[똑] ${generatedScript.title}`, text });
       } else {
-        alert("이 기기에서는 직접 공유 API가 지원되지 않습니다. 복사 기능을 이용해 주세요!");
+        await navigator.clipboard.writeText(text);
+        setIsCopied(true);
+        window.setTimeout(() => setIsCopied(false), 2000);
       }
-    } catch (e) {}
+    } catch (error: any) {
+      if (error?.name !== "AbortError" && !/cancel/i.test(error?.message || "")) {
+        setExportError("공유하지 못했어요. 잠시 후 다시 시도하거나 대본 복사를 이용해 주세요.");
+      }
+    }
   };
 
-  const handleSavePDF = () => {
-    // Generate a simple print-like window download
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${generatedScript?.title || "발표대본"}</title>
-          <style>
-            body { font-family: sans-serif; padding: 40px; color: #1e293b; line-height: 1.6; }
-            h1 { font-size: 24px; border-bottom: 2px solid #0066FF; padding-bottom: 10px; margin-bottom: 20px; }
-            h2 { font-size: 16px; color: #475569; }
-            .script-box { background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #0066FF; white-space: pre-wrap; font-size: 14px; }
-            .outline { margin-bottom: 20px; padding: 15px; background: #f1f5f9; border-radius: 8px; }
-            .tips { margin-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <h1>똑(Tok) AI 발표대본: ${generatedScript?.title}</h1>
-          <div class="outline">
-            <h2>발표 아웃라인 요약</h2>
-            <ul>
-              ${generatedScript?.outline.map((o: string) => `<li>${o}</li>`).join("")}
-            </ul>
-          </div>
-          <div class="script-box">${editedScriptContent}</div>
-          <div class="tips">
-            <h2>AI 발표 전략 및 팁</h2>
-            <ul>
-              ${generatedScript?.tips.map((t: string) => `<li>${t}</li>`).join("")}
-            </ul>
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+  const handleSavePDF = async () => {
+    if (!generatedScript) return;
+    setExportError(null);
+    try {
+      await exportScriptPdf({
+        title: generatedScript.title,
+        outline: generatedScript.outline || [],
+        tips: generatedScript.tips || [],
+        script: editedScriptContent,
+      });
+    } catch (error: any) {
+      if (error?.name !== "AbortError" && !/cancel/i.test(error?.message || "")) {
+        setExportError("PDF를 만들거나 공유하지 못했어요. 다시 시도해 주세요.");
+      }
+    }
   };
 
   // ==========================================
@@ -384,11 +381,47 @@ export default function PracticeScreen({
   };
 
   const startPracticeRecording = async () => {
-    setIsRecording(true);
+    if (recordingRef.current || !analysisConsent) return;
     setSeconds(0);
+    elapsedRef.current = 0;
     setTranscript("");
     setAnalysisResult(null);
     setAnalysisError(null);
+    pendingPractice.current = null;
+    setAnalysisConsent(false);
+
+    // The live camera preview alone is not evidence for an AI evaluation.
+    // Record video and microphone audio together; never invent scores if the
+    // browser/OS cannot record them.
+    let microphone: MediaStream | null = null;
+    try {
+      if (!mediaStreamRef.current?.getVideoTracks().length || typeof MediaRecorder === "undefined") {
+        throw new Error("이 기기에서는 영상 녹화가 지원되지 않아요.");
+      }
+      const mimeType = ["video/webm;codecs=vp8,opus", "video/webm", "video/mp4"]
+        .find(type => MediaRecorder.isTypeSupported(type));
+      if (!mimeType) throw new Error("이 기기에서 AI 분석용 영상 형식을 녹화할 수 없어요.");
+      microphone = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!activeCameraScreen.current || !mediaStreamRef.current?.getVideoTracks().some(track => track.readyState === "live")) {
+        throw new Error("연습 화면이 닫혀 녹화를 시작하지 않았어요.");
+      }
+      const stream = new MediaStream([
+        ...mediaStreamRef.current.getVideoTracks(),
+        ...microphone.getAudioTracks(),
+      ]);
+      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 220_000, audioBitsPerSecond: 32_000 });
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+      recorder.start(1000);
+      recordingRef.current = { recorder, chunks, microphone };
+      setIsRecording(true);
+    } catch (error: any) {
+      microphone?.getTracks().forEach(track => track.stop());
+      setAnalysisError(error?.name === "NotAllowedError"
+        ? "발표를 평가하려면 마이크 권한이 필요해요. 기기 설정에서 허용해 주세요."
+        : error?.message || "녹화를 시작하지 못했어요.");
+      return;
+    }
 
     // 1. Start native Speech Recognition (works inside the packaged app, unlike the
     // browser Web Speech API which iOS WKWebView doesn't implement at all and Android's
@@ -430,15 +463,18 @@ export default function PracticeScreen({
 
     // 2. Start stats timer
     timerRef.current = setInterval(() => {
-      setSeconds(prev => prev + 1);
+      elapsedRef.current += 1;
+      setSeconds(elapsedRef.current);
+      if (elapsedRef.current >= 240) void stopPracticeRecording();
 
-      // Simulate pulsating microphone levels
-      setAudioLevel(Array.from({ length: 12 }, () => Math.floor(Math.random() * 45) + 10));
     }, 1000);
   };
 
   const analysisController = useRef<AbortController | null>(null);
-  const pendingPractice = useRef<{topic: string; transcript: string; duration: number} | null>(null);
+  const pendingPractice = useRef<{
+    topic: string; expectedScript: string; duration: number;
+    videoBase64: string; videoMimeType: string;
+  } | null>(null);
   useEffect(() => () => analysisController.current?.abort(), []);
   const cancelPractice = () => {
     analysisController.current?.abort();
@@ -447,6 +483,7 @@ export default function PracticeScreen({
     void stopSpeechRecognition();
     setIsRecording(false);
     setAnalysisError(null);
+    pendingPractice.current = null;
     setSeconds(0);
   };
   useScreenBack(() => {
@@ -462,6 +499,7 @@ export default function PracticeScreen({
 
   const stopPracticeRecording = async (retry = false) => {
     if (analysisController.current) return;
+    if (!retry && !recordingRef.current) return;
     const controller = new AbortController();
     analysisController.current = controller;
     setIsAnalyzing(true);
@@ -470,23 +508,43 @@ export default function PracticeScreen({
     // Stop recording timer & stream
     if (timerRef.current) clearInterval(timerRef.current);
     void stopSpeechRecognition();
-    stopStreams();
 
     // Trigger AI Analysis
-    setIsAnalyzing(true);
     setAnalysisError(null);
 
-    if (!retry || !pendingPractice.current) {
-      pendingPractice.current = {
-        topic: practiceTopic || "자유 발표 주제",
-        transcript: (STT_FEATURE_ENABLED ? transcript.trim() : "") || selectedScriptText || "음성 기록 없음. 발표 주제와 연습 시간을 바탕으로 다음 연습 방법을 안내해주세요.",
-        duration: seconds
-      };
-    }
-    const payload = pendingPractice.current;
     const path = "/api/practice/analyze";
 
     try {
+      if (!retry) {
+        const recording = recordingRef.current!;
+        recordingRef.current = null;
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          const finish = () => resolve(new Blob(recording.chunks, { type: recording.recorder.mimeType.split(";")[0] }));
+          recording.recorder.addEventListener("stop", finish, { once: true });
+          recording.recorder.addEventListener("error", () => reject(new Error("녹화 파일을 만들지 못했어요.")), { once: true });
+          if (recording.recorder.state === "inactive") finish();
+          else recording.recorder.stop();
+        });
+        recording.microphone.getTracks().forEach(track => track.stop());
+        stopStreams();
+        if (blob.size < 1024 || elapsedRef.current < 3) throw new Error("발표를 3초 이상 녹화한 뒤 분석해 주세요.");
+        if (blob.size > 16 * 1024 * 1024) throw new Error("녹화 영상이 너무 커요. 4분 이내로 다시 연습해 주세요.");
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error("녹화 파일을 읽지 못했어요."));
+          reader.readAsDataURL(blob);
+        });
+        pendingPractice.current = {
+          topic: practiceTopic || "자유 발표 주제",
+          expectedScript: selectedScriptText.slice(0, 5000),
+          duration: elapsedRef.current,
+          videoBase64: dataUrl.split(",")[1],
+          videoMimeType: blob.type,
+        };
+      }
+      const payload = pendingPractice.current;
+      if (!payload) throw new Error("다시 분석할 녹화 자료가 없어요. 새로 연습해 주세요.");
       const res = await robustFetch(path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -516,11 +574,13 @@ export default function PracticeScreen({
       const todayStr = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, '0') + "-" + String(today.getDate()).padStart(2, '0');
       setAnalysisResult({ ...logPayload, id: "practice_" + Date.now(), date: todayStr });
       onAddPracticeLog(logPayload);
+      pendingPractice.current = null;
 
     } catch (err: any) {
       console.error("[PracticeScreen] Practice analysis fetch error:", err);
-      if (err?.name !== "AbortError") setAnalysisError(err instanceof ApiError ? err.message : "분석을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      if (err?.name !== "AbortError") setAnalysisError(err instanceof ApiError ? err.message : err?.message || "분석을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
+      stopStreams();
       analysisController.current = null;
       setIsAnalyzing(false);
     }
@@ -530,12 +590,12 @@ export default function PracticeScreen({
   const getRadarData = () => {
     if (!analysisResult) return [];
     return [
-      { subject: "시선", score: analysisResult.scores?.eye_contact ?? 80, fullMark: 100 },
-      { subject: "목소리", score: analysisResult.scores?.voice ?? 80, fullMark: 100 },
-      { subject: "발음", score: analysisResult.scores?.pronunciation ?? 80, fullMark: 100 },
-      { subject: "자세", score: analysisResult.scores?.posture ?? 80, fullMark: 100 },
-      { subject: "손동작", score: analysisResult.scores?.gestures ?? 80, fullMark: 100 },
-      { subject: "표정", score: analysisResult.scores?.expression ?? 80, fullMark: 100 }
+      { subject: "시선", score: analysisResult.scores?.eye_contact ?? 0, fullMark: 100 },
+      { subject: "목소리", score: analysisResult.scores?.voice ?? 0, fullMark: 100 },
+      { subject: "발음", score: analysisResult.scores?.pronunciation ?? 0, fullMark: 100 },
+      { subject: "자세", score: analysisResult.scores?.posture ?? 0, fullMark: 100 },
+      { subject: "손동작", score: analysisResult.scores?.gestures ?? 0, fullMark: 100 },
+      { subject: "표정", score: analysisResult.scores?.expression ?? 0, fullMark: 100 }
     ];
   };
 
@@ -817,6 +877,7 @@ export default function PracticeScreen({
                           대본 공유
                         </button>
                       </div>
+                      {exportError && <p role="alert" className="text-xs font-semibold text-rose-500">{exportError}</p>}
                     </div>
 
                     {/* Outline Section */}
@@ -1294,10 +1355,15 @@ export default function PracticeScreen({
 
                     {/* Controls below video preview */}
                     {hasPermission && (
-                      <div className="flex justify-center gap-4 mt-6">
+                      <div className="flex flex-col items-center gap-3 mt-6">
+                        <label className="max-w-md flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400 cursor-pointer">
+                          <input type="checkbox" checked={analysisConsent} onChange={event => setAnalysisConsent(event.target.checked)} className="mt-0.5" />
+                          <span>연습 종료 시 녹화한 영상과 음성을 AI 분석 서버와 Google Gemini에 전송하는 데 동의합니다. 원본은 앱 서버에 저장되지 않습니다.</span>
+                        </label>
                         <button
                           onClick={startPracticeRecording}
-                          className="px-6 py-4 bg-rose-500 hover:bg-rose-600 text-white font-extrabold rounded-2xl text-sm flex items-center gap-1.5 shadow-md shadow-rose-500/25 cursor-pointer"
+                          disabled={!analysisConsent}
+                          className="px-6 py-4 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold rounded-2xl text-sm flex items-center gap-1.5 shadow-md shadow-rose-500/25 cursor-pointer"
                         >
                           <Play size={15} /> 발표 연습 시작하기
                         </button>
@@ -1465,8 +1531,8 @@ export default function PracticeScreen({
                 <div className="space-y-2">
                   <h3 className="text-base font-black text-slate-800 dark:text-slate-100">똑(Tok) AI 발표 분석 중...</h3>
                   <p className="text-xs text-slate-400 break-keep leading-relaxed font-semibold">
-                    스피치 텍스트와 말의 빠르기, 발음 선명도, 시선 처리 등을 다차원 분석하고 있습니다.<br />
-                    선생님의 피드백과 오각형 점수 리포트가 곧 완성됩니다. 잠시만 기다려 주세요!
+                    실제 녹화한 영상과 음성을 바탕으로 말하기와 시선·자세를 분석하고 있습니다.<br />
+                    관찰 근거를 확인한 뒤 평가 결과를 표시합니다.
                   </p>
                 </div>
               </div>
@@ -1514,7 +1580,7 @@ export default function PracticeScreen({
                     } shadow-sm h-full flex flex-col justify-between`}>
                       <div>
                         <h3 className="text-sm font-extrabold tracking-tight-sf mb-1 flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
-                          <Award size={16} className="text-brand" /> 발표 6대 요소 평가 오각형
+                          <Award size={16} className="text-brand" /> 발표 6대 요소 평가
                         </h3>
                         <p className="text-[11px] text-slate-400">시선, 목소리, 발음, 자세, 제스처, 표정의 균형도입니다.</p>
                       </div>
