@@ -32,6 +32,8 @@ import SettingsScreen from "./components/SettingsScreen";
 import BottomNavigationBar from "./components/BottomNavigationBar";
 import LoginScreen from "./components/LoginScreen";
 import EmailVerificationScreen from "./components/EmailVerificationScreen";
+import TermsConsentScreen from "./components/TermsConsentScreen";
+import { TERMS_VERSION } from "./components/TermsContent";
 
 const INITIAL_USER: UserProfile = {
   name: "",
@@ -83,6 +85,23 @@ export default function App() {
     setEmailVerified(authUser?.emailVerified ?? true);
   }, [authUser]);
   const isPasswordAccount = authUser?.providerData.some(p => p.providerId === "password") ?? false;
+  const [termsGate, setTermsGate] = useState<{ uid: string; status: "checking" | "pending" | "accepted" | "error" } | null>(null);
+  const [termsRetry, setTermsRetry] = useState(0);
+  const consentAccepted = !!authUser && termsGate?.uid === authUser.uid && termsGate.status === "accepted";
+
+  useEffect(() => {
+    if (!authUser || (authUser.providerData.some(p => p.providerId === "password") && !emailVerified)) return;
+    const uid = authUser.uid;
+    let cancelled = false;
+    setTermsGate({ uid, status: "checking" });
+    dataSyncService.getAcceptedTermsVersion(uid).then(version => {
+      if (!cancelled) setTermsGate({ uid, status: version === TERMS_VERSION ? "accepted" : "pending" });
+    }).catch(error => {
+      console.error("Could not load terms agreement:", error);
+      if (!cancelled) setTermsGate({ uid, status: "error" });
+    });
+    return () => { cancelled = true; };
+  }, [authUser?.uid, emailVerified, termsRetry]);
 
   const [tokTab, setTokTab] = useState<string>("home");
   const [kkorureukTab, setKkorureukTab] = useState<string>("meal-today");
@@ -124,6 +143,7 @@ export default function App() {
       handleScreenBack();
       return;
     }
+    if (!consentAccepted) return;
     handleBack();
   };
   useEffect(() => {
@@ -246,14 +266,14 @@ export default function App() {
   // Identifies this user to RevenueCat as app_user_id, so a purchase maps
   // back to the right users/{uid} doc when the subscription webhook fires.
   useEffect(() => {
-    if (authUser?.uid) purchaseService.configure(authUser.uid);
-  }, [authUser?.uid]);
+    if (authUser?.uid && consentAccepted) purchaseService.configure(authUser.uid);
+  }, [authUser?.uid, consentAccepted]);
 
   // Fetch authoritative usage and subscription status when signing in or
   // returning to the app. Check the Korean calendar month while the app stays
   // open too, so the counter visibly resets at midnight without an AI call.
   useEffect(() => {
-    if (!authUser?.uid) return;
+    if (!authUser?.uid || !consentAccepted) return;
     const uid = authUser.uid;
     let active = true;
     let shownMonth = getKoreanMonthKey();
@@ -289,13 +309,13 @@ export default function App() {
       window.removeEventListener("focus", onFocus);
       window.clearInterval(interval);
     };
-  }, [authUser?.uid]);
+  }, [authUser?.uid, consentAccepted]);
 
   // Cloud sync: once signed in, upload any local-only data (first login on this
   // device only - skipped if the cloud side already has data), then keep local
   // state live-mirrored to Firestore for cross-device sync.
   useEffect(() => {
-    if (!authUser) return;
+    if (!authUser || !consentAccepted) return;
     const uid = authUser.uid;
     let cancelled = false;
     const unsubscribers: Array<() => void> = [];
@@ -324,7 +344,7 @@ export default function App() {
       cancelled = true;
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [authUser?.uid]);
+  }, [authUser?.uid, consentAccepted]);
 
   // Initialize device-specific native local notification listeners on mount
   useEffect(() => {
@@ -562,6 +582,23 @@ export default function App() {
         onLogout={handleLogout}
       />
     );
+  }
+
+  if (!consentAccepted) {
+    if (termsGate?.uid === authUser.uid && termsGate.status === "pending") {
+      return <TermsConsentScreen key={authUser.uid} darkMode={darkMode} onLogout={handleLogout} onAgree={async () => {
+        await dataSyncService.acceptTerms(authUser.uid, TERMS_VERSION);
+        setTermsGate({ uid: authUser.uid, status: "accepted" });
+      }} />;
+    }
+    if (termsGate?.uid === authUser.uid && termsGate.status === "error") {
+      return <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <p>이용약관을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.</p>
+        <button type="button" onClick={() => setTermsRetry(value => value + 1)} className="px-5 py-2 rounded-xl bg-brand text-white">다시 시도</button>
+        <button type="button" onClick={handleLogout} className="text-sm text-slate-500 underline">로그아웃</button>
+      </div>;
+    }
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand" /></div>;
   }
 
   return (

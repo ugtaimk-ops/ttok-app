@@ -5,6 +5,7 @@ import {
   deleteDoc,
   onSnapshot,
   getDocs,
+  getDoc,
   Unsubscribe
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
@@ -65,6 +66,16 @@ async function clearCollection(uid: string, name: string): Promise<void> {
 }
 
 export const dataSyncService = {
+  async getAcceptedTermsVersion(uid: string): Promise<string | null> {
+    const snapshot = await getDoc(userDocRef(uid));
+    return snapshot.exists() ? snapshot.data().termsAcceptedVersion ?? null : null;
+  },
+  async acceptTerms(uid: string, version: string): Promise<void> {
+    await setDoc(userDocRef(uid), {
+      termsAcceptedVersion: version,
+      termsAcceptedAt: new Date().toISOString()
+    }, { merge: true });
+  },
   subscribeToProfile(uid: string, cb: (data: Partial<UserProfile> | null) => void): Unsubscribe {
     return onSnapshot(
       userDocRef(uid),

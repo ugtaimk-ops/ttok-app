@@ -32,7 +32,7 @@ const isNative = () => Capacitor.isNativePlatform();
 function withTimeout<T>(promise: Promise<T>, ms: number, stage: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
-      const err: any = new Error(`[멈춘 단계] ${stage} - ${Math.round(ms / 1000)}초 동안 응답이 없습니다.`);
+      const err: any = new Error(`[로그인 지연] ${stage} - ${Math.round(ms / 1000)}초 동안 응답이 없습니다.`);
       err.code = "auth/stage-timeout";
       reject(err);
     }, ms);
@@ -103,21 +103,20 @@ export const authService = {
    * onAuthStateChanged() see the same signed-in user. Falls back to the web popup flow when
    * running in a regular browser (e.g. `npm run dev`).
    */
-  async signInWithGoogle(onStage?: (stage: string) => void): Promise<User> {
+  async signInWithGoogle(): Promise<User> {
     try {
       if (isNative()) {
         let result;
-        onStage?.("1단계: 구글 계정 선택 중");
         try {
           // Android's Credential Manager API (default) requires Google to recognize the
           // app's install provenance and can fail with "no credentials available" on
           // sideloaded builds that aren't installed via the Play Store. Fall back to the
           // legacy GoogleSignInClient intent-based flow in that case.
-          result = await withTimeout(FirebaseAuthentication.signInWithGoogle(), 120000, "1단계: 구글 계정 선택/인증(네이티브)");
+          result = await withTimeout(FirebaseAuthentication.signInWithGoogle(), 120000, "구글 계정 선택/인증");
         } catch (credentialManagerErr: any) {
           const msg = String(credentialManagerErr?.message || credentialManagerErr);
           if (msg.toLowerCase().includes("no credentials available")) {
-            result = await withTimeout(FirebaseAuthentication.signInWithGoogle({ useCredentialManager: false }), 120000, "1단계: 구글 계정 선택/인증(네이티브)");
+            result = await withTimeout(FirebaseAuthentication.signInWithGoogle({ useCredentialManager: false }), 120000, "구글 계정 선택/인증");
           } else {
             throw credentialManagerErr;
           }
@@ -125,9 +124,8 @@ export const authService = {
         if (!result.credential?.idToken) {
           throw new Error("Google 로그인에 실패했습니다. 다시 시도해 주세요.");
         }
-        onStage?.("2단계: Firebase 로그인 처리 중");
         const credential = GoogleAuthProvider.credential(result.credential.idToken, result.credential.accessToken);
-        const userCred = await withTimeout(signInWithCredential(auth, credential), 30000, "2단계: Firebase 로그인 처리");
+        const userCred = await withTimeout(signInWithCredential(auth, credential), 30000, "Firebase 로그인 처리");
         return userCred.user;
       }
       const provider = new GoogleAuthProvider();
@@ -262,7 +260,7 @@ export const authService = {
     const path = `users/${fbUser.uid}`;
     
     try {
-      const docSnap = await withTimeout(getDoc(userDocRef), 20000, "3단계: 프로필 불러오기(Firestore 읽기)");
+      const docSnap = await withTimeout(getDoc(userDocRef), 20000, "프로필 불러오기(Firestore 읽기)");
       const now = new Date().toISOString();
 
       if (!docSnap.exists()) {
@@ -282,7 +280,7 @@ export const authService = {
           // Perform creation
           // Usage status may have created this document while login was in
           // progress. Preserve server-managed quota and PRO fields in that case.
-          await withTimeout(setDoc(userDocRef, newUserData, { merge: true }), 20000, "3단계: 프로필 만들기(Firestore 쓰기)");
+          await withTimeout(setDoc(userDocRef, newUserData, { merge: true }), 20000, "프로필 만들기(Firestore 쓰기)");
         } catch (err: any) {
           if (err?.code === "auth/stage-timeout") throw err;
           handleFirestoreError(err, OperationType.CREATE, path);
@@ -306,7 +304,7 @@ export const authService = {
         try {
           await withTimeout(updateDoc(userDocRef, {
             lastLogin: now
-          }), 20000, "3단계: 프로필 갱신(Firestore 쓰기)");
+          }), 20000, "프로필 갱신(Firestore 쓰기)");
         } catch (err: any) {
           if (err?.code === "auth/stage-timeout") throw err;
           handleFirestoreError(err, OperationType.UPDATE, path);

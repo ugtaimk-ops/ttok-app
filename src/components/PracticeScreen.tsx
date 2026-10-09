@@ -115,7 +115,6 @@ export default function PracticeScreen({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<PracticeLog | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-  const [analysisConsent, setAnalysisConsent] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   
   // Custom Direct Script Input and Prompter states
@@ -124,15 +123,13 @@ export default function PracticeScreen({
   const [selectedScriptId, setSelectedScriptId] = useState("");
   const [selectedScriptText, setSelectedScriptText] = useState("");
   const [showTeleprompter, setShowTeleprompter] = useState(true);
-  const [prompterTextSize, setPrompterTextSize] = useState<"sm" | "base" | "lg" | "xl" | "2xl">("xl");
+  const [prompterTextSize, setPrompterTextSize] = useState<"sm" | "base" | "lg">("base");
 
-  const getTextSizeClass = (size: "sm" | "base" | "lg" | "xl" | "2xl") => {
+  const getTextSizeClass = (size: "sm" | "base" | "lg") => {
     switch (size) {
-      case "sm": return "text-xs sm:text-sm";
-      case "base": return "text-sm sm:text-base leading-relaxed";
-      case "lg": return "text-base sm:text-lg leading-relaxed";
-      case "xl": return "text-lg sm:text-xl leading-relaxed";
-      case "2xl": return "text-xl sm:text-2xl leading-loose font-bold";
+      case "sm": return "text-sm sm:text-base leading-relaxed";
+      case "base": return "text-lg sm:text-xl leading-relaxed";
+      case "lg": return "text-xl sm:text-2xl leading-loose font-bold";
       default: return "text-lg sm:text-xl leading-relaxed";
     }
   };
@@ -382,14 +379,13 @@ export default function PracticeScreen({
   };
 
   const startPracticeRecording = async () => {
-    if (recordingRef.current || !analysisConsent) return;
+    if (recordingRef.current) return;
     setSeconds(0);
     elapsedRef.current = 0;
     setTranscript("");
     setAnalysisResult(null);
     setAnalysisError(null);
     pendingPractice.current = null;
-    setAnalysisConsent(false);
 
     // The live camera preview alone is not evidence for an AI evaluation.
     // Record video and microphone audio together; never invent scores if the
@@ -897,43 +893,18 @@ export default function PracticeScreen({
                         <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">스피치 본문 (제스처 훈련 포함)</h3>
                         
                         {/* Font Size Adjuster Controls */}
-                        <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-1 rounded-xl self-start sm:self-auto max-w-full overflow-x-auto scrollbar-none flex-nowrap">
+                        <div className="flex items-center gap-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-0.5 rounded-lg self-start sm:self-auto max-w-full flex-nowrap">
                           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-extrabold px-1.5 shrink-0">크기</span>
-                          <button
-                            type="button"
-                            onClick={() => setPrompterTextSize("sm")}
-                            className={`h-9 px-2.5 text-xs font-bold rounded-lg transition-colors cursor-pointer shrink-0 ${prompterTextSize === "sm" ? "bg-brand text-white shadow-sm font-black" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}
-                          >
-                            작게
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPrompterTextSize("base")}
-                            className={`h-9 px-2.5 text-xs font-bold rounded-lg transition-colors cursor-pointer shrink-0 ${prompterTextSize === "base" ? "bg-brand text-white shadow-sm font-black" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}
-                          >
-                            보통
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPrompterTextSize("lg")}
-                            className={`h-9 px-2.5 text-xs font-bold rounded-lg transition-colors cursor-pointer shrink-0 ${prompterTextSize === "lg" ? "bg-brand text-white shadow-sm font-black" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}
-                          >
-                            크게
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPrompterTextSize("xl")}
-                            className={`h-9 px-2.5 text-xs font-bold rounded-lg transition-colors cursor-pointer shrink-0 ${prompterTextSize === "xl" ? "bg-brand text-white shadow-sm font-black" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}
-                          >
-                            더크게
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPrompterTextSize("2xl")}
-                            className={`h-9 px-2.5 text-xs font-bold rounded-lg transition-colors cursor-pointer shrink-0 ${prompterTextSize === "2xl" ? "bg-brand text-white shadow-sm font-black" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}
-                          >
-                            최대
-                          </button>
+                          {(["sm", "base", "lg"] as const).map((size, index) => (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => setPrompterTextSize(size)}
+                              className={`h-8 px-2 text-[11px] font-bold rounded-md transition-colors cursor-pointer shrink-0 ${prompterTextSize === size ? "bg-brand text-white shadow-sm font-black" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}
+                            >
+                              {["작게", "중간", "크게"][index]}
+                            </button>
+                          ))}
                         </div>
                       </div>
 
@@ -1139,42 +1110,17 @@ export default function PracticeScreen({
                             </span>
 
                             {/* Prompter Font Size Selector */}
-                            <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/10">
-                              <button
-                                type="button"
-                                onClick={() => setPrompterTextSize("sm")}
-                                className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-colors cursor-pointer ${prompterTextSize === "sm" ? "bg-brand text-white font-black" : "text-slate-400 hover:text-white"}`}
-                              >
-                                작게
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPrompterTextSize("base")}
-                                className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-colors cursor-pointer ${prompterTextSize === "base" ? "bg-brand text-white font-black" : "text-slate-400 hover:text-white"}`}
-                              >
-                                보통
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPrompterTextSize("lg")}
-                                className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${prompterTextSize === "lg" ? "bg-brand text-white font-black" : "text-slate-400 hover:text-white"}`}
-                              >
-                                크게
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPrompterTextSize("xl")}
-                                className={`px-2 py-0.5 text-[12px] font-bold rounded-md transition-colors cursor-pointer ${prompterTextSize === "xl" ? "bg-brand text-white font-black" : "text-slate-400 hover:text-white"}`}
-                              >
-                                더크게
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPrompterTextSize("2xl")}
-                                className={`px-2 py-0.5 text-[13px] font-bold rounded-md transition-colors cursor-pointer ${prompterTextSize === "2xl" ? "bg-brand text-white font-black" : "text-slate-400 hover:text-white"}`}
-                              >
-                                최대
-                              </button>
+                            <div className="flex items-center gap-0.5 bg-white/5 p-0.5 rounded-lg border border-white/10">
+                              {(["sm", "base", "lg"] as const).map((size, index) => (
+                                <button
+                                  key={size}
+                                  type="button"
+                                  onClick={() => setPrompterTextSize(size)}
+                                  className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-colors cursor-pointer ${prompterTextSize === size ? "bg-brand text-white font-black" : "text-slate-400 hover:text-white"}`}
+                                >
+                                  {["작게", "중간", "크게"][index]}
+                                </button>
+                              ))}
                             </div>
 
                             <button 
@@ -1357,14 +1303,9 @@ export default function PracticeScreen({
                     {/* Controls below video preview */}
                     {hasPermission && (
                       <div className="flex flex-col items-center gap-3 mt-6">
-                        <label className="max-w-md flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400 cursor-pointer">
-                          <input type="checkbox" checked={analysisConsent} onChange={event => setAnalysisConsent(event.target.checked)} className="mt-0.5" />
-                          <span>연습 종료 시 녹화한 영상과 음성을 AI 분석 서버와 Google Gemini에 전송하는 데 동의합니다. 원본은 앱 서버에 저장되지 않습니다.</span>
-                        </label>
                         <button
                           onClick={startPracticeRecording}
-                          disabled={!analysisConsent}
-                          className="px-6 py-4 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold rounded-2xl text-sm flex items-center gap-1.5 shadow-md shadow-rose-500/25 cursor-pointer"
+                          className="px-6 py-4 bg-rose-500 hover:bg-rose-600 text-white font-extrabold rounded-2xl text-sm flex items-center gap-1.5 shadow-md shadow-rose-500/25 cursor-pointer"
                         >
                           <Play size={15} /> 발표 연습 시작하기
                         </button>

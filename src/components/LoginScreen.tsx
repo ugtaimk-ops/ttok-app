@@ -56,7 +56,6 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  const [stage, setStage] = useState<string>("");
   const [selectedProvider, setSelectedProvider] = useState<"google" | "email" | null>(null);
 
   const [email, setEmail] = useState("");
@@ -65,11 +64,10 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
 
   useScreenBack(() => {
     if (isLoading) return true;
-    if (!selectedProvider && !error && !infoMessage && !stage) return false;
+    if (!selectedProvider && !error && !infoMessage) return false;
     setSelectedProvider(null);
     setError(null);
     setInfoMessage(null);
-    setStage("");
     setPassword("");
     return true;
   });
@@ -81,10 +79,9 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
     setSelectedProvider(provider);
 
     try {
-      const user = await authService.signInWithGoogle(setStage);
+      const user = await authService.signInWithGoogle();
 
       // Handle user session setup and get merged profile
-      setStage("3단계: 프로필 불러오는 중");
       const userProfile = await authService.handleUserSession(user);
       onLogin(userProfile);
     } catch (err: any) {
@@ -160,7 +157,7 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
             : "bg-white border-slate-200/60 shadow-xl shadow-slate-100/70"
         } relative overflow-hidden`}
       >
-        <BackButton label="취소" disabled={isLoading || (!selectedProvider && !error)} onClick={() => { setSelectedProvider(null); setError(null); setInfoMessage(null); setStage(""); setPassword(""); }} className="mb-4" />
+        <BackButton label="취소" disabled={isLoading || (!selectedProvider && !error)} onClick={() => { setSelectedProvider(null); setError(null); setInfoMessage(null); setPassword(""); }} className="mb-4" />
         {/* Glow effect on hover/focus */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-1 bg-gradient-to-r from-transparent via-brand to-transparent opacity-80" />
 
@@ -253,11 +250,6 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
                 <span className="text-fluid-xs uppercase font-black text-slate-400 dark:text-slate-500">Google</span>
               )}
             </button>
-            {isLoading && selectedProvider === "google" && stage && (
-              <p className={`text-center text-fluid-xs font-bold ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
-                {stage}
-              </p>
-            )}
           </div>
 
           {/* Divider */}
