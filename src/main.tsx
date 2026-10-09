@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 import './index.css';
+import { startLocalization } from './lib/localization';
 
 // Global error and unhandled Promise rejection listeners to prevent app crashes
 if (typeof window !== 'undefined') {
@@ -43,3 +44,5 @@ createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </StrictMode>,
 );
+
+startLocalization();

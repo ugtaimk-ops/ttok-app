@@ -1,5 +1,6 @@
 import BackButton from "./BackButton";
 import { useScreenBack } from "../lib/screenBack";
+import { localizedText } from "../lib/localization";
 import React, { useState, useEffect, useRef } from "react";
 import { ScriptItem, PracticeLog } from "../types";
 import { getApiUrl, robustFetch, getTodayDateString, readApiJson, ApiError } from "../lib/api";
@@ -1057,7 +1058,7 @@ export default function PracticeScreen({
                           <button
                             type="button"
                             onClick={() => {
-                              if (confirm("정말로 이 대본을 삭제하시겠습니까?")) {
+                              if (confirm(localizedText("정말로 이 대본을 삭제하시겠습니까?"))) {
                                 if (onDeleteScript) onDeleteScript(s.id);
                                 if (generatedScript?.id === s.id) {
                                   setGeneratedScript(null);
@@ -1495,7 +1496,7 @@ export default function PracticeScreen({
                                   onAddScript(newScriptItem);
                                   setSelectedScriptId(customId);
                                   setSelectedScriptText(customScriptText);
-                                  alert("대본 보관함에 성공적으로 저장되었습니다!");
+                                  alert(localizedText("대본 보관함에 성공적으로 저장되었습니다!"));
                                 }}
                                 className="w-full py-2 bg-brand hover:bg-brand-dark text-white font-bold rounded-xl text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-sm"
                               >
