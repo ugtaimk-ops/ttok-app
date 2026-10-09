@@ -3,14 +3,12 @@ import { Crown, Loader2, RefreshCw, Sparkles, Settings2 } from "lucide-react";
 import { UserProfile } from "../types";
 import { purchaseService } from "../services/purchaseService";
 import PaywallModal from "./PaywallModal";
+import { FREE_MONTHLY_LIMIT, PREMIUM_MONTHLY_LIMIT, getKoreanMonthKey } from "../lib/usage";
 
 interface PremiumSectionProps {
   user: UserProfile;
   darkMode: boolean;
 }
-
-const FREE_LIMIT = 50;
-const PREMIUM_LIMIT = 150;
 
 export default function PremiumSection({ user, darkMode }: PremiumSectionProps) {
   const [offering, setOffering] = useState<any>(null);
@@ -22,8 +20,9 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
   const [messageIsError, setMessageIsError] = useState(false);
 
   const isPremium = user.isPremium === true;
-  const limit = isPremium ? PREMIUM_LIMIT : FREE_LIMIT;
-  const used = typeof user.aiUsageCount === "number" ? user.aiUsageCount : 0;
+  const limit = isPremium ? PREMIUM_MONTHLY_LIMIT : FREE_MONTHLY_LIMIT;
+  const used = user.aiUsageMonth === getKoreanMonthKey() && typeof user.aiUsageCount === "number"
+    ? user.aiUsageCount : 0;
 
   useEffect(() => {
     if (isPremium) return;

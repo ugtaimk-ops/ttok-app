@@ -14,7 +14,8 @@ import {
   TodoItem
 } from "./types";
 import { initNotifications, syncAllNotifications } from "./services/notificationService";
-import { getTodayDateString } from "./lib/api";
+import { getTodayDateString, robustFetch } from "./lib/api";
+import { getKoreanMonthKey } from "./lib/usage";
 import { auth, onAuthStateChanged } from "./lib/firebase";
 import { authService } from "./services/authService";
 import { dataSyncService } from "./services/dataSyncService";
@@ -248,6 +249,48 @@ export default function App() {
     if (authUser?.uid) purchaseService.configure(authUser.uid);
   }, [authUser?.uid]);
 
+  // Fetch authoritative usage and subscription status when signing in or
+  // returning to the app. Check the Korean calendar month while the app stays
+  // open too, so the counter visibly resets at midnight without an AI call.
+  useEffect(() => {
+    if (!authUser?.uid) return;
+    const uid = authUser.uid;
+    let active = true;
+    let shownMonth = getKoreanMonthKey();
+    const refreshUsage = async () => {
+      try {
+        const response = await robustFetch("/api/usage/status");
+        if (!response.ok) throw new Error(`Usage status ${response.status}`);
+        const status = await response.json() as {
+          month: string; used: number; isPremium: boolean;
+        };
+        if (active) {
+          shownMonth = status.month;
+          setUser(prev => ({ ...prev, uid, aiUsageMonth: status.month,
+            aiUsageCount: status.used, isPremium: status.isPremium }));
+        }
+      } catch (error) {
+        console.warn("[Usage] Could not refresh account status:", error);
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void refreshUsage();
+    };
+    const onFocus = () => { void refreshUsage(); };
+    void refreshUsage();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onFocus);
+    const interval = window.setInterval(() => {
+      if (getKoreanMonthKey() !== shownMonth) void refreshUsage();
+    }, 60_000);
+    return () => {
+      active = false;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(interval);
+    };
+  }, [authUser?.uid]);
+
   // Cloud sync: once signed in, upload any local-only data (first login on this
   // device only - skipped if the cloud side already has data), then keep local
   // state live-mirrored to Firestore for cross-device sync.
@@ -268,7 +311,7 @@ export default function App() {
 
       unsubscribers.push(
         dataSyncService.subscribeToProfile(uid, (data) => {
-          if (data) setUser(prev => ({ ...prev, ...data }));
+          if (data) setUser(prev => ({ ...prev, ...data, uid }));
         }),
         dataSyncService.subscribeToSchedules(uid, setSchedules),
         dataSyncService.subscribeToTodos(uid, setTodos),

@@ -1,8 +1,8 @@
 import type { Request } from "express";
 import jwt from "jsonwebtoken";
 
-const FREE_MONTHLY_LIMIT = 50;
-const PREMIUM_MONTHLY_LIMIT = 150;
+export const FREE_MONTHLY_LIMIT = 50;
+export const PREMIUM_MONTHLY_LIMIT = 150;
 const FIRESTORE_DATABASE_ID = "ai-studio-22fbd27c-5516-4028-bd17-a6d4ba99710b";
 const FIREBASE_PROJECT_ID = "gen-lang-client-0685740024";
 const GOOGLE_CERTS_URL = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com";
@@ -14,8 +14,8 @@ const GOOGLE_CERTS_URL = "https://www.googleapis.com/robot/v1/metadata/x509/secu
 // startup with ERR_REQUIRE_ESM (jwks-rsa requiring the ESM-only "jose"
 // package from a CJS bundle) - taking down every API endpoint, not just
 // usage tracking. Deferring the require and catching failures means a
-// firebase-admin problem degrades to "usage limits not enforced" instead of
-// crash-looping the whole backend.
+// firebase-admin problem returns a temporary AI error instead of silently
+// allowing unlimited requests or crash-looping the whole backend.
 let adminApp: any = null;
 let adminLoadFailed = false;
 
@@ -25,7 +25,7 @@ function getAdminApp(): any | null {
 
   const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (!rawKey) {
-    console.warn("[UsageService] FIREBASE_SERVICE_ACCOUNT_KEY is not set - AI usage limits will not be enforced.");
+    console.warn("[UsageService] FIREBASE_SERVICE_ACCOUNT_KEY is not set - AI requests will be unavailable.");
     return null;
   }
 
@@ -41,14 +41,21 @@ function getAdminApp(): any | null {
     return adminApp;
   } catch (err) {
     adminLoadFailed = true;
-    console.error("[UsageService] Failed to load/initialize firebase-admin - AI usage limits will not be enforced:", err);
+    console.error("[UsageService] Failed to load/initialize firebase-admin - AI requests will be unavailable:", err);
     return null;
   }
 }
 
-function currentMonthKey(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+export function currentMonthKey(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(now);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  if (!year || !month) throw new Error("Could not determine Korean billing month");
+  return `${year}-${month}`;
 }
 
 // Firebase ID tokens are verified by hand with a plain JWT library against
@@ -118,27 +125,20 @@ export interface UsageCheckResult {
   isPremium: boolean;
   limit: number;
   used: number;
+  month: string;
 }
 
 /**
  * Atomically checks whether this user is still under their monthly AI usage
  * limit and, if so, increments their counter for the current month. Resets
  * the counter automatically when the stored month doesn't match the current
- * one. If the Admin SDK isn't configured (FIREBASE_SERVICE_ACCOUNT_KEY
- * missing, or it failed to load) or the caller couldn't be identified, usage
- * isn't tracked and the request is allowed through - this keeps the AI
- * features working even before that credential has been set up, rather than
- * locking everyone out.
+ * one. Database failures must fail closed, otherwise the monthly limit could
+ * be bypassed during an outage.
  */
-export async function checkAndConsumeUsage(uid: string | null): Promise<UsageCheckResult> {
+async function getUsage(uid: string, consume: boolean): Promise<UsageCheckResult> {
   const app = getAdminApp();
   if (!app) {
-    console.warn("[UsageService] Skipping usage tracking: Admin SDK unavailable (see FIREBASE_SERVICE_ACCOUNT_KEY warning above).");
-    return { allowed: true, isPremium: false, limit: FREE_MONTHLY_LIMIT, used: 0 };
-  }
-  if (!uid) {
-    console.warn("[UsageService] Skipping usage tracking: caller has no valid uid (missing/invalid Authorization header, or ID token verification failed - see warning above if the latter).");
-    return { allowed: true, isPremium: false, limit: FREE_MONTHLY_LIMIT, used: 0 };
+    throw new Error("Usage database unavailable");
   }
 
   try {
@@ -156,25 +156,26 @@ export async function checkAndConsumeUsage(uid: string | null): Promise<UsageChe
       const limit = isPremium ? PREMIUM_MONTHLY_LIMIT : FREE_MONTHLY_LIMIT;
 
       const storedMonth = data.aiUsageMonth;
-      const storedCount = typeof data.aiUsageCount === "number" ? data.aiUsageCount : 0;
+      const storedCount = Number.isFinite(data.aiUsageCount)
+        ? Math.max(0, Math.floor(data.aiUsageCount)) : 0;
       const currentCount = storedMonth === month ? storedCount : 0;
 
-      if (currentCount >= limit) {
-        return { allowed: false, isPremium, limit, used: currentCount };
+      if (!consume || currentCount >= limit) {
+        if (storedMonth !== month) {
+          tx.set(userRef, { aiUsageMonth: month, aiUsageCount: 0 }, { merge: true });
+        }
+        return { allowed: currentCount < limit, isPremium, limit, used: currentCount, month };
       }
-
-      tx.set(
-        userRef,
-        { aiUsageMonth: month, aiUsageCount: currentCount + 1 },
-        { merge: true }
-      );
-
-      return { allowed: true, isPremium, limit, used: currentCount + 1 };
+      tx.set(userRef, { aiUsageMonth: month, aiUsageCount: currentCount + 1 }, { merge: true });
+      return { allowed: true, isPremium, limit, used: currentCount + 1, month };
     });
-    console.log(`[UsageService] uid=${uid} usage now ${result.used}/${result.limit} (premium=${result.isPremium}, allowed=${result.allowed})`);
+    console.log(`[UsageService] uid=${uid} ${consume ? "usage now" : "status"} ${result.used}/${result.limit} month=${result.month} (premium=${result.isPremium}, allowed=${result.allowed})`);
     return result;
   } catch (err) {
-    console.error(`[UsageService] Usage check failed for uid=${uid}, allowing request through unmetered:`, err);
-    return { allowed: true, isPremium: false, limit: FREE_MONTHLY_LIMIT, used: 0 };
+    console.error(`[UsageService] Usage check failed for uid=${uid}:`, err);
+    throw err;
   }
 }
+
+export const checkAndConsumeUsage = (uid: string) => getUsage(uid, true);
+export const getCurrentUsage = (uid: string) => getUsage(uid, false);

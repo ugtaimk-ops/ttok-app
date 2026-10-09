@@ -280,7 +280,9 @@ export const authService = {
 
         try {
           // Perform creation
-          await withTimeout(setDoc(userDocRef, newUserData), 20000, "3단계: 프로필 만들기(Firestore 쓰기)");
+          // Usage status may have created this document while login was in
+          // progress. Preserve server-managed quota and PRO fields in that case.
+          await withTimeout(setDoc(userDocRef, newUserData, { merge: true }), 20000, "3단계: 프로필 만들기(Firestore 쓰기)");
         } catch (err: any) {
           if (err?.code === "auth/stage-timeout") throw err;
           handleFirestoreError(err, OperationType.CREATE, path);

@@ -444,8 +444,8 @@ export default function HomeScreen({
       </div>
 
       {/* AI 리포트 (PRO 전용) */}
-      {user.isPremium && (
-        <AiReportCard todos={todos} schedules={schedules} darkMode={darkMode} />
+      {user.isPremium && user.uid && (
+        <AiReportCard key={user.uid} uid={user.uid} todos={todos} schedules={schedules} darkMode={darkMode} />
       )}
 
       {/* 스마트 단축키 데스크 */}

@@ -5,7 +5,7 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import { getAIService, parseJSONResponse } from "./services/ai";
-import { verifyRequestUser, checkAndConsumeUsage } from "./services/usageService";
+import { verifyRequestUser, checkAndConsumeUsage, getCurrentUsage } from "./services/usageService";
 import { verifyWebhookAuth, handleWebhookEvent } from "./services/revenueCatService";
 
 dotenv.config();
@@ -75,15 +75,15 @@ app.use(AI_ROUTES, aiLimiter);
 // Free/premium monthly AI usage cap, tracked per signed-in user in Firestore
 // (see services/usageService.ts). Identifies the caller from the Firebase ID
 // token the client sends on Authorization: Bearer <token>. If that token is
-// missing/invalid or FIREBASE_SERVICE_ACCOUNT_KEY isn't configured on this
-// deployment yet, requests are allowed through unmetered rather than locking
-// everyone out - this is a usage cap for cost control, not an auth gate.
+// missing/invalid, or the usage database cannot be reached, requests fail
+// closed so monthly limits cannot silently be bypassed.
 // Also stashes uid/isPremium on the request for routes that need to gate a
 // feature to premium users specifically (e.g. /api/home/ai-report below),
 // so they don't need a second Firestore read.
 app.use(AI_ROUTES, async (req, res, next) => {
   try {
     const uid = await verifyRequestUser(req);
+    if (!uid) return res.status(401).json({ error: "로그인이 필요해요.", code: "AUTH_REQUIRED" });
     const result = await checkAndConsumeUsage(uid);
     (req as any).uid = uid;
     (req as any).isPremium = result.isPremium;
@@ -100,8 +100,8 @@ app.use(AI_ROUTES, async (req, res, next) => {
     }
     next();
   } catch (err) {
-    console.error("[UsageLimit] Check failed, allowing request through:", err);
-    next();
+    console.error("[UsageLimit] Check failed:", err);
+    return res.status(503).json({ error: "AI 사용량을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.", code: "USAGE_UNAVAILABLE" });
   }
 });
 
@@ -111,7 +111,22 @@ app.use(AI_ROUTES, async (req, res, next) => {
 
 // Health Check Endpoint
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", version: "1.0.12", message: "TTOK Backend Server is running!", timestamp: new Date().toISOString() });
+  res.json({ status: "ok", version: "1.0.16", message: "TTOK Backend Server is running!", timestamp: new Date().toISOString() });
+});
+
+// Reading usage does not consume an AI request. It also persists a zero count
+// when the Korean calendar month changes, so all devices show the new month
+// immediately after opening the app rather than waiting for an AI request.
+app.get("/api/usage/status", async (req, res) => {
+  const uid = await verifyRequestUser(req);
+  if (!uid) return res.status(401).json({ error: "로그인이 필요해요.", code: "AUTH_REQUIRED" });
+  try {
+    const { month, used, limit, isPremium } = await getCurrentUsage(uid);
+    return res.json({ month, used, limit, isPremium });
+  } catch (err) {
+    console.error("[UsageLimit] Status failed:", err);
+    return res.status(503).json({ error: "AI 사용량을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.", code: "USAGE_UNAVAILABLE" });
+  }
 });
 
 // School Search Endpoint (SchoolInfo.go.kr Integration & Fallback)

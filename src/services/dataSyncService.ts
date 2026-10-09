@@ -73,7 +73,11 @@ export const dataSyncService = {
     );
   },
   saveProfile(uid: string, profile: UserProfile): Promise<void> {
-    return setDoc(userDocRef(uid), profile, { merge: true }).catch((err) =>
+    const clientProfile = { ...profile };
+    delete clientProfile.isPremium;
+    delete clientProfile.aiUsageCount;
+    delete clientProfile.aiUsageMonth;
+    return setDoc(userDocRef(uid), clientProfile, { merge: true }).catch((err) =>
       console.error("[Sync] Failed to save profile:", err)
     );
   },

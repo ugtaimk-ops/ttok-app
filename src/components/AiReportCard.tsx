@@ -5,19 +5,20 @@ import { TodoItem, ScheduleItem } from "../types";
 import { robustFetch, getTodayDateString } from "../lib/api";
 
 interface AiReportCardProps {
+  uid: string;
   todos: TodoItem[];
   schedules: ScheduleItem[];
   darkMode: boolean;
 }
 
-const CACHE_KEY = "ttok_ai_report_cache";
+const cacheKey = (uid: string) => `ttok_ai_report_cache_${uid}`;
 
 // The report stays as-is for the rest of the day once generated (rather
 // than needing to be regenerated on every visit) - the refresh icon next
 // to the title lets the user regenerate it on demand at any time.
-function readCachedReport(): string | null {
+function readCachedReport(uid: string): string | null {
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
+    const raw = localStorage.getItem(cacheKey(uid));
     if (!raw) return null;
     const cached = JSON.parse(raw);
     return cached.date === getTodayDateString() ? cached.report : null;
@@ -26,8 +27,8 @@ function readCachedReport(): string | null {
   }
 }
 
-export default function AiReportCard({ todos, schedules, darkMode }: AiReportCardProps) {
-  const [report, setReport] = useState<string | null>(readCachedReport);
+export default function AiReportCard({ uid, todos, schedules, darkMode }: AiReportCardProps) {
+  const [report, setReport] = useState<string | null>(() => readCachedReport(uid));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +48,7 @@ export default function AiReportCard({ todos, schedules, darkMode }: AiReportCar
       const data = await res.json();
       setReport(data.report);
       try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ date: getTodayDateString(), report: data.report }));
+        localStorage.setItem(cacheKey(uid), JSON.stringify({ date: getTodayDateString(), report: data.report }));
       } catch {}
     } catch (err: any) {
       setError(err.message || "AI 리포트를 생성하지 못했어요. 잠시 후 다시 시도해 주세요.");
