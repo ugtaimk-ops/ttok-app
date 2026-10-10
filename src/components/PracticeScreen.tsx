@@ -2,6 +2,7 @@ import BackButton from "./BackButton";
 import { useScreenBack } from "../lib/screenBack";
 import { localizedText } from "../lib/localization";
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { ScriptItem, PracticeLog } from "../types";
 import { getApiUrl, robustFetch, getTodayDateString, readApiJson, ApiError } from "../lib/api";
 import { isNativeApp, openNativeSettings } from "../lib/capacitor";
@@ -29,7 +30,8 @@ import {
   MessageSquare,
   Loader2,
   Trash2,
-  FolderOpen
+  FolderOpen,
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SpeechRecognition } from "@capgo/capacitor-speech-recognition";
@@ -100,6 +102,7 @@ export default function PracticeScreen({
 
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [generatedScript, setGeneratedScript] = useState<any | null>(null);
+  const [savedScriptOpen, setSavedScriptOpen] = useState(false);
   const [scriptError, setScriptError] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [isEditingScriptText, setIsEditingScriptText] = useState(false);
@@ -483,7 +486,39 @@ export default function PracticeScreen({
     pendingPractice.current = null;
     setSeconds(0);
   };
+  const closeSavedScript = () => {
+    setSavedScriptOpen(false);
+    setIsEditingScriptText(false);
+    setGeneratedScript(null);
+    setEditedScriptContent("");
+    setExportError(null);
+  };
+  const openSavedScript = (script: ScriptItem) => {
+    setGeneratedScript(script);
+    setEditedScriptContent(script.script);
+    setIsEditingScriptText(false);
+    setExportError(null);
+    setScriptTopic(script.topic);
+    setSubject(script.subject || "");
+    setTime(script.time || "3분");
+    setAudience(script.audience || "청중");
+    setGrade(script.grade || "3학년");
+    setTone(script.tone || "친근한 말투");
+    setPurpose(script.purpose || "");
+    setStyle(script.style || "");
+    setSavedScriptOpen(true);
+  };
+  useEffect(() => {
+    if (!savedScriptOpen || !isActive) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [savedScriptOpen, isActive]);
+  useEffect(() => {
+    if (!isActive && savedScriptOpen) closeSavedScript();
+  }, [isActive, savedScriptOpen]);
   useScreenBack(() => {
+    if (savedScriptOpen) { closeSavedScript(); return true; }
     if (showPermissionModal) { setShowPermissionModal(false); return true; }
     if (isRecording) { cancelPractice(); return true; }
     if (isAnalyzing) { analysisController.current?.abort(); return true; }
@@ -595,6 +630,138 @@ export default function PracticeScreen({
       { subject: "표정", score: analysisResult.scores?.expression ?? 0, fullMark: 100 }
     ];
   };
+
+  const scriptPanel = !isGeneratingScript && generatedScript ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className={`p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border space-y-4 sm:space-y-6 ${
+                      darkMode ? "bg-slate-900 border-slate-800/80" : "bg-white border-slate-100"
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                      <div>
+                        <span className="text-xs font-black uppercase text-brand bg-brand-light dark:bg-brand/15 px-2.5 py-0.5 rounded">
+                          AI 완성 대본
+                        </span>
+                        <h2 className="text-lg sm:text-xl font-black tracking-tight-sf mt-1 text-slate-800 dark:text-slate-100">
+                          {generatedScript.title}
+                        </h2>
+                      </div>
+
+                      {/* Controls */}
+                      <div className="flex flex-wrap gap-2 text-fluid-sm font-bold">
+                        <button
+                          onClick={handleCopyScript}
+                          className="h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-98"
+                          title="대본 복사"
+                        >
+                          {isCopied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
+                          {isCopied ? "복사 완료" : "대본 복사"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (isEditingScriptText) {
+                              // Finished editing! Save changes to global/local storage
+                              if (generatedScript && onUpdateScript) {
+                                const updatedScript: ScriptItem = {
+                                  ...generatedScript,
+                                  script: editedScriptContent
+                                };
+                                onUpdateScript(updatedScript);
+                                setGeneratedScript(updatedScript);
+                              }
+                            }
+                            setIsEditingScriptText(!isEditingScriptText);
+                          }}
+                          className={`h-11 px-4 border rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-98 ${
+                            isEditingScriptText
+                              ? "bg-brand/10 border-brand text-brand font-black"
+                              : "bg-slate-50 border-slate-150 dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          }`}
+                          title="대본 직접 수정"
+                        >
+                          <Edit3 size={15} />
+                          {isEditingScriptText ? "저장 완료" : "대본 수정"}
+                        </button>
+                        <button
+                          onClick={handleSavePDF}
+                          className="h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-98"
+                          title="PDF 프린트/저장"
+                        >
+                          <Download size={15} />
+                          PDF 저장
+                        </button>
+                        <button
+                          onClick={handleShareScript}
+                          className="h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-98"
+                          title="대본 공유"
+                        >
+                          <Share2 size={15} />
+                          대본 공유
+                        </button>
+                      </div>
+                      {exportError && <p role="alert" className="text-xs font-semibold text-rose-500">{exportError}</p>}
+                    </div>
+
+                    {/* Outline Section */}
+                    <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-2xl">
+                      <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">발표 아웃라인 구조</h3>
+                      <ul className="space-y-1.5 text-sm text-slate-600 dark:text-slate-300 font-semibold list-disc list-inside">
+                        {generatedScript.outline.map((o: string, idx: number) => (
+                          <li key={idx}>{o}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Core Script Text Area */}
+                    <div className="space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
+                        <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">스피치 본문 (제스처 훈련 포함)</h3>
+
+                        {/* Font Size Adjuster Controls */}
+                        <div className="flex items-center gap-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-0.5 rounded-lg self-start sm:self-auto max-w-full flex-nowrap">
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-extrabold px-1.5 shrink-0">크기</span>
+                          {(["sm", "base", "lg"] as const).map((size, index) => (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => setPrompterTextSize(size)}
+                              className={`h-8 px-2 text-[11px] font-bold rounded-md transition-colors cursor-pointer shrink-0 ${prompterTextSize === size ? "bg-brand text-white shadow-sm font-black" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}
+                            >
+                              {["작게", "중간", "크게"][index]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {isEditingScriptText ? (
+                        <textarea
+                          value={editedScriptContent}
+                          onChange={(e) => setEditedScriptContent(e.target.value)}
+                          rows={12}
+                          className={`w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-2xl ${getTextSizeClass(prompterTextSize)} focus:outline-none focus:ring-2 focus:ring-brand font-medium leading-relaxed`}
+                        />
+                      ) : (
+                        <div className={`p-5 bg-white dark:bg-slate-900/10 border border-slate-100 dark:border-slate-800 rounded-2xl ${getTextSizeClass(prompterTextSize)} text-slate-700 dark:text-slate-300 font-medium whitespace-pre-wrap max-h-[400px] overflow-y-auto pr-2 custom-scrollbar`}>
+                          {editedScriptContent}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Tips Section */}
+                    <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4">
+                      <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">선생님의 핵심 발표 제언</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {generatedScript.tips.map((tip: string, idx: number) => (
+                          <div key={idx} className="p-3 bg-brand/5 border border-brand/10 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 leading-snug">
+                            ⭐ {tip}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+  ) : null;
 
   return (
     <div className="space-y-6 animate-fade-in pb-safe-layout px-1 sm:px-2">
@@ -785,7 +952,7 @@ export default function PracticeScreen({
                   </div>
                 )}
 
-                {!isGeneratingScript && !generatedScript && (
+                {!isGeneratingScript && (!generatedScript || savedScriptOpen) && (
                   <div className={`p-6 sm:p-12 rounded-[24px] sm:rounded-[32px] border border-dashed text-center h-full flex flex-col items-center justify-center space-y-3 ${
                     darkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"
                   }`}>
@@ -804,137 +971,7 @@ export default function PracticeScreen({
                   </div>
                 )}
 
-                {!isGeneratingScript && generatedScript && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className={`p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border space-y-4 sm:space-y-6 ${
-                      darkMode ? "bg-slate-900 border-slate-800/80" : "bg-white border-slate-100"
-                    }`}
-                  >
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
-                      <div>
-                        <span className="text-xs font-black uppercase text-brand bg-brand-light dark:bg-brand/15 px-2.5 py-0.5 rounded">
-                          AI 완성 대본
-                        </span>
-                        <h2 className="text-lg sm:text-xl font-black tracking-tight-sf mt-1 text-slate-800 dark:text-slate-100">
-                          {generatedScript.title}
-                        </h2>
-                      </div>
-
-                      {/* Controls */}
-                      <div className="flex flex-wrap gap-2 text-fluid-sm font-bold">
-                        <button
-                          onClick={handleCopyScript}
-                          className="h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-98"
-                          title="대본 복사"
-                        >
-                          {isCopied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
-                          {isCopied ? "복사 완료" : "대본 복사"}
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (isEditingScriptText) {
-                              // Finished editing! Save changes to global/local storage
-                              if (generatedScript && onUpdateScript) {
-                                const updatedScript: ScriptItem = {
-                                  ...generatedScript,
-                                  script: editedScriptContent
-                                };
-                                onUpdateScript(updatedScript);
-                                setGeneratedScript(updatedScript);
-                              }
-                            }
-                            setIsEditingScriptText(!isEditingScriptText);
-                          }}
-                          className={`h-11 px-4 border rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-98 ${
-                            isEditingScriptText 
-                              ? "bg-brand/10 border-brand text-brand font-black" 
-                              : "bg-slate-50 border-slate-150 dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                          }`}
-                          title="대본 직접 수정"
-                        >
-                          <Edit3 size={15} />
-                          {isEditingScriptText ? "저장 완료" : "대본 수정"}
-                        </button>
-                        <button
-                          onClick={handleSavePDF}
-                          className="h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-98"
-                          title="PDF 프린트/저장"
-                        >
-                          <Download size={15} />
-                          PDF 저장
-                        </button>
-                        <button
-                          onClick={handleShareScript}
-                          className="h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-98"
-                          title="대본 공유"
-                        >
-                          <Share2 size={15} />
-                          대본 공유
-                        </button>
-                      </div>
-                      {exportError && <p role="alert" className="text-xs font-semibold text-rose-500">{exportError}</p>}
-                    </div>
-
-                    {/* Outline Section */}
-                    <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-2xl">
-                      <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">발표 아웃라인 구조</h3>
-                      <ul className="space-y-1.5 text-sm text-slate-600 dark:text-slate-300 font-semibold list-disc list-inside">
-                        {generatedScript.outline.map((o: string, idx: number) => (
-                          <li key={idx}>{o}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* Core Script Text Area */}
-                    <div className="space-y-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
-                        <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">스피치 본문 (제스처 훈련 포함)</h3>
-                        
-                        {/* Font Size Adjuster Controls */}
-                        <div className="flex items-center gap-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-0.5 rounded-lg self-start sm:self-auto max-w-full flex-nowrap">
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-extrabold px-1.5 shrink-0">크기</span>
-                          {(["sm", "base", "lg"] as const).map((size, index) => (
-                            <button
-                              key={size}
-                              type="button"
-                              onClick={() => setPrompterTextSize(size)}
-                              className={`h-8 px-2 text-[11px] font-bold rounded-md transition-colors cursor-pointer shrink-0 ${prompterTextSize === size ? "bg-brand text-white shadow-sm font-black" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}
-                            >
-                              {["작게", "중간", "크게"][index]}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {isEditingScriptText ? (
-                        <textarea
-                          value={editedScriptContent}
-                          onChange={(e) => setEditedScriptContent(e.target.value)}
-                          rows={12}
-                          className={`w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-2xl ${getTextSizeClass(prompterTextSize)} focus:outline-none focus:ring-2 focus:ring-brand font-medium leading-relaxed`}
-                        />
-                      ) : (
-                        <div className={`p-5 bg-white dark:bg-slate-900/10 border border-slate-100 dark:border-slate-800 rounded-2xl ${getTextSizeClass(prompterTextSize)} text-slate-700 dark:text-slate-300 font-medium whitespace-pre-wrap max-h-[400px] overflow-y-auto pr-2 custom-scrollbar`}>
-                          {editedScriptContent}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Tips Section */}
-                    <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4">
-                      <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">선생님의 핵심 발표 제언</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {generatedScript.tips.map((tip: string, idx: number) => (
-                          <div key={idx} className="p-3 bg-brand/5 border border-brand/10 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 leading-snug">
-                            ⭐ {tip}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
+                {!savedScriptOpen && scriptPanel}
               </div>
             </div>
 
@@ -977,18 +1014,7 @@ export default function PracticeScreen({
                           </span>
                         </div>
                         
-                        <div className="cursor-pointer" onClick={() => {
-                          setGeneratedScript(s);
-                          setEditedScriptContent(s.script);
-                          setScriptTopic(s.topic);
-                          setSubject(s.subject || "");
-                          setTime(s.time || "3분");
-                          setAudience(s.audience || "청중");
-                          setGrade(s.grade || "3학년");
-                          setTone(s.tone || "친근한 말투");
-                          setPurpose(s.purpose || "");
-                          setStyle(s.style || "");
-                        }}>
+                        <button type="button" className="w-full text-left cursor-pointer" onClick={() => openSavedScript(s)}>
                           <h3 className="text-base font-bold text-slate-700 dark:text-slate-200 group-hover:text-brand transition-colors line-clamp-1">
                             {s.title}
                           </h3>
@@ -998,7 +1024,7 @@ export default function PracticeScreen({
                           <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3 mt-2 leading-relaxed">
                             {s.script}
                           </p>
-                        </div>
+                        </button>
                       </div>
 
                       <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-850/60 mt-4 pt-3">
@@ -1009,18 +1035,7 @@ export default function PracticeScreen({
                         <div className="flex gap-2.5 items-center">
                           <button
                             type="button"
-                            onClick={() => {
-                              setGeneratedScript(s);
-                              setEditedScriptContent(s.script);
-                              setScriptTopic(s.topic);
-                              setSubject(s.subject || "");
-                              setTime(s.time || "3분");
-                              setAudience(s.audience || "청중");
-                              setGrade(s.grade || "3학년");
-                              setTone(s.tone || "친근한 말투");
-                              setPurpose(s.purpose || "");
-                              setStyle(s.style || "");
-                            }}
+                            onClick={() => openSavedScript(s)}
                             className="h-11 px-4 text-fluid-sm font-black bg-brand/15 hover:bg-brand/25 text-brand rounded-xl transition-all cursor-pointer flex items-center gap-1.5 active:scale-98"
                           >
                             <FolderOpen size={15} /> 불러오기
@@ -1754,6 +1769,40 @@ export default function PracticeScreen({
           </div>
         )}
       </AnimatePresence>
+
+      {isActive && createPortal(
+        <AnimatePresence>
+          {savedScriptOpen && scriptPanel && (
+            <motion.div
+              key="saved-script-fullscreen"
+              role="dialog"
+              aria-modal="true"
+              aria-label="저장된 발표 대본"
+              initial={{ opacity: 0, scale: 0.94, y: 18 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 12 }}
+              transition={{ duration: 0.22 }}
+              className={`fixed inset-0 z-[100] flex flex-col ${darkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-800"}`}
+            >
+              <header className="shrink-0 safe-top border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <div className="max-w-5xl mx-auto w-full px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-brand">저장된 발표 대본</p>
+                    <h2 className="text-base font-black truncate">{generatedScript?.title}</h2>
+                  </div>
+                  <button type="button" onClick={closeSavedScript} aria-label="대본 닫기" className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+                    <X size={24} />
+                  </button>
+                </div>
+              </header>
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+                <div className="max-w-5xl mx-auto">{scriptPanel}</div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
     </div>
   );
