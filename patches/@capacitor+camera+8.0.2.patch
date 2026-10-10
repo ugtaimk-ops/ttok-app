@@ -1,0 +1,21 @@
+diff --git a/node_modules/@capacitor/camera/android/src/main/java/com/capacitorjs/plugins/camera/CameraPlugin.java b/node_modules/@capacitor/camera/android/src/main/java/com/capacitorjs/plugins/camera/CameraPlugin.java
+index a5598e3..4fc461f 100644
+--- a/node_modules/@capacitor/camera/android/src/main/java/com/capacitorjs/plugins/camera/CameraPlugin.java
++++ b/node_modules/@capacitor/camera/android/src/main/java/com/capacitorjs/plugins/camera/CameraPlugin.java
+@@ -4,6 +4,7 @@ import android.Manifest;
+ import android.annotation.SuppressLint;
+ import android.app.Activity;
+ import android.content.ActivityNotFoundException;
++import android.content.ClipData;
+ import android.content.ContentResolver;
+ import android.content.ContentValues;
+ import android.content.Intent;
+@@ -308,6 +309,8 @@ public class CameraPlugin extends Plugin {
+                     // TODO: Verify provider config exists
+                     imageFileUri = FileProvider.getUriForFile(getActivity(), appId + ".fileprovider", photoFile);
+                     takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, imageFileUri);
++                    takePictureIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
++                    takePictureIntent.setClipData(ClipData.newRawUri(null, imageFileUri));
+                 } catch (Exception ex) {
+                     call.reject(IMAGE_FILE_SAVE_ERROR, ex);
+                     return;

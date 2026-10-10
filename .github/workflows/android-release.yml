@@ -103,6 +103,13 @@ jobs:
           name: ttok-release-aab
           path: android/app/build/outputs/bundle/release/app-release.aab
 
+      - name: Upload R8 mapping for Play Console crash reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: ttok-release-r8-mapping
+          path: android/app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:

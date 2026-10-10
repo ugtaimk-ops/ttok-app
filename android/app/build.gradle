@@ -14,8 +14,8 @@ android {
         applicationId "com.ttokapp.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 21
-        versionName "1.0.21"
+        versionCode 22
+        versionName "1.0.22"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -51,11 +51,10 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // R8 optimization in 1.0.18 caused Capacitor LocalNotifications
-            // checkPermissions() to crash on startup on Android 16. Keep the
-            // native plugin bytecode intact until the shrinker rules are fixed.
-            minifyEnabled false
-            shrinkResources false
+            // Capacitor inspects plugin annotations and permission methods at runtime.
+            // Keep those members via proguard-rules.pro while shrinking the rest.
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (hasKeystoreProperties) {
                 signingConfig signingConfigs.release
