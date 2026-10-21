@@ -340,7 +340,7 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
     }
     if (!cameraOk) setStatus("카메라를 사용할 수 없어 목소리와 시간만 분석합니다.");
     else if (!micOk) setStatus("마이크를 사용할 수 없어 얼굴·자세와 시간만 분석합니다.");
-    else if (faceRef.current) setStatus("영상·음성은 이 기기에서만 처리됩니다.");
+    else if (faceRef.current) setStatus("카메라·음량 분석은 기기에서 처리합니다. 음성 자막은 기기 음성 인식 서비스를 사용합니다.");
     return true;
   }, [frontCamera, loadModels, closeModels, stopDevices]);
 
