@@ -18,6 +18,9 @@ export interface UserProfile {
   isPremium?: boolean;
   aiUsageCount?: number;
   aiUsageMonth?: string;
+  aiProblemSolveCalls?: number;
+  aiEstimatedCostMonth?: string;
+  aiEstimatedCostUsd?: number;
 }
 
 export type TodoCategory = "homework" | "general" | "exam" | "assessment";

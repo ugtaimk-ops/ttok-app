@@ -211,6 +211,8 @@ export class GeminiProvider implements AIService {
       ];
     }
 
+    if (options.modelOverride) modelsToTry = [options.modelOverride];
+
     const contents: any[] = [];
 
     if (options.imageBase64) {

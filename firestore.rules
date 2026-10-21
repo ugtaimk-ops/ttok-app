@@ -23,14 +23,15 @@ service cloud.firestore {
       // set them itself, or anyone could grant themselves premium for free.
       function touchesServerManagedFields() {
         return request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['isPremium', 'aiUsageCount', 'aiUsageMonth']);
+          .hasAny(['isPremium', 'aiUsageCount', 'aiUsageMonth', 'aiProblemSolveCalls', 'aiEstimatedCostMonth', 'aiEstimatedCostUsd']);
       }
 
       allow read: if isOwner(userId);
       allow create: if isOwner(userId)
-        && !request.resource.data.keys().hasAny(['isPremium', 'aiUsageCount', 'aiUsageMonth']);
+        && !request.resource.data.keys().hasAny(['isPremium', 'aiUsageCount', 'aiUsageMonth', 'aiProblemSolveCalls', 'aiEstimatedCostMonth', 'aiEstimatedCostUsd']);
       allow update: if isOwner(userId) && !touchesServerManagedFields();
-      allow delete: if isOwner(userId);
+      // Deleting this document would reset server-managed monthly quota.
+      allow delete: if false;
 
       match /schedules/{scheduleId} {
         allow read, write: if isOwner(userId);

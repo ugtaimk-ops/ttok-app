@@ -26,7 +26,12 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+import type { MathSolution } from "../lib/localMathSolver";
 import GlassSelect from "./GlassSelect";
+
+const ProblemOcr = registerPlugin<{ recognize(input: { base64: string }): Promise<{ text: string }> }>("ProblemOcr");
+type ProblemResult = { source: "local" | "gemini"; recognizedProblem: string; answer: string; steps: string[]; concept: string; needsRetake: boolean; cached?: boolean };
 
 interface StudyScreenProps {
   schedules: ScheduleItem[];
@@ -76,6 +81,13 @@ export default function StudyScreen({
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [uploadedBase64, setUploadedBase64] = useState<string | null>(null);
   const [uploadedMime, setUploadedMime] = useState<string | null>(null);
+  const problemFileRef = useRef<HTMLInputElement>(null);
+  const [problemImage, setProblemImage] = useState<string | null>(null);
+  const [problemMime, setProblemMime] = useState("image/jpeg");
+  const [problemOcrText, setProblemOcrText] = useState("");
+  const [problemResult, setProblemResult] = useState<ProblemResult | null>(null);
+  const [problemError, setProblemError] = useState("");
+  const [problemBusy, setProblemBusy] = useState(false);
 
   // Quiz-specific client state for active checking
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number }>({});
@@ -188,6 +200,107 @@ export default function StudyScreen({
       setUploadedBase64(photo.base64String);
     } catch (err) {
       // User cancelled the camera or denied permission - nothing to do.
+    }
+  };
+
+  const setNewProblemImage = (base64: string, mime: string) => {
+    setProblemImage(base64);
+    setProblemMime(mime);
+    setProblemResult(null);
+    setProblemOcrText("");
+    setProblemError("");
+  };
+
+  const chooseProblemPhoto = async (source: CameraSource) => {
+    if (!Capacitor.isNativePlatform() && source === CameraSource.Photos) {
+      problemFileRef.current?.click();
+      return;
+    }
+    try {
+      const photo = await Camera.getPhoto({ source, resultType: CameraResultType.Base64, quality: 80, width: 1600 });
+      if (photo.base64String) {
+        const format = photo.format === "jpg" ? "jpeg" : photo.format || "jpeg";
+        if (["jpeg", "png", "webp"].includes(format)) {
+          setNewProblemImage(photo.base64String, `image/${format}`);
+        } else {
+          const converted = await convertProblemImage(`data:image/${format};base64,${photo.base64String}`);
+          setNewProblemImage(converted, "image/jpeg");
+        }
+      }
+    } catch (error) {
+      if (String(error).toLowerCase().includes("cancel")) return;
+      setProblemError("사진을 열 수 없어요. JPG 또는 PNG 사진을 다시 선택해 주세요.");
+    }
+  };
+
+  const convertProblemImage = (src: string): Promise<string> => new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      const scale = Math.min(1, 1600 / Math.max(image.width, image.height));
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      const context = canvas.getContext("2d");
+      if (!context) { reject(new Error("Canvas unavailable")); return; }
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.85).split(",")[1]);
+    };
+    image.onerror = reject;
+    image.src = src;
+  });
+
+  const onProblemFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/") || file.size > 8_000_000) {
+      setProblemError("8MB 이하의 이미지 파일을 선택해 주세요.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      void convertProblemImage(String(reader.result))
+        .then(base64 => setNewProblemImage(base64, "image/jpeg"))
+        .catch(() => setProblemError("이 사진을 읽을 수 없어요. JPG나 PNG로 다시 선택해 주세요."));
+    };
+    reader.onerror = () => setProblemError("사진을 읽지 못했어요. 다시 선택해 주세요.");
+    reader.readAsDataURL(file);
+  };
+
+  const solvePhotoProblem = async () => {
+    if (!problemImage || problemBusy) return;
+    setProblemBusy(true);
+    setProblemError("");
+    setProblemResult(null);
+    let recognized = "";
+    try {
+      if (Capacitor.getPlatform() === "android" && Capacitor.isPluginAvailable("ProblemOcr")) {
+        try { recognized = (await ProblemOcr.recognize({ base64: problemImage })).text.trim(); }
+        catch (error) { console.warn("[Problem] Device OCR unavailable; using photo", error); }
+      }
+      setProblemOcrText(recognized);
+      const local: MathSolution | null = recognized
+        ? (await import("../lib/localMathSolver")).solveSimpleMath(recognized) : null;
+      if (local) {
+        setProblemResult({ source: "local", recognizedProblem: local.problem, answer: local.answer,
+          steps: local.steps, concept: "사칙연산과 일차방정식의 계산 순서", needsRetake: false });
+        return;
+      }
+      const response = await robustFetch("/api/problem/solve", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: problemImage, mimeType: problemMime, ocrText: recognized }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "사진 문제 풀이를 완료하지 못했어요.");
+      }
+      const result = await response.json() as ProblemResult;
+      setProblemResult(result);
+      if (!result.cached) window.dispatchEvent(new Event("ttok:usage-updated"));
+    } catch (error) {
+      setProblemError(error instanceof Error ? error.message : "문제 풀이 중 오류가 발생했어요.");
+    } finally {
+      setProblemBusy(false);
     }
   };
 
@@ -417,6 +530,7 @@ export default function StudyScreen({
   };
 
   useScreenBack(() => {
+    if (problemResult) { setProblemResult(null); return true; }
     if (deletingItem) { setDeletingItem(null); return true; }
     if (editingItem) { setEditingItem(null); return true; }
     if (contextMenu.visible) { setContextMenu(prev => ({...prev, visible: false})); return true; }
@@ -473,6 +587,33 @@ export default function StudyScreen({
             exit={{ opacity: 0, y: -15 }}
             className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8"
           >
+            <section className={`lg:col-span-12 p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border ${darkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"}`}>
+              <h2 className="text-lg font-black flex items-center gap-2"><CameraIcon size={20} /> 사진 문제 풀이</h2>
+              <p className="text-sm text-slate-500 mt-1">간단한 수학은 기기에서 풀고, 복잡하거나 읽기 어려운 문제는 AI가 사진을 확인해 풀이해요.</p>
+              <input ref={problemFileRef} type="file" accept="image/*" className="hidden" onChange={onProblemFile} />
+              <div className="flex gap-2 mt-4">
+                <button type="button" onClick={() => void chooseProblemPhoto(CameraSource.Camera)} className="flex-1 min-h-12 rounded-xl border border-brand text-brand font-bold flex items-center justify-center gap-2"><CameraIcon size={17} /> 촬영</button>
+                <button type="button" onClick={() => void chooseProblemPhoto(CameraSource.Photos)} className="flex-1 min-h-12 rounded-xl border border-brand text-brand font-bold flex items-center justify-center gap-2"><ImageIcon size={17} /> 갤러리</button>
+              </div>
+              {problemImage && <div className="mt-4 space-y-3">
+                <img src={`data:${problemMime};base64,${problemImage}`} alt="풀이할 문제 사진" className="max-h-72 w-full object-contain rounded-xl bg-slate-50 dark:bg-slate-800" />
+                <button type="button" disabled={problemBusy} onClick={() => void solvePhotoProblem()} className="w-full min-h-12 bg-brand text-white rounded-xl font-extrabold disabled:opacity-50">
+                  {problemBusy ? "문제를 읽고 있어요..." : "이 문제 풀기"}
+                </button>
+              </div>}
+              {problemOcrText && <p className="mt-3 text-xs text-slate-500 break-words">기기에서 읽은 글자: {problemOcrText}</p>}
+              {problemError && <p role="alert" className="mt-3 text-sm text-rose-600">{problemError}</p>}
+              {problemResult && <div className="mt-4 rounded-2xl bg-slate-50 dark:bg-slate-800 p-4 space-y-3">
+                {problemResult.needsRetake ? <p className="font-bold text-rose-600">문제를 정확히 읽지 못했어요. 글씨와 도형이 선명하게 보이도록 한 문제만 다시 촬영해 주세요.</p> : <>
+                  <p className="text-xs text-brand font-bold">{problemResult.source === "local" ? "기기 계산 · AI 사용량 차감 없음" : problemResult.cached ? "저장된 AI 풀이 · 추가 차감 없음" : "Gemini 2.5 Flash-Lite 풀이"}</p>
+                  <p className="text-sm">인식한 문제: {problemResult.recognizedProblem}</p>
+                  <p className="text-xl font-black">정답: {problemResult.answer}</p>
+                  <ol className="list-decimal pl-5 space-y-2 text-sm">{problemResult.steps.map((step, index) => <li key={index}>{step}</li>)}</ol>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">핵심 개념: {problemResult.concept}</p>
+                  {problemResult.source === "gemini" && <p className="text-xs text-slate-500">사진 속 문제와 풀이가 일치하는지 확인해 주세요.</p>}
+                </>}
+              </div>}
+            </section>
             
             {/* Input and Feature Selection */}
             <div className="lg:col-span-5 space-y-6">

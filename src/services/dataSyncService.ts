@@ -88,6 +88,9 @@ export const dataSyncService = {
     delete clientProfile.isPremium;
     delete clientProfile.aiUsageCount;
     delete clientProfile.aiUsageMonth;
+    delete clientProfile.aiProblemSolveCalls;
+    delete clientProfile.aiEstimatedCostMonth;
+    delete clientProfile.aiEstimatedCostUsd;
     return setDoc(userDocRef(uid), clientProfile, { merge: true }).catch((err) =>
       console.error("[Sync] Failed to save profile:", err)
     );

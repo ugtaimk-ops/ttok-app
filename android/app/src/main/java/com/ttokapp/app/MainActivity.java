@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // In-app (non-npm) Capacitor plugins must be registered manually, before super.onCreate.
         registerPlugin(AppSettingsPlugin.class);
+        registerPlugin(ProblemOcrPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

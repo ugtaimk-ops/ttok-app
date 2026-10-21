@@ -15,6 +15,7 @@ export interface GenerateContentOptions {
   videoMimeType?: string;
   temperature?: number;
   tier?: "fast" | "general" | "complex";
+  modelOverride?: string;
 }
 
 export interface AIService {

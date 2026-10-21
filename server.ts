@@ -1,11 +1,12 @@
 import express from "express";
 import http from "http";
 import path from "path";
+import { createHash } from "crypto";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import { getAIService, parseJSONResponse } from "./services/ai";
-import { verifyRequestUser, checkAndConsumeUsage, getCurrentUsage } from "./services/usageService";
+import { verifyRequestUser, checkAndConsumeUsage, getCurrentUsage, getCachedProblem, saveProblemAndCost } from "./services/usageService";
 import { verifyWebhookAuth, handleWebhookEvent } from "./services/revenueCatService";
 
 dotenv.config();
@@ -71,6 +72,7 @@ app.use("/api/", apiLimiter);
 
 const AI_ROUTES = ["/api/script/generate", "/api/practice/analyze", "/api/assessment/extract", "/api/study/action", "/api/home/ai-report"];
 app.use(AI_ROUTES, aiLimiter);
+app.use("/api/problem/solve", aiLimiter);
 
 // Reject unusable practice recordings before counting an AI request.
 app.post("/api/practice/analyze", (req, res, next) => {
@@ -138,6 +140,73 @@ app.get("/api/usage/status", async (req, res) => {
   } catch (err) {
     console.error("[UsageLimit] Status failed:", err);
     return res.status(503).json({ error: "AI 사용량을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.", code: "USAGE_UNAVAILABLE" });
+  }
+});
+
+// Photo problem solving has its own usage gate: a cached duplicate must not
+// consume another monthly AI request. The cache key is scoped to the user.
+const problemRequests = new Map<string, Promise<any>>();
+app.post("/api/problem/solve", async (req, res) => {
+  const { imageBase64, mimeType, ocrText } = req.body || {};
+  if (typeof imageBase64 !== "string" || imageBase64.length < 100 ||
+      imageBase64.length > 12_000_000 || !/^[A-Za-z0-9+/=]+$/.test(imageBase64) ||
+      !["image/jpeg", "image/png", "image/webp"].includes(mimeType) ||
+      (ocrText !== undefined && (typeof ocrText !== "string" || ocrText.length > 5000))) {
+    return res.status(400).json({ error: "JPG, PNG 또는 WebP 문제 사진을 다시 선택해 주세요." });
+  }
+  const uid = await verifyRequestUser(req);
+  if (!uid) return res.status(401).json({ error: "로그인이 필요해요." });
+  const hash = createHash("sha256").update(mimeType).update(imageBase64).digest("hex");
+  const key = `${uid}:${hash}`;
+  try {
+    const cached = await getCachedProblem(uid, hash);
+    if (cached) return res.json({ ...cached, cached: true });
+    let pending = problemRequests.get(key);
+    if (!pending) {
+      pending = (async () => {
+        const usage = await checkAndConsumeUsage(uid);
+        if (!usage.allowed) {
+          const error: any = new Error("이번 달 AI 이용 횟수를 모두 사용했어요.");
+          error.status = 403;
+          throw error;
+        }
+        const response = await getAIService("gemini").generateContent({
+          modelOverride: "gemini-2.5-flash-lite",
+          tier: "complex",
+          imageBase64,
+          imageMimeType: mimeType,
+          responseMimeType: "application/json",
+          prompt: `당신은 학생의 사진 속 단일 문제를 풀어 주는 교사입니다. 사진과 OCR 힌트를 대조하세요. OCR 힌트: ${String(ocrText || "없음")}. OCR이 사진과 다르면 사진을 따르세요. 문제의 숫자/도형/조건/선택지를 충분히 읽을 수 없거나 여러 문제가 섞였으면 절대 추측하지 말고 needsRetake=true로 반환하세요. 읽을 수 있으면 과목, 인식한 문제, 정답, 검증 가능한 단계별 풀이, 핵심 개념을 한국어로 작성하세요. 단계마다 계산을 확인하고 불확실한 부분을 지어내지 마세요. JSON만 반환하세요.`,
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              subject: { type: "STRING" }, recognizedProblem: { type: "STRING" },
+              answer: { type: "STRING" }, steps: { type: "ARRAY", items: { type: "STRING" } },
+              concept: { type: "STRING" }, needsRetake: { type: "BOOLEAN" },
+            },
+            required: ["subject", "recognizedProblem", "answer", "steps", "concept", "needsRetake"],
+          },
+        });
+        const parsed = parseJSONResponse(response);
+        if (typeof parsed?.needsRetake !== "boolean" || !Array.isArray(parsed?.steps) ||
+            typeof parsed?.answer !== "string" || typeof parsed?.recognizedProblem !== "string") {
+          throw new Error("AI 풀이 형식이 올바르지 않아요. 다시 시도해 주세요.");
+        }
+        const result = { source: "gemini", model: "gemini-2.5-flash-lite", ...parsed };
+        const configured = Number(process.env.GEMINI_SOLVE_ESTIMATED_USD);
+        const estimate = Number.isFinite(configured) && configured >= 0 ? configured : 0.002;
+        try { await saveProblemAndCost(uid, hash, result, estimate); }
+        catch (error) { console.error("[ProblemSolve] Cache/cost record failed:", error); }
+        return result;
+      })();
+      problemRequests.set(key, pending);
+      void pending.finally(() => problemRequests.delete(key)).catch(() => {});
+    }
+    return res.json(await pending);
+  } catch (error: any) {
+    console.error("[ProblemSolve] Failed:", error);
+    return res.status(error.status === 403 ? 403 : error.status === 429 ? 429 : 503)
+      .json({ error: error.status === 403 ? error.message : "문제 풀이를 완료하지 못했어요. 잠시 후 다시 시도해 주세요." });
   }
 });
 

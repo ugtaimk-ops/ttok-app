@@ -299,6 +299,7 @@ export default function App() {
     const onFocus = () => { void refreshUsage(); };
     void refreshUsage();
     document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("ttok:usage-updated", refreshUsage);
     window.addEventListener("focus", onFocus);
     const interval = window.setInterval(() => {
       if (getKoreanMonthKey() !== shownMonth) void refreshUsage();
@@ -306,6 +307,7 @@ export default function App() {
     return () => {
       active = false;
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("ttok:usage-updated", refreshUsage);
       window.removeEventListener("focus", onFocus);
       window.clearInterval(interval);
     };

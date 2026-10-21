@@ -179,3 +179,34 @@ async function getUsage(uid: string, consume: boolean): Promise<UsageCheckResult
 
 export const checkAndConsumeUsage = (uid: string) => getUsage(uid, true);
 export const getCurrentUsage = (uid: string) => getUsage(uid, false);
+
+export async function getCachedProblem(uid: string, hash: string): Promise<any | null> {
+  const app = getAdminApp();
+  if (!app) return null;
+  const { getFirestore } = require("firebase-admin/firestore");
+  const snap = await getFirestore(app, FIRESTORE_DATABASE_ID)
+    .collection("problemSolutions").doc(uid).collection("items").doc(hash).get();
+  const data = snap.data();
+  return data && data.createdAt > Date.now() - 30 * 24 * 60 * 60 * 1000 ? data.solution : null;
+}
+
+export async function saveProblemAndCost(uid: string, hash: string, solution: unknown, estimatedCostUsd: number): Promise<void> {
+  const app = getAdminApp();
+  if (!app) throw new Error("Usage database unavailable");
+  const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+  const db = getFirestore(app, FIRESTORE_DATABASE_ID);
+  const month = currentMonthKey();
+  await db.runTransaction(async (tx: any) => {
+    const userRef = db.collection("users").doc(uid);
+    const cachedRef = db.collection("problemSolutions").doc(uid).collection("items").doc(hash);
+    const user = (await tx.get(userRef)).data() || {};
+    tx.set(cachedRef, { solution, createdAt: Date.now() });
+    // This is a planning estimate per successful request, not a Gemini invoice.
+    const prior = user.aiEstimatedCostMonth === month ? Number(user.aiEstimatedCostUsd) || 0 : 0;
+    tx.set(userRef, {
+      aiEstimatedCostMonth: month,
+      aiEstimatedCostUsd: Math.round((prior + estimatedCostUsd) * 1000000) / 1000000,
+      aiProblemSolveCalls: FieldValue.increment(1),
+    }, { merge: true });
+  });
+}
