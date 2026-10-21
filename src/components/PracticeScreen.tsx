@@ -1,27 +1,27 @@
 import BackButton from "./BackButton";
-import OfflinePractice from "./OfflinePractice";
 import { useScreenBack } from "../lib/screenBack";
 import { localizedText } from "../lib/localization";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { ScriptItem } from "../types";
-import { robustFetch, getTodayDateString, readApiJson, ApiError } from "../lib/api";
+import { ScriptItem, PracticeLog } from "../types";
+import { getApiUrl, robustFetch, getTodayDateString, readApiJson, ApiError } from "../lib/api";
+import { isNativeApp, openNativeSettings } from "../lib/capacitor";
 import { Capacitor } from "@capacitor/core";
 import { Share } from "@capacitor/share";
 import { exportScriptPdf } from "../lib/exportScriptPdf";
-import { 
-  Sparkles, 
-  FileText, 
-  Video, 
-  Mic, 
-  Copy, 
-  Download, 
-  Share2, 
-  Edit3, 
-  Check, 
-  Volume2, 
+import {
+  Sparkles,
+  FileText,
+  Video,
+  Mic,
+  Copy,
+  Download,
+  Share2,
+  Edit3,
+  Check,
+  Volume2,
   VideoOff,
-  Eye, 
+  Eye,
   Award,
   AlertCircle,
   Play,
@@ -34,7 +34,21 @@ import {
   X
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { SpeechRecognition } from "@capgo/capacitor-speech-recognition";
 import GlassSelect from "./GlassSelect";
+import {
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ResponsiveContainer
+} from "recharts";
+
+// Live subtitle (STT) is built and working but held back from this release —
+// it's earmarked as a paid feature to switch on later. Flip to true to
+// re-enable; the implementation itself is untouched.
+const STT_FEATURE_ENABLED = false;
 
 interface PracticeScreenProps {
   user: any;
@@ -42,6 +56,8 @@ interface PracticeScreenProps {
   onAddScript: (script: ScriptItem) => void;
   onDeleteScript?: (id: string) => void;
   onUpdateScript?: (script: ScriptItem) => void;
+  practiceLogs: PracticeLog[];
+  onAddPracticeLog: (log: Omit<PracticeLog, "id" | "date">) => void;
   darkMode: boolean;
   initialSubTab?: "script" | "practice";
   isActive?: boolean;
@@ -53,6 +69,8 @@ export default function PracticeScreen({
   onAddScript,
   onDeleteScript,
   onUpdateScript,
+  practiceLogs,
+  onAddPracticeLog,
   darkMode,
   initialSubTab,
   isActive = true
@@ -90,9 +108,24 @@ export default function PracticeScreen({
   const [isEditingScriptText, setIsEditingScriptText] = useState(false);
   const [editedScriptContent, setEditedScriptContent] = useState("");
 
+  // ==========================================
+  // 2. PRACTICE REHEARSAL STATE
+  // ==========================================
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<PracticeLog | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
-  // The saved-script view keeps its existing font controls.
+
+  // Custom Direct Script Input and Prompter states
+  const [scriptInputMode, setScriptInputMode] = useState<"saved" | "direct">("saved");
+  const [customScriptText, setCustomScriptText] = useState("");
   const [selectedScriptId, setSelectedScriptId] = useState("");
+  const [selectedScriptText, setSelectedScriptText] = useState("");
+  const [showTeleprompter, setShowTeleprompter] = useState(true);
   const [prompterTextSize, setPrompterTextSize] = useState<"sm" | "base" | "lg">("base");
 
   const getTextSizeClass = (size: "sm" | "base" | "lg") => {
@@ -117,9 +150,89 @@ export default function PracticeScreen({
       })[0];
       setSelectedScriptId(latestScript.id);
       setPracticeTopic(latestScript.topic);
+      setSelectedScriptText(latestScript.script);
     }
   }, [scripts]);
-  
+
+  // Recording stats
+  const [seconds, setSeconds] = useState(0);
+  const [transcript, setTranscript] = useState("");
+
+  // Media refs
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recordingRef = useRef<{ recorder: MediaRecorder; chunks: Blob[]; microphone: MediaStream } | null>(null);
+  const elapsedRef = useRef(0);
+  const timerRef = useRef<any>(null);
+  const cameraRequest = useRef(0);
+  const acquiringCamera = useRef(false);
+  const activeCameraScreen = useRef(false);
+  activeCameraScreen.current = isActive && subTab === "practice";
+  const speechListenerRef = useRef<{ remove: () => Promise<void> } | null>(null);
+  const isListeningRef = useRef(false);
+
+  const stopSpeechRecognition = async () => {
+    if (speechListenerRef.current) {
+      try { await speechListenerRef.current.remove(); } catch (e) {}
+      speechListenerRef.current = null;
+    }
+    if (isListeningRef.current) {
+      isListeningRef.current = false;
+      try { await SpeechRecognition.stop(); } catch (e) {}
+    }
+  };
+
+  // Clean up media streams and timers
+  useEffect(() => {
+    return () => {
+      stopStreams();
+      if (timerRef.current) clearInterval(timerRef.current);
+      stopSpeechRecognition();
+    };
+  }, []);
+
+  // The screen now stays mounted (hidden) instead of unmounting when the
+  // user leaves this tab, so the camera/mic must be released explicitly
+  // here too - otherwise they'd stay held in the background indefinitely.
+  useEffect(() => {
+    if (!isActive || subTab !== "practice") {
+      stopStreams();
+      if (timerRef.current) clearInterval(timerRef.current);
+      stopSpeechRecognition();
+      setIsRecording(false);
+    }
+  }, [isActive, subTab]);
+
+  // Re-bind active camera stream to videoRef element when it mounts/remounts (fullscreen toggle)
+  useEffect(() => {
+    if (videoRef.current && mediaStreamRef.current) {
+      videoRef.current.srcObject = mediaStreamRef.current;
+    }
+  }, [isRecording, hasPermission]);
+
+  // Auto-restart camera preview when resetting the analysis result or returning to rehearsal dashboard
+  // (also fires when isActive flips back to true, since the tab-hidden effect above just released the stream)
+  useEffect(() => {
+    if (isActive && subTab === "practice" && !analysisResult && !isRecording && !isAnalyzing && !mediaStreamRef.current) {
+      handleRequestPermissions();
+    }
+  }, [isActive, subTab, analysisResult, isRecording, isAnalyzing]);
+
+  const stopStreams = () => {
+    cameraRequest.current += 1;
+    const recording = recordingRef.current;
+    recordingRef.current = null;
+    if (recording) {
+      if (recording.recorder.state !== "inactive") recording.recorder.stop();
+      recording.microphone.getTracks().forEach(track => track.stop());
+      recording.chunks.length = 0;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+    }
+  };
+
   // ==========================================
   // 1. SCRIPT ACTIONS
   // ==========================================
@@ -169,7 +282,7 @@ export default function PracticeScreen({
       setGeneratedScript(newScriptItem);
       setEditedScriptContent(data.script);
       setSelectedScriptId(generatedId);
-      
+
       // Save to application state histories
       onAddScript(newScriptItem);
 
@@ -229,6 +342,150 @@ export default function PracticeScreen({
   // ==========================================
   // 2. REHEARSAL ACTIONS
   // ==========================================
+  const handleRequestPermissions = async () => {
+    if (acquiringCamera.current || !activeCameraScreen.current) return;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setPermissionError("SECURE_CONTEXT_REQUIRED");
+      setHasPermission(false);
+      setShowPermissionModal(true);
+      return;
+    }
+    acquiringCamera.current = true;
+    const request = ++cameraRequest.current;
+    setPermissionError(null);
+    try {
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      } catch (error: any) {
+        if (error?.name !== "OverconstrainedError") throw error;
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
+      // Permission dialogs can finish after the user has left or cancelled.
+      if (request !== cameraRequest.current || !activeCameraScreen.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      mediaStreamRef.current?.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+      setHasPermission(true);
+      setShowPermissionModal(false);
+    } catch (error: any) {
+      if (request !== cameraRequest.current || !activeCameraScreen.current) return;
+      setPermissionError(error?.name || "UnknownError");
+      setHasPermission(false);
+      setShowPermissionModal(true);
+    } finally {
+      acquiringCamera.current = false;
+    }
+  };
+
+  const startPracticeRecording = async () => {
+    if (recordingRef.current) return;
+    setSeconds(0);
+    elapsedRef.current = 0;
+    setTranscript("");
+    setAnalysisResult(null);
+    setAnalysisError(null);
+    pendingPractice.current = null;
+
+    // The live camera preview alone is not evidence for an AI evaluation.
+    // Record video and microphone audio together; never invent scores if the
+    // browser/OS cannot record them.
+    let microphone: MediaStream | null = null;
+    try {
+      if (!mediaStreamRef.current?.getVideoTracks().length || typeof MediaRecorder === "undefined") {
+        throw new Error("이 기기에서는 영상 녹화가 지원되지 않아요.");
+      }
+      const mimeType = ["video/webm;codecs=vp8,opus", "video/webm", "video/mp4"]
+        .find(type => MediaRecorder.isTypeSupported(type));
+      if (!mimeType) throw new Error("이 기기에서 AI 분석용 영상 형식을 녹화할 수 없어요.");
+      microphone = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!activeCameraScreen.current || !mediaStreamRef.current?.getVideoTracks().some(track => track.readyState === "live")) {
+        throw new Error("연습 화면이 닫혀 녹화를 시작하지 않았어요.");
+      }
+      const stream = new MediaStream([
+        ...mediaStreamRef.current.getVideoTracks(),
+        ...microphone.getAudioTracks(),
+      ]);
+      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 220_000, audioBitsPerSecond: 32_000 });
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+      recorder.start(1000);
+      recordingRef.current = { recorder, chunks, microphone };
+      setIsRecording(true);
+    } catch (error: any) {
+      microphone?.getTracks().forEach(track => track.stop());
+      setAnalysisError(error?.name === "NotAllowedError"
+        ? "발표를 평가하려면 마이크 권한이 필요해요. 기기 설정에서 허용해 주세요."
+        : error?.message || "녹화를 시작하지 못했어요.");
+      return;
+    }
+
+    // 1. Start native Speech Recognition (works inside the packaged app, unlike the
+    // browser Web Speech API which iOS WKWebView doesn't implement at all and Android's
+    // embedded WebView can't reliably reach without this plugin's native bridge).
+    // Gated behind STT_FEATURE_ENABLED — held back as a future paid feature.
+    if (STT_FEATURE_ENABLED) {
+      try {
+        const { available } = await SpeechRecognition.available();
+        if (!available) throw new Error("not-available");
+
+        const permission = await SpeechRecognition.requestPermissions();
+        if (permission.speechRecognition !== "granted") throw new Error("permission-denied");
+
+        const listener = await SpeechRecognition.addListener("partialResults", (data) => {
+          if (data.matches?.length) {
+            setTranscript(data.matches[0]);
+          }
+        });
+        speechListenerRef.current = listener;
+        isListeningRef.current = true;
+
+        SpeechRecognition.start({
+          language: "ko-KR",
+          partialResults: true,
+          popup: false
+        }).catch((err) => console.log("Speech recognition ended:", err));
+      } catch (err: any) {
+        console.log("Speech recognition unavailable:", err);
+        const reason = err?.message || String(err);
+        if (reason === "not-available") {
+          setTranscript("이 기기에서 음성 인식 서비스를 찾을 수 없어요. Google 앱(또는 음성 서비스)이 설치·활성화되어 있는지 확인해주세요.");
+        } else if (reason === "permission-denied") {
+          setTranscript("음성 인식 권한이 꺼져 있어요. 아이폰은 설정 > 똑 에서 '마이크'와 별개로 '음성 인식' 권한도 따로 켜야 해요. 안드로이드는 설정 > 앱 > 똑 > 권한에서 '마이크'를 허용해주세요.");
+        } else {
+          setTranscript(`음성 인식을 시작하지 못했어요 (${reason}). 말한 내용에 어울리는 똑똑한 AI 분석이 진행됩니다.`);
+        }
+      }
+    }
+
+    // 2. Start stats timer
+    timerRef.current = setInterval(() => {
+      elapsedRef.current += 1;
+      setSeconds(elapsedRef.current);
+      if (elapsedRef.current >= 240) void stopPracticeRecording();
+
+    }, 1000);
+  };
+
+  const analysisController = useRef<AbortController | null>(null);
+  const pendingPractice = useRef<{
+    topic: string; expectedScript: string; duration: number;
+    videoBase64: string; videoMimeType: string;
+  } | null>(null);
+  useEffect(() => () => analysisController.current?.abort(), []);
+  const cancelPractice = () => {
+    analysisController.current?.abort();
+    if (timerRef.current) clearInterval(timerRef.current);
+    stopStreams();
+    void stopSpeechRecognition();
+    setIsRecording(false);
+    setAnalysisError(null);
+    pendingPractice.current = null;
+    setSeconds(0);
+  };
   const closeSavedScript = () => {
     setSavedScriptOpen(false);
     setIsEditingScriptText(false);
@@ -262,11 +519,117 @@ export default function PracticeScreen({
   }, [isActive, savedScriptOpen]);
   useScreenBack(() => {
     if (savedScriptOpen) { closeSavedScript(); return true; }
+    if (showPermissionModal) { setShowPermissionModal(false); return true; }
+    if (isRecording) { cancelPractice(); return true; }
+    if (isAnalyzing) { analysisController.current?.abort(); return true; }
     if (isEditingScriptText) { setIsEditingScriptText(false); setEditedScriptContent(generatedScript?.script || ""); return true; }
+    if (analysisResult) { setAnalysisResult(null); return true; }
     if (generatedScript && subTab === "script") { setGeneratedScript(null); return true; }
     if (subTab === "practice") { setSubTab("script"); return true; }
     return false;
   });
+
+  const stopPracticeRecording = async (retry = false) => {
+    if (analysisController.current) return;
+    if (!retry && !recordingRef.current) return;
+    const controller = new AbortController();
+    analysisController.current = controller;
+    setIsAnalyzing(true);
+    setIsRecording(false);
+
+    // Stop recording timer & stream
+    if (timerRef.current) clearInterval(timerRef.current);
+    void stopSpeechRecognition();
+
+    // Trigger AI Analysis
+    setAnalysisError(null);
+
+    const path = "/api/practice/analyze";
+
+    try {
+      if (!retry) {
+        const recording = recordingRef.current!;
+        recordingRef.current = null;
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          const finish = () => resolve(new Blob(recording.chunks, { type: recording.recorder.mimeType.split(";")[0] }));
+          recording.recorder.addEventListener("stop", finish, { once: true });
+          recording.recorder.addEventListener("error", () => reject(new Error("녹화 파일을 만들지 못했어요.")), { once: true });
+          if (recording.recorder.state === "inactive") finish();
+          else recording.recorder.stop();
+        });
+        recording.microphone.getTracks().forEach(track => track.stop());
+        stopStreams();
+        if (blob.size < 1024 || elapsedRef.current < 3) throw new Error("발표를 3초 이상 녹화한 뒤 분석해 주세요.");
+        if (blob.size > 16 * 1024 * 1024) throw new Error("녹화 영상이 너무 커요. 4분 이내로 다시 연습해 주세요.");
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error("녹화 파일을 읽지 못했어요."));
+          reader.readAsDataURL(blob);
+        });
+        pendingPractice.current = {
+          topic: practiceTopic || "자유 발표 주제",
+          expectedScript: selectedScriptText.slice(0, 5000),
+          duration: elapsedRef.current,
+          videoBase64: dataUrl.split(",")[1],
+          videoMimeType: blob.type,
+        };
+      }
+      const payload = pendingPractice.current;
+      if (!payload) throw new Error("다시 분석할 녹화 자료가 없어요. 새로 연습해 주세요.");
+      const res = await robustFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify(payload)
+      });
+
+      console.log(`[PracticeScreen] Practice analysis response status: ${res.status} (${res.statusText})`);
+
+      const data = await readApiJson(res);
+      if (controller.signal.aborted) return;
+      if (!data || typeof data.totalScore !== "number" || !data.scores || !data.feedback) {
+        throw new ApiError("분석 결과가 완성되지 않았어요. 다시 시도해 주세요.");
+      }
+
+      const logPayload = {
+        topic: payload.topic,
+        totalScore: data.totalScore,
+        duration: payload.duration,
+        scores: data.scores,
+        voiceAnalysis: data.voiceAnalysis,
+        videoAnalysis: data.videoAnalysis,
+        feedback: data.feedback
+      };
+
+      const today = new Date();
+      const todayStr = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, '0') + "-" + String(today.getDate()).padStart(2, '0');
+      setAnalysisResult({ ...logPayload, id: "practice_" + Date.now(), date: todayStr });
+      onAddPracticeLog(logPayload);
+      pendingPractice.current = null;
+
+    } catch (err: any) {
+      console.error("[PracticeScreen] Practice analysis fetch error:", err);
+      if (err?.name !== "AbortError") setAnalysisError(err instanceof ApiError ? err.message : err?.message || "분석을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      stopStreams();
+      analysisController.current = null;
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Prepare radar chart data matching the analysis items
+  const getRadarData = () => {
+    if (!analysisResult) return [];
+    return [
+      { subject: "시선", score: analysisResult.scores?.eye_contact ?? 0, fullMark: 100 },
+      { subject: "목소리", score: analysisResult.scores?.voice ?? 0, fullMark: 100 },
+      { subject: "발음", score: analysisResult.scores?.pronunciation ?? 0, fullMark: 100 },
+      { subject: "자세", score: analysisResult.scores?.posture ?? 0, fullMark: 100 },
+      { subject: "손동작", score: analysisResult.scores?.gestures ?? 0, fullMark: 100 },
+      { subject: "표정", score: analysisResult.scores?.expression ?? 0, fullMark: 100 }
+    ];
+  };
 
   const scriptPanel = !isGeneratingScript && generatedScript ? (
                   <motion.div
@@ -402,7 +765,7 @@ export default function PracticeScreen({
 
   return (
     <div className="space-y-6 animate-fade-in pb-safe-layout px-1 sm:px-2">
-      
+
       {/* Upper Navigation Tabs */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 text-left">
         <div className="space-y-1">
@@ -418,8 +781,8 @@ export default function PracticeScreen({
           <button
             onClick={() => setSubTab("script")}
             className={`flex-1 lg:flex-initial h-12 px-5 text-fluid-sm font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm ${
-              subTab === "script" 
-                ? "bg-white dark:bg-slate-700 text-brand shadow" 
+              subTab === "script"
+                ? "bg-white dark:bg-slate-700 text-brand shadow"
                 : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
             }`}
           >
@@ -428,8 +791,8 @@ export default function PracticeScreen({
           <button
             onClick={() => setSubTab("practice")}
             className={`flex-1 lg:flex-initial h-12 px-5 text-fluid-sm font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm ${
-              subTab === "practice" 
-                ? "bg-white dark:bg-slate-700 text-brand shadow" 
+              subTab === "practice"
+                ? "bg-white dark:bg-slate-700 text-brand shadow"
                 : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
             }`}
           >
@@ -454,7 +817,7 @@ export default function PracticeScreen({
                   darkMode ? "bg-slate-900 border-slate-800/80" : "bg-white border-slate-100"
                 } shadow-sm`}>
                   <h2 className="text-fluid-lg font-black tracking-tight-sf mb-5 text-slate-800 dark:text-slate-100">발표 상세 조건 입력</h2>
-                  
+
                   <form onSubmit={handleGenerateScript} className="space-y-4">
                     <div>
                       <label htmlFor="scriptTopicInput" className="block text-fluid-sm font-bold text-slate-500 dark:text-slate-400 mb-1.5">발표 주제</label>
@@ -631,11 +994,11 @@ export default function PracticeScreen({
               {scripts.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {scripts.map((s) => (
-                    <div 
+                    <div
                       key={s.id}
                       className={`group p-5 rounded-2xl border transition-all duration-200 relative flex flex-col justify-between ${
-                        darkMode 
-                          ? "bg-slate-950/40 border-slate-800/60 hover:bg-slate-950 hover:border-slate-750" 
+                        darkMode
+                          ? "bg-slate-950/40 border-slate-800/60 hover:bg-slate-950 hover:border-slate-750"
                           : "bg-slate-50/40 border-slate-150 hover:bg-slate-50 hover:border-slate-200"
                       } ${
                         generatedScript?.id === s.id ? "ring-2 ring-brand border-transparent" : ""
@@ -650,7 +1013,7 @@ export default function PracticeScreen({
                             {s.date || getTodayDateString()}
                           </span>
                         </div>
-                        
+
                         <button type="button" className="w-full text-left cursor-pointer" onClick={() => openSavedScript(s)}>
                           <h3 className="text-base font-bold text-slate-700 dark:text-slate-200 group-hover:text-brand transition-colors line-clamp-1">
                             {s.title}
@@ -668,7 +1031,7 @@ export default function PracticeScreen({
                         <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
                           ⏱️ {s.time || "3분"}
                         </span>
-                        
+
                         <div className="flex gap-2.5 items-center">
                           <button
                             type="button"
@@ -677,7 +1040,7 @@ export default function PracticeScreen({
                           >
                             <FolderOpen size={15} /> 불러오기
                           </button>
-                          
+
                           <button
                             type="button"
                             onClick={() => {
@@ -709,9 +1072,702 @@ export default function PracticeScreen({
           </motion.div>
         )}
 
-        {/* TAB 2: OFFLINE PRACTICE */}
-        {subTab === "practice" && <OfflinePractice userId={user?.uid || ""} topic={practiceTopic} scripts={scripts} isActive={isActive} />}
+        {/* ==========================================
+            TAB 2: AI REHEARSAL ASSISTANT
+            ========================================== */}
+        {subTab === "practice" && (
+          <motion.div
+            key="practice-rehearsal"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="space-y-6"
+          >
 
+            {/* RECORDING / CONTROLLER PANEL */}
+            {!analysisResult && !isAnalyzing && (
+              isRecording ? (
+                /* FULLSCREEN REHEARSAL RECORDING VIEW */
+                <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col justify-between p-4 sm:p-6 md:p-8 pt-[calc(16px+env(safe-area-inset-top,0px))] pb-[calc(64px+env(safe-area-inset-bottom,0px))] px-[calc(16px+env(safe-area-inset-left,0px))] animate-fade-in text-left">
+                  {/* Camera Track covering the entire display */}
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]"
+                  />
+
+                  {/* Dark gradient overlay for extreme legibility of text & buttons */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/85 pointer-events-none" />
+
+                  {/* Top bar indicators */}
+                  <div className="relative z-10 flex flex-wrap gap-2 justify-between items-center w-full">
+                    <BackButton label="취소" onClick={cancelPractice} />
+                    <div className="bg-rose-500 text-white font-black text-[9px] sm:text-xs tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1.5 animate-pulse shadow-lg shadow-rose-500/30">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                      <span>발표 연습 중</span>
+                    </div>
+
+                    <div className="bg-slate-900/90 text-white border border-slate-800/60 backdrop-blur-md px-3 py-1.5 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-1.5 shadow-md">
+                      ⏱️ {Math.floor(seconds / 60)}분 {seconds % 60}초 진행 중
+                    </div>
+                  </div>
+
+                  {/* Collapsible Teleprompter (Prompt Script) */}
+                  {selectedScriptText && (
+                    <div className="relative z-10 mx-auto w-full max-w-2xl mt-4">
+                      {showTeleprompter ? (
+                        <div className="bg-slate-950/75 border border-white/10 backdrop-blur-md rounded-2xl p-4 shadow-2xl space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2">
+                            <span className="text-[10px] text-brand font-black tracking-widest flex items-center gap-1">
+                              <FileText size={12} /> 발표 대본 프롬프터 (연습용)
+                            </span>
+
+                            {/* Prompter Font Size Selector */}
+                            <div className="flex items-center gap-0.5 bg-white/5 p-0.5 rounded-lg border border-white/10">
+                              {(["sm", "base", "lg"] as const).map((size, index) => (
+                                <button
+                                  key={size}
+                                  type="button"
+                                  onClick={() => setPrompterTextSize(size)}
+                                  className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-colors cursor-pointer ${prompterTextSize === size ? "bg-brand text-white font-black" : "text-slate-400 hover:text-white"}`}
+                                >
+                                  {["작게", "중간", "크게"][index]}
+                                </button>
+                              ))}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => setShowTeleprompter(false)}
+                              className="text-[10px] text-slate-400 hover:text-white font-bold bg-white/5 hover:bg-white/10 px-2 py-1 rounded cursor-pointer"
+                            >
+                              숨기기
+                            </button>
+                          </div>
+                          <div className={`max-h-[160px] overflow-y-auto ${getTextSizeClass(prompterTextSize)} text-slate-100 font-semibold whitespace-pre-wrap pr-1 custom-scrollbar scroll-smooth`}>
+                            {selectedScriptText}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-center">
+                          <button
+                            type="button"
+                            onClick={() => setShowTeleprompter(true)}
+                            className="bg-slate-900/95 border border-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-full text-[10px] sm:text-xs text-slate-300 hover:text-white font-black flex items-center gap-1 shadow-lg cursor-pointer"
+                          >
+                            <Eye size={12} className="text-brand" /> 대본 프롬프터 켜기
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Bottom area containing Live Subtitle STT and Control Buttons */}
+                  <div className="relative z-10 flex flex-col items-center gap-4 w-full max-w-2xl mx-auto mt-auto pb-4">
+                    {/* Floating TV-style subtitle card at the bottom to never cover the face */}
+                    {STT_FEATURE_ENABLED && (
+                      <div className="bg-slate-950/80 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/10 shadow-2xl space-y-1.5 w-full text-center">
+                        <span className="text-[9px] text-brand uppercase font-black tracking-widest block">실시간 자막 (STT)</span>
+                        <p className={`text-slate-100 leading-relaxed font-semibold break-keep ${getTextSizeClass(prompterTextSize)}`}>
+                          {transcript || "소리 내어 말해보세요. 음성 자막이 이곳에 표시됩니다..."}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Topic Indicator & End Practice button */}
+                    <div className="flex flex-col items-center gap-2.5 w-full max-w-md mx-auto">
+                      {practiceTopic && (
+                        <p className="text-white/95 text-[10px] sm:text-xs font-black bg-slate-900/80 border border-white/10 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg">
+                          🎤 주제: {practiceTopic}
+                        </p>
+                      )}
+
+                      <button
+                        onClick={() => stopPracticeRecording()}
+                        className="w-full sm:w-auto px-8 py-3.5 sm:py-4 bg-rose-600 hover:bg-rose-700 active:scale-98 text-white font-black rounded-[20px] sm:rounded-[24px] text-xs sm:text-sm flex items-center justify-center gap-2 shadow-2xl shadow-rose-600/40 transition-all cursor-pointer"
+                      >
+                        <Square size={14} className="fill-current" />
+                        연습 종료 및 AI 종합 분석
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* NORMAL PRACTICE DASHBOARD */
+                <div className="space-y-6">
+                  {analysisError && (
+                    <div className="p-4 bg-rose-50 border border-rose-100 dark:bg-rose-500/5 dark:border-rose-500/10 text-rose-600 dark:text-rose-400 rounded-2xl flex gap-3 items-center">
+                      <AlertCircle size={18} className="shrink-0 text-rose-500" />
+                      <div className="flex-1">
+                        <p className="text-xs font-bold">분석을 완료하지 못했어요</p>
+                        <p className="text-[11px] text-rose-500/80 mt-0.5">{analysisError}</p>
+                        <button type="button" disabled={isAnalyzing} onClick={() => stopPracticeRecording(true)} className="mt-2 min-h-11 px-3 rounded-xl bg-white dark:bg-slate-800 font-bold text-xs">분석 다시 시도</button>
+                      </div>
+                      <button
+                        onClick={() => setAnalysisError(null)}
+                        className="px-3 py-1.5 bg-rose-100 dark:bg-rose-950/50 hover:bg-rose-200 text-rose-700 dark:text-rose-300 rounded-lg text-[10px] font-bold cursor-pointer"
+                      >
+                        지우기
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
+
+                  {/* Visualizer and Stream View */}
+                  <div className="lg:col-span-8 flex flex-col justify-between">
+                    <div className={`p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border relative aspect-video flex flex-col items-center justify-center overflow-hidden ${
+                      darkMode ? "bg-slate-950 border-slate-900 text-slate-100" : "bg-slate-100 border-slate-200 text-slate-800"
+                    }`}>
+                      {/* Camera Track */}
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className={`absolute inset-0 w-full h-full object-cover transform scale-x-[-1] transition-opacity duration-500 ${
+                          hasPermission ? "opacity-100" : "opacity-0"
+                        }`}
+                      />
+
+                      {/* Clean background with zero dark tint mask beneath */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent pointer-events-none" />
+
+                      {/* Permission Request Onboarding */}
+                      {hasPermission === null && (
+                        <div className="relative text-center z-10 max-w-sm p-6 space-y-4">
+                          <div className="w-12 h-12 bg-brand/10 text-brand rounded-2xl flex items-center justify-center mx-auto">
+                            <Video size={24} />
+                          </div>
+                          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">카메라 권한 요청</h3>
+                          <p className="text-xs text-slate-400 break-keep">발표 영상을 기록하여 분석하기 위해 기기 카메라 권한이 꼭 필요합니다.</p>
+
+                          <div className="flex justify-center pt-2">
+                            <button
+                              onClick={handleRequestPermissions}
+                              className="px-6 py-3 bg-brand hover:bg-brand-dark text-white font-black rounded-2xl text-xs cursor-pointer shadow-lg shadow-brand/20 transition-all flex items-center gap-2"
+                            >
+                              <Video size={14} /> 카메라 권한 직접 허용하기
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Permission Blocked notice */}
+                      {hasPermission === false && (
+                        <div className="relative text-center z-10 max-w-md p-6 space-y-3 bg-slate-950/95 rounded-3xl border border-slate-800">
+                          <div className="w-10 h-10 bg-rose-500/10 text-rose-500 rounded-2xl flex items-center justify-center mx-auto">
+                            <VideoOff size={20} />
+                          </div>
+                          <h3 className="text-sm font-bold text-rose-500">카메라 활성화 안내</h3>
+
+                          {/* Error-specific messaging */}
+                          <div className="p-3 bg-slate-900 rounded-xl text-[11px] text-left text-slate-300 space-y-2 border border-slate-800/80 max-h-[180px] overflow-y-auto custom-scrollbar">
+                            {permissionError === "SECURE_CONTEXT_REQUIRED" ? (
+                              <p className="leading-relaxed">
+                                ⚠️ <strong>보안 환경 제한 (HTTPS)</strong><br />
+                                카메라 기능은 보안 연결(HTTPS) 또는 로컬 환경에서만 브라우저 보안 규정상 허용됩니다. 안전한 접속 상태인지 확인해 주세요.
+                              </p>
+                            ) : permissionError === "NotAllowedError" || permissionError === "PermissionDeniedError" ? (
+                              <p className="leading-relaxed">
+                                ⚠️ <strong>기기 권한 허용이 필요합니다</strong><br />
+                                웹 브라우저 혹은 앱 설정에서 카메라 사용이 차단되었습니다. 주소창 옆의 권한 설정을 변경해 주세요.
+                              </p>
+                            ) : permissionError === "NotFoundError" || permissionError === "DevicesNotFoundError" ? (
+                              <p className="leading-relaxed">
+                                ⚠️ <strong>기기를 찾을 수 없습니다</strong><br />
+                                사용 가능한 카메라 기기를 인식하지 못했습니다. 연결을 재확인해 주세요.
+                              </p>
+                            ) : permissionError === "NotReadableError" || permissionError === "TrackStartError" ? (
+                              <p className="leading-relaxed">
+                                ⚠️ <strong>다른 앱에서 기기를 사용 중입니다</strong><br />
+                                카메라를 줌(Zoom), 카카오톡, 또는 다른 브라우저 탭에서 사용 중일 수 있습니다. 해당 앱들을 완전히 종료한 후 새로고침해 주세요.
+                              </p>
+                            ) : (
+                              <p className="leading-relaxed">
+                                ⚠️ <strong>미디어 접근 오류 발생</strong> ({permissionError || "UnknownError"})<br />
+                                모바일 브라우저/인앱 웹뷰 보안 설정으로 인해 직접적인 미디어 스트림 수집이 제한될 수 있습니다.
+                              </p>
+                            )}
+
+                            <div className="pt-2 border-t border-slate-800 text-[10px] text-slate-400 space-y-1">
+                              <p className="font-bold text-slate-300">📱 안드로이드 및 모바일 웹뷰 해결책:</p>
+                              <ul className="list-disc pl-3 space-y-1">
+                                <li><strong>인앱 브라우저 제한:</strong> 카카오톡, 페이스북 등 앱 내부 브라우저는 하드웨어 카메라 권한을 차단할 가능성이 매우 높습니다.</li>
+                                <li><strong>확실한 해결 방법:</strong> 화면 우측 상단의 <strong className="text-brand">"새 창에서 열기" (Launch)</strong> 버튼을 눌러 모바일의 정식 브라우저(<strong>Chrome</strong> 또는 <strong>삼성 인터넷</strong>)에서 해당 웹사이트를 다시 실행하시면 즉시 정상 작동합니다!</li>
+                                <li><strong>앱별 기기 권한:</strong> 스마트폰 [설정] &gt; [애플리케이션] &gt; [사용 중인 브라우저 앱] &gt; [권한]에서 카메라 권한이 '허용' 상태인지 꼭 확인해 주세요.</li>
+                              </ul>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-2 pt-1">
+                            <button
+                              onClick={handleRequestPermissions}
+                              className="w-full py-2.5 bg-brand hover:bg-brand-dark text-white font-bold rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              <RefreshCw size={12} /> 기기 다시 연결 및 권한 요청
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+
+                    {/* Controls below video preview */}
+                    {hasPermission && (
+                      <div className="flex flex-col items-center gap-3 mt-6">
+                        <button
+                          onClick={startPracticeRecording}
+                          className="px-6 py-4 bg-rose-500 hover:bg-rose-600 text-white font-extrabold rounded-2xl text-sm flex items-center gap-1.5 shadow-md shadow-rose-500/25 cursor-pointer"
+                        >
+                          <Play size={15} /> 발표 연습 시작하기
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info and helper scripts column */}
+                  <div className="lg:col-span-4 space-y-6">
+
+                    {/* Custom Practice Topic Input */}
+                    <div className={`p-6 rounded-[32px] border ${
+                      darkMode ? "bg-slate-900 border-slate-800/80" : "bg-white border-slate-100"
+                    }`}>
+                      <h3 className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">연습할 발표 주제</h3>
+                      <input
+                        type="text"
+                        value={practiceTopic}
+                        onChange={(e) => setPracticeTopic(e.target.value)}
+                        id="practiceTopicInput" name="practiceTopic" autoComplete="off" placeholder="예: 기후 변화와 인류의 미래"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand font-semibold"
+                      />
+                    </div>
+
+                    {/* Script prompt selector */}
+                    <div className={`p-6 rounded-[32px] border ${
+                      darkMode ? "bg-slate-900 border-slate-800/80" : "bg-white border-slate-100"
+                    }`}>
+                      <h3 className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">연습할 대본 선택 및 입력</h3>
+
+                      {/* Selection tabs */}
+                      <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl mb-4">
+                        <button
+                          type="button"
+                          onClick={() => setScriptInputMode("saved")}
+                          className={`py-2 text-xs sm:text-sm font-bold rounded-lg transition-colors cursor-pointer ${
+                            scriptInputMode === "saved"
+                              ? "bg-white dark:bg-slate-900 text-brand shadow-sm font-extrabold"
+                              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                          }`}
+                        >
+                          저장된 대본 목록
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setScriptInputMode("direct")}
+                          className={`py-2 text-xs sm:text-sm font-bold rounded-lg transition-colors cursor-pointer ${
+                            scriptInputMode === "direct"
+                              ? "bg-white dark:bg-slate-900 text-brand shadow-sm font-extrabold"
+                              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                          }`}
+                        >
+                          텍스트 직접 입력
+                        </button>
+                      </div>
+
+                      {scriptInputMode === "saved" ? (
+                        scripts.length > 0 ? (
+                          <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                            {scripts.map(s => (
+                              <button
+                                key={s.id}
+                                onClick={() => {
+                                  setSelectedScriptId(s.id);
+                                  setPracticeTopic(s.topic);
+                                  setSelectedScriptText(s.script);
+                                  setTranscript(s.script.substring(0, 200) + "...");
+                                }}
+                                className={`w-full p-3 text-left border rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer flex items-center justify-between ${
+                                  selectedScriptId === s.id ? "border-brand bg-brand/5" : "border-slate-100 animate-none"
+                                }`}
+                              >
+                                <div className="truncate pr-4">
+                                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{s.title}</p>
+                                  <p className="text-xs text-slate-400 truncate">{s.topic}</p>
+                                </div>
+                                <span className="text-xs font-bold text-slate-400 shrink-0">{s.time}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            상단 '발표 대본 작성' 탭에서 AI 대본을 먼저 생성하면, 이곳에 원터치 프롬프트 프롬프팅 용도로 자동 동기화됩니다.
+                          </p>
+                        )
+                      ) : (
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-xs text-slate-500 font-extrabold block mb-1">여기에 대본 내용을 붙여넣으세요</span>
+                            <textarea
+                              value={customScriptText}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCustomScriptText(val);
+                                setSelectedScriptId("custom");
+                                setSelectedScriptText(val);
+                                setTranscript(val.substring(0, 200) + (val.length > 200 ? "..." : ""));
+                              }}
+                              placeholder="다른 곳에서 작성한 대본이나 직접 연습하고 싶은 대본 텍스트를 입력해 주세요..."
+                              rows={5}
+                              className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand font-medium leading-relaxed"
+                            />
+                          </div>
+                          {customScriptText && (
+                            <div className="flex flex-col gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!customScriptText.trim()) return;
+                                  const customId = "scr_" + Date.now();
+                                  const todayStr = new Date().toISOString().split('T')[0];
+                                  const topicName = practiceTopic.trim() || "직접 입력한 발표 주제";
+                                  const newScriptItem: ScriptItem = {
+                                    id: customId,
+                                    date: todayStr,
+                                    title: `${topicName} (직접 작성)`,
+                                    topic: topicName,
+                                    script: customScriptText,
+                                    outline: ["직접 작성한 발표 아웃라인"],
+                                    tips: ["직접 작성한 대본을 읽으며 아이컨택과 스피치 속도를 연습해 보세요!"],
+                                    time: "3분",
+                                    grade: `${user?.grade || "3"}학년`,
+                                    subject: "기타",
+                                    audience: "청중",
+                                    tone: "기본 말투",
+                                    purpose: "발표 연습",
+                                    style: "직접 작성"
+                                  };
+                                  onAddScript(newScriptItem);
+                                  setSelectedScriptId(customId);
+                                  setSelectedScriptText(customScriptText);
+                                  alert(localizedText("대본 보관함에 성공적으로 저장되었습니다!"));
+                                }}
+                                className="w-full py-2 bg-brand hover:bg-brand-dark text-white font-bold rounded-xl text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+                              >
+                                <Sparkles size={12} /> 이 대본을 보관함에 저장하기
+                              </button>
+                              <div className="flex items-center justify-center gap-1 text-[10px] text-brand font-bold bg-brand/5 p-2 rounded-lg">
+                                <Check size={12} /> 대본이 리허설 프롬프터로 연동되었습니다!
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+
+                </div>
+                </div>
+              )
+            )}
+
+            {/* AI LOADING ANALYZER */}
+            {isAnalyzing && (
+              <div className={`p-16 rounded-[32px] border text-center flex flex-col items-center justify-center space-y-6 max-w-lg mx-auto ${
+                darkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"
+              }`}>
+                <div className="relative">
+                  <Loader2 size={48} className="text-brand animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Sparkles size={18} className="text-brand" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-base font-black text-slate-800 dark:text-slate-100">똑(Tok) AI 발표 분석 중...</h3>
+                  <p className="text-xs text-slate-400 break-keep leading-relaxed font-semibold">
+                    실제 녹화한 영상과 음성을 바탕으로 말하기와 시선·자세를 분석하고 있습니다.<br />
+                    관찰 근거를 확인한 뒤 평가 결과를 표시합니다.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ANALYSIS RESULT SCREEN */}
+            {analysisResult && !isAnalyzing && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-8"
+              >
+                {/* Result header */}
+                <div className={`p-6 rounded-[32px] border flex flex-col sm:flex-row justify-between items-center gap-6 ${
+                  darkMode ? "bg-slate-900 border-slate-800/85" : "bg-white border-slate-100"
+                }`}>
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-brand-light dark:bg-brand/10 text-brand rounded-2xl flex items-center justify-center font-black text-2xl">
+                      {analysisResult.totalScore}
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black uppercase text-brand bg-brand-light dark:bg-brand/15 px-2.5 py-0.5 rounded">
+                        REHEARSAL SCORE
+                      </span>
+                      <h2 className="text-xl font-bold tracking-tight-sf mt-1 text-slate-800 dark:text-slate-100">"{analysisResult.topic}" 발표 분석 결과</h2>
+                      <p className="text-xs text-slate-400 mt-0.5">발표 소요 시간: {analysisResult.duration}초</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setAnalysisResult(null)}
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw size={14} /> 다시 연습하기
+                  </button>
+                </div>
+
+                {/* Score charts and list columns */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                  {/* Radar Spider chart */}
+                  <div className="lg:col-span-5">
+                    <div className={`p-6 rounded-[32px] border ${
+                      darkMode ? "bg-slate-900 border-slate-800/80" : "bg-white border-slate-100"
+                    } shadow-sm h-full flex flex-col justify-between`}>
+                      <div>
+                        <h3 className="text-sm font-extrabold tracking-tight-sf mb-1 flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                          <Award size={16} className="text-brand" /> 발표 6대 요소 평가
+                        </h3>
+                        <p className="text-[11px] text-slate-400">시선, 목소리, 발음, 자세, 제스처, 표정의 균형도입니다.</p>
+                      </div>
+
+                      {/* Radar Chart Container */}
+                      <div className="w-full h-64 mt-4 text-xs font-bold">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={getRadarData()}>
+                            <PolarGrid stroke={darkMode ? "#334155" : "#e2e8f0"} />
+                            <PolarAngleAxis
+                              dataKey="subject"
+                              tick={{ fill: darkMode ? "#94a3b8" : "#475569", fontSize: 11, fontWeight: "bold" }}
+                            />
+                            <PolarRadiusAxis
+                              angle={30}
+                              domain={[0, 100]}
+                              tick={{ fill: "#94a3b8", fontSize: 9 }}
+                            />
+                            <Radar
+                              name="발표지수"
+                              dataKey="score"
+                              stroke="#0066FF"
+                              fill="#0066FF"
+                              fillOpacity={0.2}
+                            />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Scores detail lines */}
+                      <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+                        {getRadarData().map((item, idx) => (
+                          <div key={idx} className="bg-slate-50 dark:bg-slate-900/40 p-2 rounded-xl">
+                            <span className="text-[10px] text-slate-400 font-bold block">{item.subject}</span>
+                            <span className="text-xs font-black text-slate-800 dark:text-slate-100">{item.score}점</span>
+                          </div>
+                        ))}
+                      </div>
+
+                    </div>
+                  </div>
+
+                  {/* Feedback details */}
+                  <div className="lg:col-span-7 space-y-6">
+
+                    {/* Teacher's detailed feedback cards */}
+                    <div className={`p-6 rounded-[32px] border ${
+                      darkMode ? "bg-slate-900 border-slate-800/80" : "bg-white border-slate-100"
+                    } shadow-sm`}>
+                      <h3 className="text-sm font-extrabold tracking-tight-sf mb-4 flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                        <MessageSquare size={16} className="text-brand" /> 똑똑 선생님의 구체적 피드백
+                      </h3>
+                      <div className="space-y-2">
+                        {(analysisResult.feedback || []).map((f, idx) => (
+                          <div
+                            key={idx}
+                            className="p-3.5 bg-brand-light/30 border border-brand/5 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold leading-relaxed"
+                          >
+                            💡 {f}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Speech / Audio & Video specifications details */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+                      {/* Voice details */}
+                      <div className={`p-5 rounded-[32px] border ${
+                        darkMode ? "bg-slate-900 border-slate-800/80" : "bg-white border-slate-100"
+                      }`}>
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">🎙️ 음성 종합 분석</span>
+                        <div className="space-y-2 mt-3 text-xs">
+                          <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
+                            <span className="text-slate-400">말의 속도</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{analysisResult.voiceAnalysis?.speed ?? "보통"}</span>
+                          </div>
+                          <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
+                            <span className="text-slate-400">선명한 발음</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{analysisResult.voiceAnalysis?.pronunciation ?? "보통"}</span>
+                          </div>
+                          <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
+                            <span className="text-slate-400">불필요 단어 수</span>
+                            <span className="font-black text-brand">{analysisResult.voiceAnalysis?.fillerWordsCount ?? 0}회 (음/어)</span>
+                          </div>
+                          <div className="flex justify-between pb-1">
+                            <span className="text-slate-400">안정적 쉼표</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{analysisResult.voiceAnalysis?.pauses ?? "적절함"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Video details */}
+                      <div className={`p-5 rounded-[32px] border ${
+                        darkMode ? "bg-slate-900 border-slate-800/80" : "bg-white border-slate-100"
+                      }`}>
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">👁️ 시각 태도 분석</span>
+                        <div className="space-y-2 mt-3 text-xs">
+                          <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
+                            <span className="text-slate-400">시선 처리</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{analysisResult.videoAnalysis?.eyeContact ?? "안정적"}</span>
+                          </div>
+                          <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
+                            <span className="text-slate-400">바른 자세</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{analysisResult.videoAnalysis?.posture ?? "바름"}</span>
+                          </div>
+                          <div className="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
+                            <span className="text-slate-400">제스처/손짓</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{analysisResult.videoAnalysis?.gestures ?? "적절함"}</span>
+                          </div>
+                          <div className="flex justify-between pb-1">
+                            <span className="text-slate-400">안면 표정</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{analysisResult.videoAnalysis?.expression ?? "밝음"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </motion.div>
+            )}
+
+          </motion.div>
+        )}
+
+      </AnimatePresence>
+
+      {/* ────────────────────────────────────────────────────────
+          CAMERA & MICROPHONE RUNTIME PERMISSION EXPLAINER MODAL
+          ──────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showPermissionModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowPermissionModal(false)}
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+            />
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className={`relative w-full max-w-md p-6 rounded-[28px] border shadow-2xl z-10 overflow-hidden ${
+                darkMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-900"
+              }`}
+            >
+              <BackButton label="취소" onClick={() => setShowPermissionModal(false)} className="mb-4" />
+              <div className="flex flex-col items-center text-center space-y-4">
+                <motion.div
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                  className="w-14 h-14 bg-brand/10 text-brand rounded-2xl flex items-center justify-center"
+                >
+                  <Video size={28} />
+                </motion.div>
+
+                <div className="space-y-1">
+                  <h3 className="text-lg font-black tracking-tight-sf">카메라 권한 안내</h3>
+                  <p className="text-xs text-brand font-bold">발표 분석을 위해 꼭 권한이 필요해요!</p>
+                </div>
+
+                {/* Explanation text */}
+                <div className={`p-4 rounded-2xl text-xs text-left leading-relaxed space-y-2.5 ${
+                  darkMode ? "bg-slate-950/80 text-slate-300" : "bg-slate-50 text-slate-600"
+                }`}>
+                  <p>
+                    <strong>똑(Tok) AI 발표 연습</strong> 기능은 사용자의 발표 자세, 시선 처리, 표정 및 목소리 성량을 실시간으로 분석하여 고품질의 채점 피드백을 전달합니다.
+                  </p>
+                  <p className="font-semibold text-rose-500">
+                    현재 카메라에 대한 접근이 차단되어 있어 AI 연습 모드를 시작할 수 없습니다.
+                  </p>
+                </div>
+
+                {/* Android specific notice */}
+                {isNativeApp() && (
+                  <div className="w-full p-3.5 bg-brand/5 border border-brand/20 rounded-2xl text-left space-y-1">
+                    <p className="text-[11px] font-extrabold text-brand flex items-center gap-1.5">
+                      📱 안드로이드 앱 사용자 추가 안내
+                    </p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      '다시 묻지 않음' 등으로 권한 요청이 영구 차단된 경우, 아래 <strong>[앱 설정 열기]</strong> 버튼을 눌러 안드로이드 애플리케이션 정보 화면에서 카메라 권한을 직접 <strong>'허용'</strong>으로 활성화해 주셔야 합니다.
+                    </p>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="w-full flex flex-col gap-2 pt-2">
+                  <button
+                    onClick={() => {
+                      handleRequestPermissions();
+                    }}
+                    className="w-full py-3 bg-brand hover:bg-brand-dark text-white font-bold rounded-xl text-xs shadow-md shadow-brand/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <RefreshCw size={13} /> 기기 다시 연결 및 권한 허용
+                  </button>
+
+                  {isNativeApp() && (
+                    <button
+                      onClick={async () => {
+                        await openNativeSettings();
+                      }}
+                      className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      📱 안드로이드 앱 설정 열기
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setShowPermissionModal(false)}
+                    className={`w-full py-2.5 font-bold rounded-xl text-xs transition-all cursor-pointer ${
+                      darkMode ? "bg-slate-800 text-slate-400 hover:bg-slate-700" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    }`}
+                  >
+                    취소 및 닫기
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
       {isActive && createPortal(

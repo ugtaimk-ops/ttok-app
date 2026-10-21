@@ -17,11 +17,9 @@ const GOOGLE_CERTS_URL = "https://www.googleapis.com/robot/v1/metadata/x509/secu
 // firebase-admin problem returns a temporary AI error instead of silently
 // allowing unlimited requests or crash-looping the whole backend.
 let adminApp: any = null;
-let adminLoadFailed = false;
 
 function getAdminApp(): any | null {
   if (adminApp) return adminApp;
-  if (adminLoadFailed) return null;
 
   const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (!rawKey) {
@@ -40,7 +38,6 @@ function getAdminApp(): any | null {
     adminApp = initializeApp({ credential: cert(serviceAccount) });
     return adminApp;
   } catch (err) {
-    adminLoadFailed = true;
     console.error("[UsageService] Failed to load/initialize firebase-admin - AI requests will be unavailable:", err);
     return null;
   }
