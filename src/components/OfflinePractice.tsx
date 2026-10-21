@@ -365,14 +365,22 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
     return false;
   }, isActive, 1);
   useEffect(() => {
-    const onVisibility = () => { if (document.hidden && phaseRef.current === "running") pause(); };
+    const onVisibility = () => {
+      if (!document.hidden) return;
+      if (phaseRef.current === "running") pause();
+      else stopDevices();
+    };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [pause]);
-  useEffect(() => () => {
-    disposed.current = true;
-    stopDevices();
-    closeModels();
+  }, [pause, stopDevices]);
+  useEffect(() => {
+    // React StrictMode replays effects in development. Re-enable on setup.
+    disposed.current = false;
+    return () => {
+      disposed.current = true;
+      stopDevices();
+      closeModels();
+    };
   }, [stopDevices, closeModels]);
 
   const scoreLabels: Record<keyof OfflinePracticeResult["scores"], string> = {
