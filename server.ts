@@ -14,6 +14,11 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
+// Render forwards requests through one trusted proxy. Without this, the rate
+// limiter treats every visitor as the same proxy IP and logs X-Forwarded-For
+// validation errors instead of applying limits to each client.
+if (process.env.RENDER === "true") app.set("trust proxy", 1);
+
 // Enable lightweight CORS middleware to prevent any browser cross-origin blocks
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
