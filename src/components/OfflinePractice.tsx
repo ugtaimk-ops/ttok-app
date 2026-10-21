@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FaceLandmarker, PoseLandmarker } from "@mediapipe/tasks-vision";
+import { Capacitor } from "@capacitor/core";
+import { SpeechRecognition } from "@capgo/capacitor-speech-recognition";
+import type { PluginListenerHandle } from "@capacitor/core";
 import { Camera, CameraOff, Mic, MicOff, Pause, Play, RotateCcw, Square, Trash2 } from "lucide-react";
 import { emptyMeasurements, summarizePractice, type OfflinePracticeResult, type PracticeMeasurements } from "../lib/offlinePracticeAnalysis";
 import { useScreenBack } from "../lib/screenBack";
@@ -16,6 +19,10 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
   const [customMinutes, setCustomMinutes] = useState("3");
   const [frontCamera, setFrontCamera] = useState(true);
   const [poseEnabled, setPoseEnabled] = useState(true);
+  const [speechEnabled, setSpeechEnabled] = useState(true);
+  const [speechLanguage, setSpeechLanguage] = useState<"ko-KR" | "en-US">("ko-KR");
+  const [speechStatus, setSpeechStatus] = useState("시작하면 음성 인식 권한을 요청합니다.");
+  const [liveCaption, setLiveCaption] = useState("");
   const [selectedScriptId, setSelectedScriptId] = useState("");
   const [customScript, setCustomScript] = useState("");
   const [customTopic, setCustomTopic] = useState("");
@@ -59,6 +66,63 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
   const activeRef = useRef(isActive);
   activeRef.current = isActive;
   const requestId = useRef(0);
+  const speechGeneration = useRef(0);
+  const speechListeners = useRef<PluginListenerHandle[]>([]);
+  const speechStopPromise = useRef<Promise<void>>(Promise.resolve());
+  const transcriptRef = useRef("");
+
+  const stopSpeech = useCallback(() => {
+    speechGeneration.current++;
+    speechStopPromise.current = speechStopPromise.current.then(async () => {
+      await SpeechRecognition.setPTTState({ held: false }).catch(() => {});
+      await SpeechRecognition.stop().catch(() => {});
+    });
+    for (const listener of speechListeners.current.splice(0)) void listener.remove();
+  }, []);
+
+  const startSpeech = useCallback(async () => {
+    if (!speechEnabled) { setSpeechStatus("음성 인식을 사용하지 않습니다."); return; }
+    if (!Capacitor.isNativePlatform()) {
+      setSpeechStatus("실시간 자막은 Android·iOS 앱에서 지원합니다."); return;
+    }
+    const generation = ++speechGeneration.current;
+    const sessionPrefix = transcriptRef.current.trim();
+    try {
+      await speechStopPromise.current;
+      if (generation !== speechGeneration.current || phaseRef.current !== "running") return;
+      setSpeechStatus("음성 인식을 연결하는 중...");
+      const { available } = await SpeechRecognition.available();
+      if (!available) throw new Error("이 기기에 음성 인식 서비스가 없습니다.");
+      const permissions = await SpeechRecognition.requestPermissions();
+      if (permissions.speechRecognition !== "granted") throw new Error("마이크·음성 인식 권한을 허용해 주세요.");
+      if (generation !== speechGeneration.current || phaseRef.current !== "running") return;
+      const partial = await SpeechRecognition.addListener("partialResults", event => {
+        if (generation !== speechGeneration.current || phaseRef.current !== "running") return;
+        const text = (event.accumulatedText || [event.accumulated, event.matches?.[0]].filter(Boolean).join(" ") || "").trim();
+        if (text) {
+          // Continuous PTT sends the entire accumulated text, not one new sentence.
+          transcriptRef.current = [sessionPrefix, text].filter(Boolean).join(" ").trim();
+          setLiveCaption(transcriptRef.current);
+        }
+      });
+      speechListeners.current.push(partial);
+      const error = await SpeechRecognition.addListener("error", event => {
+        if (generation === speechGeneration.current && phaseRef.current === "running")
+          setSpeechStatus(`음성 인식이 중단됐어요 (${event.code}). 발표는 계속할 수 있습니다.`);
+      });
+      speechListeners.current.push(error);
+      if (generation !== speechGeneration.current || phaseRef.current !== "running") { stopSpeech(); return; }
+      await SpeechRecognition.setPTTState({ held: true });
+      await SpeechRecognition.start({ language: speechLanguage, partialResults: true, continuousPTT: true, popup: false, maxResults: 1 });
+      if (generation === speechGeneration.current && phaseRef.current === "running") setSpeechStatus("음성 인식 중 · 말하는 내용이 아래에 표시됩니다.");
+      else stopSpeech();
+    } catch (error) {
+      if (generation === speechGeneration.current) {
+        setSpeechStatus(error instanceof Error ? `음성 인식을 시작하지 못했어요: ${error.message}` : "음성 인식을 시작하지 못했어요.");
+        stopSpeech();
+      }
+    }
+  }, [speechEnabled, speechLanguage, stopSpeech]);
 
   useEffect(() => {
     try {
@@ -71,6 +135,7 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
   }, [scripts, selectedScriptId]);
 
   const stopDevices = useCallback(() => {
+    stopSpeech();
     requestId.current++;
     if (visionTimer.current) clearTimeout(visionTimer.current);
     if (audioTimer.current) clearInterval(audioTimer.current);
@@ -87,7 +152,7 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
     audioRef.current = null;
     analyserRef.current = null;
     if (!disposed.current) { setCameraActive(false); setMicActive(false); }
-  }, []);
+  }, [stopSpeech]);
 
   const closeModels = useCallback(() => {
     faceRef.current?.close();
@@ -102,6 +167,8 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
     if (phaseRef.current !== "running" && phaseRef.current !== "paused") return;
     const ms = elapsed();
     metricsRef.current.elapsedMs = ms;
+    metricsRef.current.recognitionLanguage = speechEnabled ? speechLanguage : undefined;
+    metricsRef.current.recognizedText = transcriptRef.current.trim();
     metricsRef.current.longestPauseMs = Math.max(metricsRef.current.longestPauseMs, silenceRun.current);
     stopDevices();
     phaseRef.current = "result";
@@ -114,7 +181,7 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
       catch { setStatus("기기 저장 공간이 부족해 결과를 저장하지 못했어요."); }
       return next;
     });
-  }, [stopDevices, effectiveTopic, storageKey]);
+  }, [stopDevices, effectiveTopic, storageKey, speechEnabled, speechLanguage]);
 
   // Vision is capped at 5 video frames per second (up to two inferences per
   // frame). Slow devices automatically use a longer delay.
@@ -303,6 +370,7 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
       lastAudioSample.current = segmentStart.current;
       phaseRef.current = "running";
       setPhase("running");
+      void startSpeech();
       visionTimer.current = setTimeout(sampleVision, 200);
       audioTimer.current = setInterval(sampleAudio, 100);
       clockTimer.current = setInterval(() => {
@@ -312,7 +380,7 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
       }, 250);
       return true;
     } finally { busyRef.current = false; setPreparing(false); }
-  }, [openDevices, sampleVision, sampleAudio, finish]);
+  }, [openDevices, sampleVision, sampleAudio, finish, startSpeech]);
 
   const pause = useCallback(() => {
     if (phaseRef.current !== "running") return;
@@ -321,6 +389,7 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
     setPhase("paused");
     stopDevices();
     setStatus("일시정지했습니다. 재개하면 카메라와 마이크를 다시 연결합니다.");
+    setSpeechStatus("음성 인식이 일시정지되었습니다.");
   }, [stopDevices]);
 
   const start = async () => {
@@ -339,6 +408,8 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
     previousFaceForward.current = null;
     previousShoulderX.current = null;
     visionErrors.current = 0;
+    transcriptRef.current = "";
+    setLiveCaption("");
     setSeconds(0);
     setResult(null);
     phaseRef.current = "paused";
@@ -351,6 +422,8 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
     setPhase("ready");
     setResult(null);
     setSeconds(0);
+    transcriptRef.current = "";
+    setLiveCaption("");
   };
 
   useEffect(() => {
@@ -391,8 +464,8 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
   return <div className="space-y-5 pb-12">
     <div className="rounded-[28px] border border-brand/15 bg-white dark:bg-slate-900 dark:border-slate-800 p-5 space-y-2">
       <h2 className="text-lg font-black text-slate-900 dark:text-white">기기 내 발표 연습</h2>
-      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">영상·음성 원본은 저장하거나 서버로 보내지 않습니다. 얼굴 방향, 자세, 목소리 신호, 발표 시간을 기기에서 측정해 연습용 피드백을 드립니다.</p>
-      <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">오프라인 한국어 음성 인식은 현재 제공되지 않아 대본 내용·말하기 속도·습관어·발음은 평가하지 않습니다.</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">카메라 영상과 음성 원본은 앱 서버에 저장하거나 보내지 않습니다. 얼굴 방향·자세·음량은 기기에서 분석합니다. 음성 인식을 켜면 기기의 음성 인식 서비스가 인터넷으로 음성을 처리할 수 있습니다. 인식된 문장은 이 기기에만 저장됩니다.</p>
+      <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">음성 인식은 인터넷과 기기 서비스에 따라 달라집니다. 자막은 실제 인식 결과이며 발음·말하기 속도 점수는 제공하지 않습니다.</p>
     </div>
 
     {(phase === "ready" || phase === "paused" || phase === "running") && <>
@@ -412,12 +485,14 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
           <div className="flex flex-wrap gap-2">{["1", "3", "5", "custom"].map(value => <button key={value} onClick={() => setTargetMinutes(value)} className={`px-3 py-2 rounded-xl text-xs font-bold ${targetMinutes === value ? "bg-brand text-white" : "bg-slate-100 dark:bg-slate-800 dark:text-white"}`}>{value === "custom" ? "직접 입력" : `${value}분`}</button>)}</div>
           {targetMinutes === "custom" && <label className="text-xs text-slate-600 dark:text-slate-300">목표 시간(분) <input type="number" min="1" max="30" value={customMinutes} onChange={e => setCustomMinutes(e.target.value)} className="ml-2 w-20 p-2 rounded-lg border dark:bg-slate-800" /></label>}
           <div className="flex flex-wrap gap-2"><button onClick={previewCamera} disabled={preparing} className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 dark:text-white text-xs font-bold"><Camera size={14} className="inline mr-1" /> 카메라 미리보기</button><button onClick={() => { cameraRef.current?.getTracks().forEach(track => track.stop()); cameraRef.current = null; setCameraActive(false); setFrontCamera(!frontCamera); }} disabled={preparing} className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 dark:text-white text-xs font-bold"><RotateCcw size={14} className="inline mr-1" />{frontCamera ? "후면 카메라" : "전면 카메라"}</button><label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300"><input type="checkbox" checked={poseEnabled} onChange={e => setPoseEnabled(e.target.checked)} /> 자세 분석 사용</label></div>
+          <div className="flex flex-wrap items-center gap-2 text-xs dark:text-white"><label className="flex items-center gap-2"><input type="checkbox" checked={speechEnabled} onChange={e => setSpeechEnabled(e.target.checked)} /> 실시간 음성 인식</label>{speechEnabled && <><span>인식 언어</span><button onClick={() => setSpeechLanguage("ko-KR")} className={`rounded-lg px-3 py-2 ${speechLanguage === "ko-KR" ? "bg-brand text-white" : "bg-slate-100 dark:bg-slate-800"}`}>한국어</button><button onClick={() => setSpeechLanguage("en-US")} className={`rounded-lg px-3 py-2 ${speechLanguage === "en-US" ? "bg-brand text-white" : "bg-slate-100 dark:bg-slate-800"}`}>English</button></>}</div>
           <button onClick={start} disabled={preparing} className="w-full rounded-2xl bg-brand disabled:opacity-60 text-white py-3.5 font-black flex items-center justify-center gap-2"><Play size={16} /> {preparing ? "분석 모델 준비 중..." : "발표 연습 시작"}</button>
         </>}
         {phase === "running" && <div className="flex gap-2"><button onClick={pause} className="flex-1 rounded-2xl bg-slate-200 dark:bg-slate-700 dark:text-white py-3 font-bold"><Pause size={16} className="inline mr-1" /> 일시정지</button><button onClick={finish} className="flex-1 rounded-2xl bg-rose-600 text-white py-3 font-bold"><Square size={16} className="inline mr-1" /> 발표 종료</button></div>}
         {phase === "running" && prompterText && <div className="flex flex-wrap items-center gap-2 text-xs dark:text-white"><button onClick={() => setShowPrompter(!showPrompter)} className="rounded-lg bg-slate-100 dark:bg-slate-800 px-2 py-1.5">대본 {showPrompter ? "숨기기" : "보기"}</button>{(["sm", "base", "lg"] as const).map((size, index) => <button key={size} onClick={() => setPrompterSize(size)} className={`rounded-lg px-2 py-1.5 ${prompterSize === size ? "bg-brand text-white" : "bg-slate-100 dark:bg-slate-800"}`}>{["작게", "중간", "크게"][index]}</button>)}</div>}
         {phase === "paused" && <div className="flex gap-2"><button onClick={resume} disabled={preparing} className="flex-1 rounded-2xl bg-brand disabled:opacity-60 text-white py-3 font-bold"><Play size={16} className="inline mr-1" /> {preparing ? "준비 중..." : "재개"}</button><button onClick={finish} disabled={preparing} className="flex-1 rounded-2xl bg-rose-600 disabled:opacity-60 text-white py-3 font-bold"><Square size={16} className="inline mr-1" /> 종료</button></div>}
         <p role="status" className="text-xs text-slate-500 dark:text-slate-400">{status}</p>
+        {speechEnabled && phase !== "ready" && <div className="rounded-xl bg-slate-50 dark:bg-slate-800 p-3 text-sm dark:text-white"><p className="font-bold text-xs text-brand">실시간 자막 · {speechLanguage === "ko-KR" ? "한국어" : "English"}</p><p className="mt-1 min-h-6 whitespace-pre-wrap" aria-live="polite">{liveCaption || "아직 인식된 말이 없습니다."}</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{speechStatus}</p></div>}
       </div>
     </>}
 
@@ -429,6 +504,7 @@ export default function OfflinePractice({ userId, topic, scripts, isActive }: { 
         <p className="mt-2 text-sm dark:text-slate-200">발표 {formatTime(shown.durationSeconds * 1000)} · 목표 {formatTime(shown.targetSeconds * 1000)}</p>
       </div>
       <div className="rounded-[24px] bg-white dark:bg-slate-900 p-5 space-y-2">{(Object.keys(shown.scores) as (keyof typeof shown.scores)[]).map(key => <div key={key} className="flex justify-between border-b border-slate-100 dark:border-slate-800 py-2 text-sm dark:text-white"><span>{scoreLabels[key]}</span><strong>{shown.scores[key] === null ? "분석 불가" : `${shown.scores[key]}점`}</strong></div>)}</div>
+      {shown.measurements.recognizedText && <div className="rounded-[24px] bg-white dark:bg-slate-900 p-5 text-sm dark:text-white"><h4 className="font-black mb-2">인식된 발표 내용 · {shown.measurements.recognitionLanguage === "en-US" ? "English" : "한국어"}</h4><p className="whitespace-pre-wrap">{shown.measurements.recognizedText}</p><p className="mt-2 text-xs text-slate-500">음성 인식 결과에는 누락·오인식이 있을 수 있습니다. 이 기록은 이 기기에만 저장됩니다.</p></div>}
       <div className="rounded-[24px] bg-white dark:bg-slate-900 p-5 space-y-2 text-sm dark:text-white"><h4 className="font-black">얼굴 방향·자세 측정</h4><p>얼굴 인식 {shown.measurements.faceDetected}/{shown.measurements.faceSamples}표본 · 카메라 방향 추정 {shown.measurements.faceForward}/{shown.measurements.faceDetected}표본 · 방향 이탈 {shown.measurements.faceTurns}회</p><p>상체 인식 {shown.measurements.poseDetected}/{shown.measurements.poseSamples}표본 · 어깨 기울기 {shown.measurements.shoulderTiltSamples}표본 · 상체 기울기 {shown.measurements.torsoTiltSamples}표본</p><p className="text-xs text-slate-500">눈의 실제 시선이나 체형을 측정하지 않습니다. 카메라 각도, 앉은 자세, 조명의 영향을 받습니다.</p></div>
       <div className="rounded-[24px] bg-white dark:bg-slate-900 p-5 text-sm dark:text-white space-y-2"><h4 className="font-black">발화·침묵</h4><p>발화 신호 {formatTime(shown.measurements.speechMs)} · 침묵 {formatTime(shown.measurements.silenceMs)}</p><p>2초 이상 멈춤 {shown.measurements.longPauses}회 · 가장 긴 침묵 {formatTime(shown.measurements.longestPauseMs)}</p><div className="h-3 flex rounded-full overflow-hidden bg-slate-200"><span className="bg-brand" style={{ width: `${shown.measurements.speechMs / Math.max(1, shown.measurements.speechMs + shown.measurements.silenceMs) * 100}%` }} /></div><p className="text-xs text-slate-500">마이크 신호 기반 추정치로, 의도적인 쉼을 구별하지 않습니다.</p></div>
       {shown.measurements.audioDbfs.length > 0 && <div className="rounded-[24px] bg-white dark:bg-slate-900 p-5 dark:text-white"><h4 className="font-black text-sm mb-3">상대적인 음량 변화 (dBFS)</h4><div className="h-20 flex items-end gap-px overflow-hidden" aria-label="시간별 마이크 입력 상대 음량">{shown.measurements.audioDbfs.map((db, index) => <span key={index} className="bg-brand min-w-[2px] flex-1" style={{ height: `${Math.max(2, (db + 90) / 90 * 100)}%` }} />)}</div><p className="text-xs text-slate-500 mt-2">실제 음압(dB SPL)이 아니며 기기·거리의 영향을 받습니다.</p></div>}

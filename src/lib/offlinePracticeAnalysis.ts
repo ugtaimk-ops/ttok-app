@@ -20,6 +20,8 @@ export interface PracticeMeasurements {
   shoulderTiltSamples: number;
   torsoTiltSamples: number;
   movementSamples: number;
+  recognitionLanguage?: "ko-KR" | "en-US";
+  recognizedText?: string;
 }
 
 export type ScoreName = "delivery" | "face" | "posture" | "pace" | "time";
@@ -68,7 +70,7 @@ export function summarizePractice(topic: string, measurements: PracticeMeasureme
         - pct(m.torsoTiltSamples, m.poseDetected) * 0.3
         - pct(m.movementSamples, m.poseDetected) * 0.2
         - (100 - poseVisibility) * 0.2) : null,
-    pace: null, // No verified, fully offline Korean STT is bundled.
+    pace: null, // Captions are shown, but recognition errors make a numeric pace grade unreliable.
     time: m.targetMs > 0 && m.elapsedMs >= 3000
       ? clamp(100 - Math.abs(m.elapsedMs - m.targetMs) / m.targetMs * 100) : null,
   };
