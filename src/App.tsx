@@ -706,8 +706,6 @@ export default function App() {
                 onAddScript={handleAddScript}
                 onDeleteScript={handleDeleteScript}
                 onUpdateScript={handleUpdateScript}
-                practiceLogs={practiceLogs}
-                onAddPracticeLog={handleAddPracticeLog}
                 darkMode={darkMode}
                 initialSubTab={practiceSubTab}
                 isActive={tokTab === "practice"}
