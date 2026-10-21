@@ -4,7 +4,7 @@
 
 `OfflinePractice`는 카메라와 마이크에만 접근합니다. `MediaRecorder`, `FileReader`, `fetch`, `robustFetch`를 사용하지 않으며 영상·음성 원본을 저장하지 않습니다. 발표가 끝나면 트랙과 Web Audio 컨텍스트를 닫습니다. 화면을 떠나거나 앱이 배경으로 가면 측정을 일시정지하고 트랙을 닫습니다. 현재 연습 결과는 사용자별 `localStorage`에 최대 20개 저장되며 UI에서 삭제할 수 있습니다. 기존 버전이 이미 클라우드에 저장했던 과거 연습 로그를 자동 삭제하지는 않습니다.
 
-대본 작성 등 다른 기능은 기존 Gemini API를 그대로 사용합니다. 서버의 과거 `/api/practice/analyze` 영상 업로드·Gemini 평가 경로는 제거했습니다.
+대본 작성 등 다른 기능은 기존 Gemini API를 그대로 사용합니다. 서버의 과거 `/api/practice/analyze` Gemini 평가 경로는 제거했고, 구버전 앱 요청에는 새 앱으로 업데이트하라는 410 응답만 반환합니다.
 
 ## 구현과 해석
 

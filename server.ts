@@ -74,6 +74,15 @@ const AI_ROUTES = ["/api/script/generate", "/api/assessment/extract", "/api/stud
 app.use(AI_ROUTES, aiLimiter);
 app.use("/api/problem/solve", aiLimiter);
 
+// Older app versions may still call this endpoint. Do not forward recordings
+// to an AI provider; tell them to update to the local-only rehearsal screen.
+app.post("/api/practice/analyze", (_req, res) => {
+  res.status(410).json({
+    code: "PRACTICE_UPDATE_REQUIRED",
+    error: "발표 연습이 기기 내 분석으로 바뀌었어요. 앱을 최신 버전으로 업데이트해 주세요.",
+  });
+});
+
 // Free/premium monthly AI usage cap, tracked per signed-in user in Firestore
 // (see services/usageService.ts). Identifies the caller from the Firebase ID
 // token the client sends on Authorization: Bearer <token>. If that token is
