@@ -674,11 +674,10 @@ JSON 스키마를 정확히 따르세요.`;
     try {
       responseText = await ai.generateContent({
         tier: "complex",
-        modelOverride: "gemini-2.5-flash-lite",
+        modelOverride: "gemini-3.5-flash-lite",
         prompt,
         videoBase64,
         videoMimeType,
-        temperature: 0.2,
         responseMimeType: "application/json",
         responseSchema: {
           type: "OBJECT",
