@@ -1,4 +1,4 @@
-export const TERMS_VERSION = "2026-10-10";
+export const TERMS_VERSION = "2026-10-23";
 
 export default function TermsContent() {
   return (
@@ -65,8 +65,8 @@ export default function TermsContent() {
                     </p>
                     <p>
                       2. 구독 상품 및 가격은 다음과 같습니다. (부가세 포함, Google Play 정책에 따라 변경될 수 있습니다)<br />
-                      • 월간 구독: 2,900원 / 월<br />
-                      • 연간 구독: 29,000원 / 년
+                      • 월간 구독: 3,900원 / 월<br />
+                      • 연간 구독: 35,000원 / 년
                     </p>
                     <p>
                       3. 결제는 <strong>Google Play 인앱 결제 시스템</strong>을 통해서만 이루어지며, 똑(TTOK)은 결제 정보를 직접 수집하거나 저장하지 않습니다.

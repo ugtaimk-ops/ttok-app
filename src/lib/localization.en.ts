@@ -454,8 +454,8 @@ export const englishText: Record<string, string> = {
   "• 일정, 프로필, 발표 결과 등 계정 동기화 데이터는 Firebase에 보관될 수 있습니다.": "• Synced account data such as schedules, profile and practice results may be stored in Firebase.",
   "• AI 제공업체의 데이터 처리 조건은 해당 업체의 정책에 따릅니다.": "• The AI provider processes data under its own policies.",
   "• 모든 통신은 HTTPS를 사용합니다.": "• All communication uses HTTPS.",
-  "• 월간 구독: 2,900원 / 월": "• Monthly subscription: ₩2,900 per month",
-  "• 연간 구독: 29,000원 / 년": "• Yearly subscription: ₩29,000 per year",
+  "• 월간 구독: 3,900원 / 월": "• Monthly subscription: ₩3,900 per month",
+  "• 연간 구독: 35,000원 / 년": "• Yearly subscription: ₩35,000 per year",
   // Messages, form options and generated UI suggestions
   "150회": "150 uses",
   "50회": "50 uses",
