@@ -59,6 +59,10 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
     setIsOpeningManage(true);
     try {
       await purchaseService.openManageSubscription();
+    } catch (error) {
+      console.error("Could not open subscription management:", error);
+      setMessage("구독 관리 화면을 열지 못했어요. Play 스토어의 정기 결제 메뉴에서 확인해 주세요.");
+      setMessageIsError(true);
     } finally {
       setIsOpeningManage(false);
     }

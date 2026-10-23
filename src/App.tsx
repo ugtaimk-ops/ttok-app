@@ -56,6 +56,18 @@ const INITIAL_SCRIPTS: ScriptItem[] = [];
 
 const INITIAL_PRACTICE_LOGS: PracticeLog[] = [];
 
+function getStoredDataOwner(): string | null {
+  const owner = localStorage.getItem("ttok_data_owner_uid");
+  if (owner) return owner;
+  try {
+    // Older app versions stored the uid only in the cached profile.
+    const profile = JSON.parse(localStorage.getItem("ttok_user_profile") || "null");
+    return typeof profile?.uid === "string" ? profile.uid : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   // undefined = still checking auth state, null = signed out, User = signed in
   const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
@@ -258,6 +270,9 @@ export default function App() {
   const todosRef = useRef(todos);
   const scriptsRef = useRef(scripts);
   const practiceLogsRef = useRef(practiceLogs);
+  const [activeDataOwner, setActiveDataOwner] = useState<string | null>(getStoredDataOwner);
+  const schedulesOwnerRef = useRef<string | null>(null);
+  const todosOwnerRef = useRef<string | null>(null);
   useEffect(() => { schedulesRef.current = schedules; }, [schedules]);
   useEffect(() => { todosRef.current = todos; }, [todos]);
   useEffect(() => { scriptsRef.current = scripts; }, [scripts]);
@@ -321,6 +336,32 @@ export default function App() {
     const uid = authUser.uid;
     let cancelled = false;
     const unsubscribers: Array<() => void> = [];
+    schedulesOwnerRef.current = null;
+    todosOwnerRef.current = null;
+
+    // The old localStorage keys were shared by every account on this device.
+    // Only migrate them if they belong to this user; otherwise a new account
+    // could receive the previous account's private data.
+    const cachedOwner = activeDataOwner;
+    if (cachedOwner !== uid) {
+      // Clear persistent data before assigning the new owner. An app restart
+      // between these writes must not make old data appear to belong to uid.
+      localStorage.setItem("ttok_user_profile", JSON.stringify({ ...INITIAL_USER, uid }));
+      for (const key of ["ttok_schedules", "ttok_todos", "ttok_scripts", "ttok_practice_logs"]) {
+        localStorage.setItem(key, "[]");
+      }
+      schedulesRef.current = [];
+      todosRef.current = [];
+      scriptsRef.current = [];
+      practiceLogsRef.current = [];
+      setUser({ ...INITIAL_USER, uid });
+      setSchedules([]);
+      setTodos([]);
+      setScripts([]);
+      setPracticeLogs([]);
+    }
+    localStorage.setItem("ttok_data_owner_uid", uid);
+    setActiveDataOwner(uid);
 
     (async () => {
       await Promise.all([
@@ -333,17 +374,27 @@ export default function App() {
 
       unsubscribers.push(
         dataSyncService.subscribeToProfile(uid, (data) => {
-          if (data) setUser(prev => ({ ...prev, ...data, uid }));
+          if (!cancelled && data) setUser(prev => ({ ...prev, ...data, uid }));
         }),
-        dataSyncService.subscribeToSchedules(uid, setSchedules),
-        dataSyncService.subscribeToTodos(uid, setTodos),
-        dataSyncService.subscribeToScripts(uid, setScripts),
-        dataSyncService.subscribeToPracticeLogs(uid, setPracticeLogs)
+        dataSyncService.subscribeToSchedules(uid, items => {
+          if (cancelled) return;
+          schedulesOwnerRef.current = uid;
+          setSchedules(items);
+        }),
+        dataSyncService.subscribeToTodos(uid, items => {
+          if (cancelled) return;
+          todosOwnerRef.current = uid;
+          setTodos(items);
+        }),
+        dataSyncService.subscribeToScripts(uid, items => { if (!cancelled) setScripts(items); }),
+        dataSyncService.subscribeToPracticeLogs(uid, items => { if (!cancelled) setPracticeLogs(items); })
       );
     })();
 
     return () => {
       cancelled = true;
+      schedulesOwnerRef.current = null;
+      todosOwnerRef.current = null;
       unsubscribers.forEach((unsub) => unsub());
     };
   }, [authUser?.uid, consentAccepted]);
@@ -384,6 +435,11 @@ export default function App() {
   const [autoDeleteExpired, setAutoDeleteExpired] = useState<boolean>(() => {
     return localStorage.getItem("ttok_auto_delete_expired") === "true";
   });
+  const [today, setToday] = useState(getTodayDateString);
+  useEffect(() => {
+    const timer = window.setInterval(() => setToday(getTodayDateString()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const handleToggleAutoDeleteExpired = () => {
     const newVal = !autoDeleteExpired;
@@ -393,36 +449,28 @@ export default function App() {
 
   // Automatically purge expired schedules and todos if the feature is enabled
   useEffect(() => {
-    if (autoDeleteExpired) {
-      const d = new Date();
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const todayStr = `${year}-${month}-${day}`;
-
-      setSchedules(prev => {
-        const filtered = prev.filter(s => !s.date || s.date >= todayStr);
-        if (filtered.length !== prev.length) {
-          return filtered;
-        }
-        return prev;
-      });
-
-      setTodos(prev => {
-        const filtered = prev.filter(t => !t.dueDate || t.dueDate >= todayStr);
-        if (filtered.length !== prev.length) {
-          return filtered;
-        }
-        return prev;
-      });
+    if (autoDeleteExpired && authUser && consentAccepted) {
+      const expiredSchedules = schedulesOwnerRef.current === authUser.uid
+        ? schedules.filter(s => s.date && s.date < today) : [];
+      const expiredTodos = todosOwnerRef.current === authUser.uid
+        ? todos.filter(t => t.dueDate && t.dueDate < today) : [];
+      if (expiredSchedules.length) {
+        setSchedules(prev => prev.filter(s => !s.date || s.date >= today));
+        expiredSchedules.forEach(s => { void dataSyncService.deleteSchedule(authUser.uid, s.id); });
+      }
+      if (expiredTodos.length) {
+        setTodos(prev => prev.filter(t => !t.dueDate || t.dueDate >= today));
+        expiredTodos.forEach(t => { void dataSyncService.deleteTodo(authUser.uid, t.id); });
+      }
     }
-  }, [autoDeleteExpired, schedules, todos]);
+  }, [autoDeleteExpired, schedules, todos, authUser?.uid, consentAccepted, today]);
 
   const handleLogout = async () => {
     try {
       await authService.logout();
     } catch (e) {
       console.error("Sign out failed:", e);
+      return;
     }
     navigationHistory.current = [];
     previousRoute.current = { mode: "tok", tab: "home" };
@@ -438,6 +486,12 @@ export default function App() {
     setTodos(INITIAL_TODOS);
     setScripts(INITIAL_SCRIPTS);
     setPracticeLogs(INITIAL_PRACTICE_LOGS);
+    schedulesRef.current = [];
+    todosRef.current = [];
+    scriptsRef.current = [];
+    practiceLogsRef.current = [];
+    schedulesOwnerRef.current = null;
+    todosOwnerRef.current = null;
     // onAuthStateChanged will flip authUser to null and return to LoginScreen
   };
 
@@ -600,6 +654,10 @@ export default function App() {
         <button type="button" onClick={handleLogout} className="text-sm text-slate-500 underline">로그아웃</button>
       </div>;
     }
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand" /></div>;
+  }
+
+  if (activeDataOwner !== authUser.uid) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand" /></div>;
   }
 

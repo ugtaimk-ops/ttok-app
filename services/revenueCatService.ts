@@ -16,20 +16,19 @@ export function verifyWebhookAuth(authHeader: string | undefined): boolean {
   return authHeader === `Bearer ${expected}`;
 }
 
-async function fetchIsEntitlementActive(appUserId: string): Promise<boolean | null> {
+async function fetchIsEntitlementActive(appUserId: string): Promise<boolean> {
   const secretKey = process.env.REVENUECAT_SECRET_API_KEY;
   if (!secretKey) {
-    console.error("[RevenueCat] REVENUECAT_SECRET_API_KEY is not set - cannot verify subscriber state.");
-    return null;
+    throw new Error("REVENUECAT_SECRET_API_KEY is not set");
   }
 
   const res = await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(appUserId)}`, {
-    headers: { Authorization: `Bearer ${secretKey}` }
+    headers: { Authorization: `Bearer ${secretKey}` },
+    signal: AbortSignal.timeout(10000)
   });
 
   if (!res.ok) {
-    console.error(`[RevenueCat] Failed to fetch subscriber ${appUserId}: ${res.status} ${await res.text()}`);
-    return null;
+    throw new Error(`[RevenueCat] Subscriber lookup failed: ${res.status}`);
   }
 
   const data = await res.json();
@@ -52,25 +51,20 @@ async function fetchIsEntitlementActive(appUserId: string): Promise<boolean | nu
 }
 
 async function setIsPremium(uid: string, isPremium: boolean): Promise<void> {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { getApps, initializeApp, cert } = require("firebase-admin/app");
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { getFirestore } = require("firebase-admin/firestore");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { getApps, initializeApp, cert } = require("firebase-admin/app");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { getFirestore } = require("firebase-admin/firestore");
 
-    const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    if (!rawKey) {
-      console.error("[RevenueCat] FIREBASE_SERVICE_ACCOUNT_KEY is not set - cannot update isPremium.");
-      return;
-    }
-
-    const app = getApps().length > 0 ? getApps()[0] : initializeApp({ credential: cert(JSON.parse(rawKey)) });
-    const db = getFirestore(app, FIRESTORE_DATABASE_ID);
-    await db.collection("users").doc(uid).set({ isPremium }, { merge: true });
-    console.log(`[RevenueCat] Set isPremium=${isPremium} for uid=${uid}`);
-  } catch (err) {
-    console.error("[RevenueCat] Failed to update isPremium in Firestore:", err);
+  const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (!rawKey) {
+    throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY is not set");
   }
+
+  const app = getApps().length > 0 ? getApps()[0] : initializeApp({ credential: cert(JSON.parse(rawKey)) });
+  const db = getFirestore(app, FIRESTORE_DATABASE_ID);
+  await db.collection("users").doc(uid).set({ isPremium }, { merge: true });
+  console.log(`[RevenueCat] Set isPremium=${isPremium} for uid=${uid}`);
 }
 
 /**
@@ -88,9 +82,5 @@ export async function handleWebhookEvent(body: any): Promise<void> {
   }
 
   const isActive = await fetchIsEntitlementActive(appUserId);
-  if (isActive === null) {
-    // Couldn't verify - don't guess either way, leave the existing value alone.
-    return;
-  }
   await setIsPremium(appUserId, isActive);
 }

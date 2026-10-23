@@ -627,12 +627,8 @@ app.post("/api/script/generate", async (req, res) => {
   } catch (error: any) {
     console.error("[BACKEND] Script generation error:", error);
     const is429 = error.status === 429 || error.message?.includes("RESOURCE_EXHAUSTED_429");
-    res.status(is429 ? 429 : 500).json({ 
-      error: is429 ? "RESOURCE_EXHAUSTED_429" : (error.message || "대본 생성에 실패했습니다."),
-      details: error.stack || null,
-      envCheck: {
-        hasGeminiKey: !!process.env.GEMINI_API_KEY
-      }
+    res.status(is429 ? 429 : 500).json({
+      error: is429 ? "RESOURCE_EXHAUSTED_429" : "대본 생성에 실패했습니다. 잠시 후 다시 시도해 주세요."
     });
   }
 });
@@ -979,8 +975,8 @@ app.post("/revenuecat/webhook", async (req, res) => {
     res.status(200).json({ received: true });
   } catch (err) {
     console.error("[RevenueCat] Webhook handling failed:", err);
-    // Still 200 so RevenueCat doesn't endlessly retry a permanently-failing event.
-    res.status(200).json({ received: true, error: true });
+    // A failed subscription update must not be acknowledged as completed.
+    res.status(503).json({ received: false, error: "Subscription update unavailable" });
   }
 });
 
