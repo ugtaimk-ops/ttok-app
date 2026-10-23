@@ -750,9 +750,10 @@ JSON 스키마를 정확히 따르세요.`;
     console.error("[BACKEND] Practice analysis error:", error);
     const is429 = error.status === 429 || error.message?.includes("RESOURCE_EXHAUSTED_429");
     const isTimeout = error.status === 504 || error.code === "AI_TIMEOUT";
-    res.status(is429 ? 429 : isTimeout ? 504 : 500).json({
-      error: is429 ? "AI 요청이 많아 잠시 이용하기 어려워요." : isTimeout ? "AI 응답이 늦어 분석을 마치지 못했어요. 잠시 후 다시 시도해 주세요." : "발표 분석에 실패했습니다.",
-      code: is429 ? "AI_QUOTA_EXCEEDED" : isTimeout ? "AI_TIMEOUT" : "PRACTICE_ANALYSIS_FAILED",
+    const isUnavailable = error.status === 503 || error.statusCode === 503;
+    res.status(is429 ? 429 : isTimeout ? 504 : isUnavailable ? 503 : 500).json({
+      error: is429 ? "AI 요청이 많아 잠시 이용하기 어려워요." : isTimeout ? "AI 응답이 늦어 분석을 마치지 못했어요. 잠시 후 다시 시도해 주세요." : isUnavailable ? "AI 분석 서버가 잠시 혼잡해요. 잠시 후 다시 시도해 주세요." : "발표 분석에 실패했습니다.",
+      code: is429 ? "AI_QUOTA_EXCEEDED" : isTimeout ? "AI_TIMEOUT" : isUnavailable ? "AI_UNAVAILABLE" : "PRACTICE_ANALYSIS_FAILED",
     });
   }
 });

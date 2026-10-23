@@ -75,6 +75,12 @@ function shouldTryNextKey(error: any): boolean {
   return isQuotaError(error) || isKeyError(error);
 }
 
+function isTemporaryServiceError(error: any): boolean {
+  const status = error?.status ?? error?.statusCode;
+  const message = String(error?.message || error);
+  return status === 503 || message.includes('"code":503') || message.includes('"status":"UNAVAILABLE"');
+}
+
 export class GeminiProvider implements AIService {
   private getClient(apiKey: string): GoogleGenAI {
     let client = clientCache.get(apiKey);
@@ -151,34 +157,45 @@ export class GeminiProvider implements AIService {
 
     for (const modelName of modelsToTry) {
       if (signal.aborted) throw aiTimeoutError();
-      try {
-        console.info(`Attempting Gemini generation with model: ${modelName}`);
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: contents.length === 1 && !hasImage ? prompt : { parts: contents },
-          config: {
-            ...config,
-            abortSignal: signal,
-            httpOptions: { timeout: attemptTimeoutMs, retryOptions: { attempts: 1 } },
-          },
-        });
+      // Gemini occasionally returns 503 while processing a video. Retry that
+      // temporary service failure once with the same model and key, within
+      // the request deadline. Other failures still follow the existing key
+      // rotation/error path.
+      for (let serviceAttempt = 0; serviceAttempt < 2; serviceAttempt++) {
+        try {
+          console.info(`Attempting Gemini generation with model: ${modelName}`);
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: contents.length === 1 && !hasImage ? prompt : { parts: contents },
+            config: {
+              ...config,
+              abortSignal: signal,
+              httpOptions: { timeout: attemptTimeoutMs, retryOptions: { attempts: 1 } },
+            },
+          });
 
-        if (response && response.text) {
-          console.info(`Successfully generated content with model: ${modelName}`);
-          return response.text;
-        }
-      } catch (error: any) {
-        if (signal.aborted) throw aiTimeoutError();
-        console.warn(`Gemini generation with ${modelName} failed:`, error.message || error);
-        lastError = error;
+          if (response && response.text) {
+            console.info(`Successfully generated content with model: ${modelName}`);
+            return response.text;
+          }
+        } catch (error: any) {
+          if (signal.aborted) throw aiTimeoutError();
+          console.warn(`Gemini generation with ${modelName} failed:`, error.message || error);
+          lastError = error;
 
-        if (shouldTryNextKey(error)) {
-          const reason = isQuotaError(error) ? "quota exceeded" : "auth/key error";
-          console.error(`[BACKEND] Detected ${reason} with ${modelName}. Stopping model fallback for this key.`);
-          const keyError = new Error("KEY_UNUSABLE");
-          (keyError as any).status = error?.status || (isQuotaError(error) ? 429 : 401);
-          (keyError as any).originalMessage = error.message || String(error);
-          throw keyError;
+          if (serviceAttempt === 0 && isTemporaryServiceError(error)) {
+            console.warn(`[Gemini] Temporary 503 from ${modelName}; retrying once.`);
+            continue;
+          }
+
+          if (shouldTryNextKey(error)) {
+            const reason = isQuotaError(error) ? "quota exceeded" : "auth/key error";
+            console.error(`[BACKEND] Detected ${reason} with ${modelName}. Stopping model fallback for this key.`);
+            const keyError = new Error("KEY_UNUSABLE");
+            (keyError as any).status = error?.status || (isQuotaError(error) ? 429 : 401);
+            (keyError as any).originalMessage = error.message || String(error);
+            throw keyError;
+          }
         }
       }
     }

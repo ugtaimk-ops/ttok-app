@@ -4,6 +4,9 @@ dist/
 coverage/
 .DS_Store
 *.log
+.gradle-user-home/
+.tmp-chrome-model-check/
+release-artifacts/
 .env*
 !.env.example
 
