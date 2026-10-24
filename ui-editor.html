@@ -18,13 +18,21 @@
     .filters{display:flex;gap:8px;align-items:center;margin:14px 0}.filters input{flex:1;min-width:120px;padding:10px;border:1px solid #cbd8e8;border-radius:10px}
     .row{display:flex;gap:12px;align-items:center;border-top:1px solid #edf1f6;padding:12px 0}.row:first-child{border:0}
     .number{font-weight:800;color:#1267db;min-width:150px;font-size:12px;overflow-wrap:anywhere}.info{flex:1;min-width:150px}
+    .preview{width:176px;min-width:130px;display:flex;justify-content:center;align-items:center;padding:7px;border-radius:13px;background:#f5f8fc;border:1px solid #e8eef6}
+    .preview-button{max-width:100%;min-height:42px;padding:9px 15px;border:1px solid #d6e2f2;border-radius:14px;background:#fff;color:#0863cf;font-weight:800;box-shadow:0 3px 8px #19375a18;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .preview-button.primary{background:linear-gradient(135deg,#1474ff,#0758db);border-color:#1267db;color:#fff;box-shadow:0 5px 12px #1267db35}
+    .preview-button.accent{background:linear-gradient(135deg,#ff3274,#ed155d);border-color:#ef2869;color:#fff;box-shadow:0 5px 12px #ed155d35}
+    .preview-button.danger{background:#fff1f2;border-color:#ffd5dc;color:#d82a4c;box-shadow:none}
+    .preview-button.segment{border-radius:999px;background:#eaf2ff;border:2px solid #94bfff;color:#245ca9;box-shadow:none}
+    .preview-button.small{min-height:34px;padding:6px 11px;border-radius:10px;font-size:13px;box-shadow:none}
+    .preview-caption{font-size:10px;color:#8290a3;text-align:center;margin-top:4px}
     .label{font-weight:700}.meta{font-size:13px;color:#65758a;margin-top:3px;word-break:break-word}.source{font-size:11px;color:#8593a7;margin-top:3px}
     .actions{display:flex;gap:5px;flex-wrap:wrap}.actions button{padding:6px 8px;font-size:13px}.hidden-item{opacity:.45}
     .editor{margin-top:18px;padding:16px;border-radius:14px;background:#f3f7fc}.editor label{display:block;font-weight:700;margin:10px 0 5px}
     .editor input,.editor textarea,.editor select{width:100%;border:1px solid #cbd8e8;border-radius:9px;padding:10px;background:white}
     .editor textarea{min-height:66px;resize:vertical}.editor .buttons{display:flex;gap:8px;margin-top:14px}
     .empty{padding:26px 6px;color:#627189;text-align:center}.badge{display:inline-block;margin-left:7px;border-radius:20px;background:#edf3fb;color:#53657d;padding:3px 8px;font-size:12px}
-    @media(max-width:760px){body{padding:12px}.layout{display:block}.screens{position:static;max-height:220px;margin-bottom:12px}.row{align-items:flex-start;flex-wrap:wrap}.info{min-width:calc(100% - 165px)}.actions{margin-left:0;width:100%}.number{max-width:150px}}
+    @media(max-width:760px){body{padding:12px}.layout{display:block}.screens{position:static;max-height:220px;margin-bottom:12px}.row{align-items:flex-start;flex-wrap:wrap}.info{min-width:calc(100% - 165px)}.preview{margin-left:0;width:auto;min-width:160px}.actions{margin-left:0;width:100%}.number{max-width:150px}}
   </style>
 </head>
 <body>
@@ -80,8 +88,10 @@
       $("items").innerHTML=visible.length?visible.map(x=>`<div class="row ${x.hidden?"hidden-item":""}" data-id="${escape(x.id)}">
         <span class="number">${escape(x.id)}</span><div class="info"><div class="label">${escape(x.label)}${x.hidden?" (숨김)":""}${x.added?" (추가 요청)":""}</div>
         <div class="meta">${escape(x.note||x.description||"앱에서 선택 가능한 실제 화면 요소")}</div>${x.source?`<div class="source">코드 위치: ${escape(x.source)}</div>`:""}</div>
+        <div><div class="preview"><button class="preview-button ${previewKind(x)}" type="button" tabindex="-1">${escape(x.label)}</button></div><div class="preview-caption">버튼 모양 미리보기</div></div>
         <div class="actions"><button data-cmd="edit">편집</button><button data-cmd="toggle">${x.hidden?"표시":"숨기기"}</button><button data-cmd="up" aria-label="위로">↑</button><button data-cmd="down" aria-label="아래로">↓</button></div></div>`).join(""):`<div class="empty">조건에 맞는 요소가 없습니다.</div>`;
     }
+    function previewKind(item){const id=item.id; if(/delete|logout|reset-run|decline/.test(id))return "danger small";if(id==="practice-start"||id==="practice-script-generate"||id==="study-run"||id==="paywall-purchase"||id==="premium-subscribe")return id==="practice-start"?"accent":"primary";if(id.startsWith("nav-")||id.startsWith("header-")||id.includes("-tab-"))return "segment";if(id.includes("close")||id.includes("cancel")||id.includes("retry")||id.includes("edit"))return "small";return "";}
     $("screens").onclick=e=>{const b=e.target.closest("[data-screen]");if(b){activeScreen=b.dataset.screen;$ ("search").value="";$("showHidden").checked=true;draw();}};
     $("items").onclick=e=>{
       const b=e.target.closest("button[data-cmd]"), row=e.target.closest("[data-id]");if(!b||!row)return;
