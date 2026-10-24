@@ -21,6 +21,47 @@ const FILES = {
 };
 const GROUP_ORDER = Object.keys(FILES);
 
+function screenFor(id, group) {
+  if (id.startsWith("login-") ) return "로그인";
+  if (id.startsWith("email-verify-")) return "이메일 인증";
+  if (id.startsWith("terms-") || id.startsWith("gate-")) return "첫 이용 약관";
+  if (id.startsWith("header-") || id.startsWith("nav-") || id === "back-button") return "공통 메뉴";
+  if (id.startsWith("home-shortcut-")) return "홈 · 바로가기 편집";
+  if (id.startsWith("home-schedule-add") || id.startsWith("home-schedule-edit")) return "홈 · 일정 추가·수정";
+  if (id.startsWith("home-schedule-")) return "홈 · 일정 카드";
+  if (id.startsWith("ai-report-")) return "홈 · AI 리포트";
+  if (id.startsWith("assessment-direct-")) return "수행평가 · 직접 입력";
+  if (id.startsWith("assessment-photo-") || id.startsWith("assessment-scan-")) return "수행평가 · 사진 등록·결과";
+  if (id.startsWith("assessment-menu-") || id.startsWith("assessment-edit-") || id.startsWith("assessment-delete-")) return "수행평가 · 수정·삭제 팝업";
+  if (id.startsWith("assessment-")) return "수행평가 · 일정 목록";
+  if (id.startsWith("practice-tab-") || id.startsWith("practice-script-generate")) return "발표 · 대본 작성";
+  if (id.startsWith("practice-saved-") || id.startsWith("practice-script-")) return "발표 · 저장 대본 보기";
+  if (id.startsWith("practice-prompter-")) return "발표 · 프롬프터";
+  if (id.startsWith("practice-permission-") || id.startsWith("practice-modal-")) return "발표 · 권한 안내";
+  if (id.startsWith("practice-analysis-") || id === "practice-retry") return "발표 · 분석 결과";
+  if (id.startsWith("practice-stop-") || id === "practice-start") return "발표 · 연습 진행";
+  if (id.startsWith("practice-source-")) return "발표 · 연습 준비";
+  if (id.startsWith("study-photo-")) return "공부 · 사진 문제 풀이";
+  if (id === "study-tab-helper") return "공부 · AI 공부 도우미";
+  if (id === "study-tab-planner") return "공부 · 시험 계획";
+  if (id.startsWith("study-material-") || id.startsWith("study-mode-") || id.startsWith("study-run") || id.startsWith("study-quiz-")) return "공부 · AI 공부 도우미";
+  if (id.startsWith("study-exam-") || id.startsWith("study-plan-") || id.startsWith("study-menu-") || id.startsWith("study-edit-") || id.startsWith("study-delete-")) return "공부 · 시험 계획";
+  if (id.startsWith("profile-school-")) return "프로필 · 학교 검색";
+  if (id.startsWith("profile-avatar-") || id.startsWith("profile-camera-")) return "프로필 · 사진 설정";
+  if (id.startsWith("profile-")) return "프로필 · 정보 수정";
+  if (id.startsWith("paywall-") || id.startsWith("premium-")) return "설정 · 똑 PRO 구독";
+  if (id.startsWith("settings-reset-")) return "설정 · 데이터 초기화";
+  if (id.startsWith("settings-terms-")) return "설정 · 이용약관";
+  if (id.startsWith("settings-")) return "설정 · 앱·계정 관리";
+  if (id.startsWith("meal-week-")) return "꼬르륵 · 주간 급식";
+  if (id.startsWith("meal-month-") || id.startsWith("meal-date-")) return "꼬르륵 · 날짜별 급식";
+  if (id.startsWith("meal-school-")) return "꼬르륵 · 학교 설정";
+  if (id.startsWith("meal-alarm-")) return "꼬르륵 · 급식 알림";
+  if (id.startsWith("select-")) return "공통 메뉴 · 선택 목록";
+  if (id.startsWith("error-")) return "오류 화면";
+  return group;
+}
+
 // 코드에서 data-ui 위치 수집
 const found = {}; // id -> "src/components/X.tsx:123"
 const srcDir = path.join(root, "src");
@@ -81,3 +122,14 @@ if (!fs.existsSync(indexCss)) {
   );
 }
 console.log(`완료: 요소 ${Object.keys(found).length}개, UI_MAP.md 갱신`);
+
+const catalogDir = path.join(root, "public");
+fs.mkdirSync(catalogDir, { recursive: true });
+const catalog = Object.entries(labels).map(([id, [group, description]]) => ({
+  id,
+  group,
+  screen: screenFor(id, group),
+  label: description,
+  source: found[id] || "코드 위치 확인 필요",
+}));
+fs.writeFileSync(path.join(catalogDir, "ui-catalog.json"), JSON.stringify(catalog, null, 2) + "\n");
