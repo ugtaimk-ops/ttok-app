@@ -10,6 +10,7 @@ import {
   Search
 } from "lucide-react";
 import { motion } from "motion/react";
+import { useRef, useState, type PointerEvent } from "react";
 
 interface BottomNavigationBarProps {
   currentTab: string;
@@ -24,6 +25,16 @@ export default function BottomNavigationBar({
   darkMode,
   serviceMode
 }: BottomNavigationBarProps) {
+  const gestureRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    dragging: boolean;
+    cancelled: boolean;
+    targetTab: string | null;
+  } | null>(null);
+  const [hoverTab, setHoverTab] = useState<string | null>(null);
+  const suppressClickUntil = useRef(0);
   
   const tokTabs = [
     { id: "home", label: "홈", icon: Home },
@@ -42,6 +53,74 @@ export default function BottomNavigationBar({
 
   const tabs = serviceMode === "tok" ? tokTabs : kkorureukTabs;
 
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    gestureRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      dragging: false,
+      cancelled: false,
+      targetTab: null,
+    };
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const gesture = gestureRef.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+
+    if (gesture.cancelled) return;
+    if (!gesture.dragging && Math.abs(event.clientY - gesture.startY) > Math.abs(event.clientX - gesture.startX)) {
+      gesture.cancelled = true;
+      return;
+    }
+    if (!gesture.dragging && Math.abs(event.clientX - gesture.startX) < 16) return;
+    if (!gesture.dragging) {
+      gesture.dragging = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    event.preventDefault();
+
+    const buttons = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>("button[data-nav-tab]")
+    );
+    const nearest = buttons.reduce<HTMLButtonElement | null>((closest, button) => {
+      if (!closest) return button;
+      const buttonCenter = button.getBoundingClientRect().left + button.offsetWidth / 2;
+      const closestCenter = closest.getBoundingClientRect().left + closest.offsetWidth / 2;
+      return Math.abs(event.clientX - buttonCenter) < Math.abs(event.clientX - closestCenter)
+        ? button
+        : closest;
+    }, null);
+    const nextTab = nearest?.dataset.navTab;
+    if (nextTab) {
+      gesture.targetTab = nextTab;
+      setHoverTab(nextTab);
+    }
+  };
+
+  const handlePointerEnd = (event: PointerEvent<HTMLDivElement>) => {
+    const gesture = gestureRef.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    if (gesture.dragging) {
+      event.preventDefault();
+      suppressClickUntil.current = performance.now() + 350;
+      if (gesture.targetTab && gesture.targetTab !== currentTab) onChangeTab(gesture.targetTab);
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    gestureRef.current = null;
+    setHoverTab(null);
+  };
+
+  const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
+    const gesture = gestureRef.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    gestureRef.current = null;
+    setHoverTab(null);
+  };
+
   return (
     <>
       {/* SVG Liquid Gooey Filter for iOS 27 Liquid Style Navigation */}
@@ -56,7 +135,14 @@ export default function BottomNavigationBar({
       </svg>
 
       <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1.25rem)] xs:w-[calc(100%-2rem)] sm:w-[calc(100%-2.5rem)] max-w-2xl h-16 sm:h-20 z-45">
-        <div data-ui="nav-bar" className={`w-full h-full relative border flex items-center justify-around px-1 xs:px-2 sm:px-4 md:px-6 overflow-visible transition-all duration-300 ${
+        <div
+          data-ui="nav-bar"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerEnd}
+          onPointerCancel={handlePointerCancel}
+          style={{ touchAction: "pan-y" }}
+          className={`w-full h-full relative border flex items-center justify-around px-1 xs:px-2 sm:px-4 md:px-6 overflow-visible transition-all duration-300 ${
           darkMode 
             ? "bg-slate-950/10 border-slate-800/40 backdrop-blur-3xl shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.05),0_20px_50px_rgba(0,0,0,0.5)]" 
             : "bg-white/10 border-white/50 backdrop-blur-3xl shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.55),inset_0_1px_0_rgba(255,255,255,0.4),0_20px_50px_rgba(15,23,42,0.12)]"
@@ -71,7 +157,7 @@ export default function BottomNavigationBar({
             style={{ filter: "url(#gooey-nav)" }}
           >
             {tabs.map((tab) => {
-              const isActive = currentTab === tab.id;
+              const isActive = (hoverTab ?? currentTab) === tab.id;
               return (
                 <div key={tab.id} className="w-12 xs:w-13 sm:w-16 h-13 xs:h-14 sm:h-16 flex items-center justify-center relative overflow-visible">
                   {/* Subtle liquid base/droplet under every tab */}
@@ -84,12 +170,9 @@ export default function BottomNavigationBar({
                     <motion.div
                       layoutId="liquidActiveBubble"
                       className="absolute w-[42px] xs:w-[46px] sm:w-[58px] h-[46px] xs:h-[50px] sm:h-[58px] rounded-[14px] xs:rounded-[16px] sm:rounded-[22px] bg-brand shadow-lg shadow-brand/30"
-                      transition={{
-                        type: "spring",
-                        stiffness: 140,
-                        damping: 15,
-                        mass: 0.8
-                      }}
+                      transition={hoverTab
+                        ? { type: "tween", duration: 0.12, ease: "easeOut" }
+                        : { type: "spring", stiffness: 320, damping: 29, mass: 0.65 }}
                     />
                   )}
                 </div>
@@ -100,13 +183,17 @@ export default function BottomNavigationBar({
           {/* Crisp Foreground Interactive Icons */}
           {tabs.map((tab) => {
             const IconComponent = tab.icon;
-            const isActive = currentTab === tab.id;
+            const isActive = (hoverTab ?? currentTab) === tab.id;
 
             return (
               <button
                 key={tab.id}
                 data-ui={`nav-${tab.id}`}
-                onClick={() => onChangeTab(tab.id)}
+                data-nav-tab={tab.id}
+                onClick={() => {
+                  if (performance.now() < suppressClickUntil.current) return;
+                  onChangeTab(tab.id);
+                }}
                 className="relative flex items-center justify-center focus:outline-none cursor-pointer group transition-all z-10 w-12 xs:w-13 sm:w-16 h-13 xs:h-14 sm:h-16"
                 id={`tab-button-${tab.id}`}
                 title={tab.label}

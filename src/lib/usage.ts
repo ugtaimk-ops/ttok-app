@@ -1,5 +1,5 @@
-export const FREE_MONTHLY_LIMIT = 50;
-export const PREMIUM_MONTHLY_LIMIT = 150;
+export const FREE_MONTHLY_LIMIT = 30;
+export const PREMIUM_MONTHLY_LIMIT = 100;
 
 export function getKoreanMonthKey(now = new Date()): string {
   const parts = new Intl.DateTimeFormat("en-US", {

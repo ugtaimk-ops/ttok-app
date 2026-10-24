@@ -28,6 +28,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import GlassSelect from "./GlassSelect";
 import AiReportCard from "./AiReportCard";
+import DefaultAvatar, { hasPhotoAvatar } from "./DefaultAvatar";
 
 const SCHEDULE_TYPE_OPTIONS = [
   { value: "study", label: "공부 📚" },
@@ -43,10 +44,10 @@ interface ShortcutItem {
   targetTab: string;
   iconType: "calendar" | "sparkles" | "bookOpen" | "award" | "settings";
   deepParams?: {
-    assessmentMode?: "list" | "direct" | "photo";
+    assessmentMode?: "list" | "direct" | "photo" | "planner";
     practiceSubTab?: "script" | "practice";
     studySubTab?: "helper" | "planner";
-    studyHelperMode?: "summary" | "quiz" | "note" | "question";
+    studyHelperMode?: "summary" | "quiz" | "note" | "question" | "photo";
   };
   featureId?: string;
 }
@@ -72,12 +73,12 @@ const DEFAULT_SHORTCUTS: ShortcutItem[] = [
   },
   {
     id: "sc_3",
-    title: "교과 공부 AI 질문 & 요약",
-    description: "교과 범위 요약 및 모르는 부분 질문하기",
+    title: "사진 문제 풀이",
+    description: "문제를 촬영하거나 사진을 골라 풀이하기",
     targetTab: "study",
     iconType: "bookOpen",
-    deepParams: { studySubTab: "helper", studyHelperMode: "question" },
-    featureId: "study_question"
+    deepParams: { studyHelperMode: "photo" },
+    featureId: "study_photo"
   }
 ];
 
@@ -123,12 +124,12 @@ const TTOK_FEATURES: Omit<ShortcutItem, "featureId">[] = [
     deepParams: { practiceSubTab: "practice" }
   },
   {
-    id: "study_question",
-    title: "교과 공부 AI 질문 & 요약",
-    description: "교과 범위 요약 및 모르는 부분 질문하기",
+    id: "study_photo",
+    title: "사진 문제 풀이",
+    description: "문제를 촬영하거나 사진을 골라 풀이하기",
     targetTab: "study",
     iconType: "bookOpen",
-    deepParams: { studySubTab: "helper", studyHelperMode: "question" }
+    deepParams: { studyHelperMode: "photo" }
   },
   {
     id: "study_quiz",
@@ -136,15 +137,15 @@ const TTOK_FEATURES: Omit<ShortcutItem, "featureId">[] = [
     description: "학습한 텍스트 바탕 실전 AI 퀴즈 풀기",
     targetTab: "study",
     iconType: "bookOpen",
-    deepParams: { studySubTab: "helper", studyHelperMode: "quiz" }
+    deepParams: { studyHelperMode: "quiz" }
   },
   {
     id: "study_planner",
     title: "지필 및 수행 학습 계획",
     description: "과목별 세부 시험 범위 및 학습 스케줄링",
-    targetTab: "study",
-    iconType: "bookOpen",
-    deepParams: { studySubTab: "planner" }
+    targetTab: "assessment",
+    iconType: "calendar",
+    deepParams: { assessmentMode: "planner" }
   },
   {
     id: "profile_page",
@@ -166,6 +167,7 @@ const TTOK_FEATURES: Omit<ShortcutItem, "featureId">[] = [
 
 interface HomeScreenProps {
   user: UserProfile;
+  planPreview?: "free" | "pro";
   todos: TodoItem[];
   schedules: ScheduleItem[];
   onToggleTodo: (id: string) => void;
@@ -173,10 +175,10 @@ interface HomeScreenProps {
   onDeleteTodo: (id: string) => void;
   darkMode: boolean;
   onChangeTab?: (tab: string, params?: { 
-    assessmentMode?: "list" | "direct" | "photo";
+    assessmentMode?: "list" | "direct" | "photo" | "planner";
     practiceSubTab?: "script" | "practice";
     studySubTab?: "helper" | "planner";
-    studyHelperMode?: "summary" | "quiz" | "note" | "question";
+    studyHelperMode?: "summary" | "quiz" | "note" | "question" | "photo";
   }) => void;
   onAddSchedule?: (newSchedule: Omit<ScheduleItem, "id">) => void;
   onDeleteSchedule?: (id: string) => void;
@@ -185,6 +187,7 @@ interface HomeScreenProps {
 
 export default function HomeScreen({ 
   user, 
+  planPreview,
   todos, 
   schedules, 
   onToggleTodo, 
@@ -269,7 +272,20 @@ export default function HomeScreen({
     const saved = localStorage.getItem("ttok_smart_shortcuts");
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (!Array.isArray(parsed)) return DEFAULT_SHORTCUTS;
+        return parsed.map((shortcut: ShortcutItem) => {
+          if (shortcut.featureId === "study_question" || shortcut.deepParams?.studyHelperMode === "question") {
+            return { ...shortcut, title: "사진 문제 풀이", description: "문제를 촬영하거나 사진을 골라 풀이하기", targetTab: "study", deepParams: { studyHelperMode: "photo" }, featureId: "study_photo" };
+          }
+          if (shortcut.featureId === "study_photo" && shortcut.deepParams?.studyHelperMode !== "photo") {
+            return { ...shortcut, deepParams: { studyHelperMode: "photo" } };
+          }
+          if (shortcut.featureId === "study_planner" || shortcut.deepParams?.studySubTab === "planner") {
+            return { ...shortcut, targetTab: "assessment", iconType: "calendar", deepParams: { assessmentMode: "planner" }, featureId: "study_planner" };
+          }
+          return shortcut;
+        });
       } catch (e) {
         console.error("Failed to parse smart shortcuts:", e);
       }
@@ -391,17 +407,15 @@ export default function HomeScreen({
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="relative shrink-0">
               <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl sm:rounded-2xl md:rounded-3xl border-2 border-brand/20 overflow-hidden shadow-md flex items-center justify-center bg-gradient-to-tr from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900">
-                {user.avatarUrl && !user.avatarUrl.startsWith("http") && !user.avatarUrl.startsWith("data:") ? (
-                  <span className="text-2xl sm:text-3xl md:text-4xl select-none" role="img" aria-label="profile emoji">
-                    {user.avatarUrl}
-                  </span>
-                ) : (
+                {hasPhotoAvatar(user.avatarUrl) ? (
                   <img 
-                    src={user.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=256"} 
+                    src={user.avatarUrl}
                     alt="Profile" 
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                   />
+                ) : (
+                  <DefaultAvatar />
                 )}
               </div>
               <div className="absolute -bottom-1 -right-1 bg-brand text-white w-5 h-5 sm:w-6 sm:h-6 rounded-lg flex items-center justify-center shadow-md">
@@ -444,7 +458,12 @@ export default function HomeScreen({
       </div>
 
       {/* AI 리포트 (PRO 전용) */}
-      {user.isPremium && user.uid && (
+      {planPreview === "pro" ? (
+        <div className="p-5 sm:p-6 rounded-[24px] sm:rounded-[32px] border border-amber-200/60 bg-gradient-to-br from-amber-50 to-orange-50 dark:border-amber-500/20 dark:from-amber-500/10 dark:to-orange-500/5">
+          <h3 className="text-fluid-sm font-black text-amber-600 dark:text-amber-400">AI 리포트 <span className="text-fluid-xs">PRO · 미리보기</span></h3>
+          <p className="mt-2 text-fluid-sm font-semibold text-slate-600 dark:text-slate-300">실제 PRO 사용자에게는 할 일과 일정을 바탕으로 AI 학습 추천이 표시됩니다.</p>
+        </div>
+      ) : planPreview === "free" ? null : user.isPremium && user.uid && (
         <AiReportCard key={user.uid} uid={user.uid} todos={todos} schedules={schedules} darkMode={darkMode} />
       )}
 

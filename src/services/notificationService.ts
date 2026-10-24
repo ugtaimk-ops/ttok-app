@@ -178,7 +178,7 @@ export const syncAllNotifications = async (schedules?: ScheduleItem[]) => {
     const assessNotif = assessNotifSaved !== null ? assessNotifSaved === "true" : true;
 
     const dailyNotifSaved = localStorage.getItem("ttok_daily_notif");
-    const dailyNotif = dailyNotifSaved !== null ? dailyNotifSaved === "true" : false;
+    const dailyNotif = dailyNotifSaved !== null ? dailyNotifSaved === "true" : true;
 
     // Kkorureuk (Meal) notification settings
     const mealNotifSaved = localStorage.getItem("ttok_meal_notif_enabled");

@@ -1,16 +1,12 @@
 import BackButton from "./BackButton";
 import { useScreenBack } from "../lib/screenBack";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Moon, 
   Sun, 
-  Bell, 
   UserX, 
   LogOut, 
-  Check, 
   AlertTriangle,
-  Lock,
-  Smartphone,
   FileText,
   X,
   RefreshCw
@@ -23,6 +19,7 @@ import TermsContent, { TERMS_VERSION } from "./TermsContent";
 
 interface SettingsScreenProps {
   darkMode: boolean;
+  planPreview?: "free" | "pro";
   onToggleDarkMode: () => void;
   onLogout: () => void;
   onResetData: () => void;
@@ -35,6 +32,7 @@ interface SettingsScreenProps {
 
 export default function SettingsScreen({ 
   darkMode, 
+  planPreview,
   onToggleDarkMode, 
   onLogout, 
   onResetData,
@@ -56,7 +54,7 @@ export default function SettingsScreen({
   });
   const [dailyNotif, setDailyNotif] = useState(() => {
     const saved = localStorage.getItem("ttok_daily_notif");
-    return saved !== null ? saved === "true" : false;
+    return saved !== null ? saved === "true" : true;
   });
   const [mealNotifEnabled, setMealNotifEnabled] = useState<boolean>(() => {
     const saved = localStorage.getItem("ttok_meal_notif_enabled");
@@ -73,8 +71,9 @@ export default function SettingsScreen({
   const [showPurgeModal, setShowPurgeModal] = useState(false);
   const [purgeCountdown, setPurgeCountdown] = useState(5);
   const [showTermsModal, setShowTermsModal] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("설정이 안전하게 적용되었습니다!");
+  const syncNotificationsRef = useRef(onSyncNotifications);
+  syncNotificationsRef.current = onSyncNotifications;
+  const notificationsInitialized = useRef(false);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -97,20 +96,20 @@ export default function SettingsScreen({
     };
   }, [showPurgeModal]);
 
-  const handleSaveNotif = () => {
+  useEffect(() => {
     localStorage.setItem("ttok_exam_notif", String(examNotif));
     localStorage.setItem("ttok_assess_notif", String(assessNotif));
     localStorage.setItem("ttok_daily_notif", String(dailyNotif));
     localStorage.setItem("ttok_meal_notif_enabled", String(mealNotifEnabled));
     localStorage.setItem("ttok_meal_notif_hour", mealNotifHour);
     localStorage.setItem("ttok_meal_notif_minute", mealNotifMinute);
-    setToastMessage("똑(TTOK) 푸시 알림 설정이 안전하게 갱신되었습니다!");
-    setShowToast(true);
-    if (onSyncNotifications) {
-      onSyncNotifications();
+    if (!notificationsInitialized.current) {
+      notificationsInitialized.current = true;
+      return;
     }
-    setTimeout(() => setShowToast(false), 2000);
-  };
+    const timer = window.setTimeout(() => syncNotificationsRef.current?.(), 250);
+    return () => window.clearTimeout(timer);
+  }, [examNotif, assessNotif, dailyNotif, mealNotifEnabled, mealNotifHour, mealNotifMinute]);
 
   useScreenBack(() => {
     if (showTermsModal) { setShowTermsModal(false); return true; }
@@ -272,18 +271,10 @@ export default function SettingsScreen({
 
           </div>
 
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
-            <button data-ui="settings-notif-save"
-              onClick={handleSaveNotif}
-              className="px-5 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:bg-slate-100 text-slate-700 dark:text-slate-300 text-fluid-sm font-black rounded-2xl flex items-center gap-2 cursor-pointer shadow-sm"
-            >
-              <Bell size={15} /> 알림 규칙 적용 저장
-            </button>
-          </div>
         </div>
 
         {/* 2.5. PREMIUM / SUBSCRIPTION */}
-        <PremiumSection user={user} darkMode={darkMode} />
+        <PremiumSection user={user} darkMode={darkMode} planPreview={planPreview} />
 
         {/* 3. PLATFORM & SECURITY */}
         <div className={`p-5 sm:p-6 rounded-[24px] sm:rounded-[32px] border ${
@@ -292,20 +283,6 @@ export default function SettingsScreen({
           <h3 className="text-fluid-xs font-black text-slate-400 uppercase tracking-wider mb-2">기기 연동 및 계정 관리</h3>
 
           <div className="space-y-3.5">
-            <div className="flex items-center justify-between text-fluid-sm font-semibold">
-              <span className="text-slate-400">플랫폼 모드</span>
-              <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <Smartphone size={15} /> Android / iOS 크로스 플랫폼 지원
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between text-fluid-sm font-semibold">
-              <span className="text-slate-400">데이터 백업 연동</span>
-              <span className="text-emerald-500 font-bold flex items-center gap-1">
-                <Lock size={14} /> Google Cloud 기기 간 완벽 백업 지원
-              </span>
-            </div>
-
             {user.email && (
               <div className="flex items-center justify-between text-fluid-sm font-semibold">
                 <span className="text-slate-400">로그인 계정</span>
@@ -461,21 +438,6 @@ export default function SettingsScreen({
               </div>
             </motion.div>
           </div>
-        )}
-      </AnimatePresence>
-
-      {/* Save Notification Toast */}
-      <AnimatePresence>
-        {showToast && (
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-fab-safe right-6 bg-brand text-white px-5 py-3 rounded-2xl flex items-center gap-2 shadow-lg text-xs font-bold z-50"
-          >
-            <Check size={16} />
-            <span>{toastMessage}</span>
-          </motion.div>
         )}
       </AnimatePresence>
 

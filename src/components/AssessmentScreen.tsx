@@ -20,6 +20,10 @@ import {
   Trash2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import ExamPlanner from "./ExamPlanner";
+import { prepareAiImage } from "../lib/prepareAiImage";
+
+type AssessmentMode = "list" | "direct" | "photo" | "planner";
 
 interface AssessmentScreenProps {
   schedules: ScheduleItem[];
@@ -28,7 +32,7 @@ interface AssessmentScreenProps {
   onDeleteSchedule: (id: string) => void;
   onUpdateSchedule: (updated: ScheduleItem) => void;
   darkMode: boolean;
-  initialMode?: "list" | "direct" | "photo";
+  initialMode?: AssessmentMode;
 }
 
 export default function AssessmentScreen({ 
@@ -40,7 +44,7 @@ export default function AssessmentScreen({
   darkMode,
   initialMode
 }: AssessmentScreenProps) {
-  const [mode, setMode] = useState<"list" | "direct" | "photo">("list");
+  const [mode, setMode] = useState<AssessmentMode>("list");
 
   useEffect(() => {
     if (initialMode) {
@@ -165,21 +169,6 @@ export default function AssessmentScreen({
     setMode("list");
   };
 
-  // Convert File to Base64
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const base64String = reader.result as string;
-        // Extract raw base64 data without metadata header
-        const rawBase64 = base64String.split(",")[1];
-        resolve(rawBase64);
-      };
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
   // Call Express API endpoint to extract text using Gemini Multimodal
   const analyzeImage = async (base64Data: string, mimeType: string) => {
     setIsAnalyzing(true);
@@ -232,10 +221,10 @@ export default function AssessmentScreen({
     if (!file) return;
 
     try {
-      const base64 = await fileToBase64(file);
-      analyzeImage(base64, file.type);
+      const { base64, mimeType } = await prepareAiImage(file);
+      void analyzeImage(base64, mimeType);
     } catch (err) {
-      setAnalysisError("이미지 파일을 변환하는 도중 에러가 발생했습니다.");
+      setAnalysisError(err instanceof Error ? err.message : "이미지 파일을 변환하는 도중 에러가 발생했습니다.");
     }
   };
 
@@ -286,32 +275,34 @@ export default function AssessmentScreen({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-left">
         <div className="space-y-1">
           <h1 className="text-fluid-3xl font-black tracking-tight-sf text-slate-800 dark:text-slate-100">
-            수행평가 일정 관리
+            지필·수행평가 관리
           </h1>
           <p className="text-fluid-sm text-slate-500 dark:text-slate-400 font-semibold">
-            나의 수행평가 계획과 일정을 똑 소리나게 통합 스케줄링하세요
+            수행평가 일정과 지필평가 학습 계획을 한곳에서 관리하세요
           </p>
         </div>
 
-        {mode === "list" && (
-          <div className="flex gap-2 w-full sm:w-auto">
-            <button data-ui="assessment-add-direct"
-              onClick={() => setMode("direct")}
-              className="flex-1 sm:flex-initial h-12 px-5 bg-brand-light dark:bg-brand/10 text-brand font-black rounded-2xl text-fluid-sm hover:bg-brand hover:text-white transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-98"
-            >
-              <Plus size={18} /> 직접 입력
-            </button>
-            <button data-ui="assessment-add-photo"
-              onClick={() => setMode("photo")}
-              className="flex-1 sm:flex-initial h-12 px-5 bg-brand-light dark:bg-brand/10 text-brand font-black rounded-2xl text-fluid-sm hover:bg-brand hover:text-white transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-98"
-            >
-              <Sparkles size={18} /> 사진 등록
-            </button>
-          </div>
-        )}
+        <div className="flex w-full sm:w-fit rounded-2xl bg-slate-100 dark:bg-slate-850 p-1.5" role="tablist" aria-label="평가 관리 종류">
+          <button data-ui="assessment-tab-list" role="tab" aria-selected={mode !== "planner"}
+            onClick={() => setMode("list")}
+            className={`flex-1 sm:flex-none h-11 px-4 rounded-xl text-fluid-sm font-black transition-all ${mode !== "planner" ? "bg-white dark:bg-slate-700 text-brand shadow-sm" : "text-slate-500 dark:text-slate-400"}`}>
+            수행평가 일정
+          </button>
+          <button data-ui="assessment-tab-planner" role="tab" aria-selected={mode === "planner"}
+            onClick={() => setMode("planner")}
+            className={`flex-1 sm:flex-none h-11 px-4 rounded-xl text-fluid-sm font-black transition-all ${mode === "planner" ? "bg-white dark:bg-slate-700 text-brand shadow-sm" : "text-slate-500 dark:text-slate-400"}`}>
+            지필·수행 계획
+          </button>
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
+
+        {mode === "planner" && (
+          <motion.div key="planner" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}>
+            <ExamPlanner schedules={schedules} onAddSchedule={onAddSchedule} onDeleteSchedule={onDeleteSchedule} onUpdateSchedule={onUpdateSchedule} darkMode={darkMode} />
+          </motion.div>
+        )}
         
         {/* 1. LIST VIEW */}
         {mode === "list" && (
@@ -323,6 +314,7 @@ export default function AssessmentScreen({
             className="space-y-6"
           >
             {schedules.filter(s => s.type === "assessment").length > 0 ? (
+              <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {schedules.filter(s => s.type === "assessment").map(item => (
                   <div 
@@ -403,6 +395,17 @@ export default function AssessmentScreen({
                   </div>
                 ))}
               </div>
+              <div className="flex flex-wrap gap-2 justify-end">
+                <button data-ui="assessment-add-direct" onClick={() => setMode("direct")}
+                  className="min-h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-200 font-bold flex items-center gap-1.5">
+                  <Plus size={16} /> 직접 입력
+                </button>
+                <button data-ui="assessment-add-photo" onClick={() => setMode("photo")}
+                  className="min-h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-200 font-bold flex items-center gap-1.5">
+                  <Sparkles size={16} /> 사진 등록
+                </button>
+              </div>
+              </>
             ) : (
               <div className={`p-8 sm:p-16 rounded-[24px] sm:rounded-[32px] border text-center ${darkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"}`}>
                 <div className="mx-auto w-14 h-14 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-2xl flex items-center justify-center mb-4">

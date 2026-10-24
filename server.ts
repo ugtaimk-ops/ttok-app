@@ -6,7 +6,7 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import { getAIService, parseJSONResponse } from "./services/ai";
-import { verifyRequestUser, checkAndConsumeUsage, getCurrentUsage, getCachedProblem, saveProblemAndCost } from "./services/usageService";
+import { verifyRequestUser, checkAndConsumeUsage, getCurrentUsage, getCachedProblem, saveProblemResult, getCachedAiResult, saveCachedAiResult } from "./services/usageService";
 import { verifyWebhookAuth, handleWebhookEvent } from "./services/revenueCatService";
 
 dotenv.config();
@@ -76,6 +76,7 @@ const aiLimiter = rateLimit({
 app.use("/api/", apiLimiter);
 
 const AI_ROUTES = ["/api/script/generate", "/api/practice/analyze", "/api/assessment/extract", "/api/study/action", "/api/home/ai-report"];
+const CACHEABLE_AI_ROUTES = new Set(["/api/assessment/extract", "/api/study/action"]);
 app.use(AI_ROUTES, aiLimiter);
 app.use("/api/problem/solve", aiLimiter);
 
@@ -103,6 +104,19 @@ app.use(AI_ROUTES, async (req, res, next) => {
   try {
     const uid = await verifyRequestUser(req);
     if (!uid) return res.status(401).json({ error: "로그인이 필요해요.", code: "AUTH_REQUIRED" });
+    const route = req.originalUrl.split("?")[0];
+    const isRepeatableStudyRequest = route === "/api/study/action" &&
+      (req.body?.actionType === "quiz" || req.body?.actionType === "question");
+    if (CACHEABLE_AI_ROUTES.has(route) && !isRepeatableStudyRequest) {
+      const hash = createHash("sha256").update("ai-cache-v1:").update(route).update(JSON.stringify(req.body || {})).digest("hex");
+      (req as any).aiCacheHash = hash;
+      try {
+        const cached = await getCachedAiResult(uid, hash);
+        if (cached) return res.json(cached);
+      } catch (cacheError) {
+        console.warn("[AI] Cache lookup unavailable:", cacheError);
+      }
+    }
     const result = await checkAndConsumeUsage(uid);
     (req as any).uid = uid;
     (req as any).isPremium = result.isPremium;
@@ -178,6 +192,7 @@ app.post("/api/problem/solve", async (req, res) => {
         const response = await getAIService("gemini").generateContent({
           modelOverride: "gemini-2.5-flash-lite",
           tier: "complex",
+          costContext: { uid, feature: "problem" },
           imageBase64,
           imageMimeType: mimeType,
           responseMimeType: "application/json",
@@ -198,10 +213,8 @@ app.post("/api/problem/solve", async (req, res) => {
           throw new Error("AI 풀이 형식이 올바르지 않아요. 다시 시도해 주세요.");
         }
         const result = { source: "gemini", model: "gemini-2.5-flash-lite", ...parsed };
-        const configured = Number(process.env.GEMINI_SOLVE_ESTIMATED_USD);
-        const estimate = Number.isFinite(configured) && configured >= 0 ? configured : 0.002;
-        try { await saveProblemAndCost(uid, hash, result, estimate); }
-        catch (error) { console.error("[ProblemSolve] Cache/cost record failed:", error); }
+        try { await saveProblemResult(uid, hash, result); }
+        catch (error) { console.error("[ProblemSolve] Cache record failed:", error); }
         return result;
       })();
       problemRequests.set(key, pending);
@@ -374,6 +387,7 @@ app.get("/api/school/search", async (req, res) => {
           prompt,
           temperature: 0.1,
           tier: "fast",
+          maxOutputTokens: 128,
           responseMimeType: "application/json"
         });
         
@@ -590,6 +604,7 @@ app.post("/api/script/generate", async (req, res) => {
     try {
       responseText = await ai.generateContent({
         tier: "complex",
+        costContext: { uid: (req as any).uid, feature: "script" },
         prompt,
         responseMimeType: "application/json",
         responseSchema: {
@@ -671,6 +686,7 @@ JSON 스키마를 정확히 따르세요.`;
       responseText = await ai.generateContent({
         tier: "complex",
         modelOverride: "gemini-3.5-flash-lite",
+        costContext: { uid: (req as any).uid, feature: "practice" },
         prompt,
         videoBase64,
         videoMimeType,
@@ -780,7 +796,8 @@ app.post("/api/assessment/extract", async (req, res) => {
     `;
 
     const responseText = await ai.generateContent({
-      tier: "complex",
+      tier: "fast",
+      costContext: { uid: (req as any).uid, feature: "assessment" },
       prompt,
       imageBase64,
       imageMimeType: mimeType || "image/png",
@@ -801,6 +818,13 @@ app.post("/api/assessment/extract", async (req, res) => {
     });
 
     const data = parseJSONResponse(responseText);
+    if (typeof data.title !== "string" || typeof data.subject !== "string" || typeof data.dueDate !== "string") {
+      throw new Error("수행평가 정보를 정확히 읽지 못했어요. 사진을 다시 선택해 주세요.");
+    }
+    if ((req as any).aiCacheHash) {
+      try { await saveCachedAiResult((req as any).uid, (req as any).aiCacheHash, data); }
+      catch (cacheError) { console.warn("[AI] Could not cache assessment result:", cacheError); }
+    }
     res.json(data);
   } catch (error: any) {
     console.error("Assessment extraction error:", error);
@@ -879,7 +903,8 @@ app.post("/api/study/action", async (req, res) => {
       출력은 반드시 명시된 JSON 스키마 규격을 100% 만족하는 JSON이어야 합니다.`;
 
     const responseText = await ai.generateContent({
-      tier: imageBase64 ? "complex" : "general",
+      tier: actionType === "summary" || actionType === "note" ? "fast" : "complex",
+      costContext: { uid: (req as any).uid, feature: "study" },
       prompt,
       imageBase64: imageBase64 || undefined,
       imageMimeType: mimeType || "image/png",
@@ -900,6 +925,13 @@ app.post("/api/study/action", async (req, res) => {
     });
 
     const data = parseJSONResponse(responseText);
+    if (typeof data.title !== "string" || typeof data.content !== "string" || !Array.isArray(data.extraData)) {
+      throw new Error("공부 결과 형식이 올바르지 않아요. 다시 시도해 주세요.");
+    }
+    if ((req as any).aiCacheHash) {
+      try { await saveCachedAiResult((req as any).uid, (req as any).aiCacheHash, data); }
+      catch (cacheError) { console.warn("[AI] Could not cache study result:", cacheError); }
+    }
     res.json(data);
   } catch (error: any) {
     console.error("Study helper error:", error);
@@ -949,7 +981,8 @@ app.post("/api/home/ai-report", async (req, res) => {
       순수한 텍스트로만 답변하고, 마크다운이나 따옴표로 감싸지 마세요.
     `;
 
-    const report = await ai.generateContent({ prompt, temperature: 0.8 });
+    const report = await ai.generateContent({ prompt, temperature: 0.8, tier: "fast", maxOutputTokens: 256,
+      costContext: { uid: (req as any).uid, feature: "report" } });
     res.json({ report: report.trim() });
   } catch (error: any) {
     console.error("AI report error:", error);

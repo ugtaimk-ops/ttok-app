@@ -30,6 +30,7 @@ import StudyScreen from "./components/StudyScreen";
 import ProfileScreen from "./components/ProfileScreen";
 import SettingsScreen from "./components/SettingsScreen";
 import BottomNavigationBar from "./components/BottomNavigationBar";
+import DefaultAvatar, { hasPhotoAvatar } from "./components/DefaultAvatar";
 import LoginScreen from "./components/LoginScreen";
 import EmailVerificationScreen from "./components/EmailVerificationScreen";
 import TermsConsentScreen from "./components/TermsConsentScreen";
@@ -45,7 +46,7 @@ const INITIAL_USER: UserProfile = {
   grade: "",
   classNum: "",
   goal: "",
-  avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=256"
+  avatarUrl: ""
 };
 
 const INITIAL_SCHEDULES: ScheduleItem[] = [];
@@ -55,6 +56,7 @@ const INITIAL_TODOS: TodoItem[] = [];
 const INITIAL_SCRIPTS: ScriptItem[] = [];
 
 const INITIAL_PRACTICE_LOGS: PracticeLog[] = [];
+const TOK_TAB_ORDER = ["home", "assessment", "practice", "study", "profile", "settings"];
 
 function getStoredDataOwner(): string | null {
   const owner = localStorage.getItem("ttok_data_owner_uid");
@@ -69,6 +71,14 @@ function getStoredDataOwner(): string | null {
 }
 
 export default function App() {
+  // The local UI editor may display both plans without changing Firebase or
+  // RevenueCat state. Vite removes this branch from production builds.
+  const planPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get("ui") === "1"
+    ? (() => {
+        const plan = new URLSearchParams(window.location.search).get("planPreview");
+        return plan === "free" || plan === "pro" ? plan : undefined;
+      })()
+    : undefined;
   // undefined = still checking auth state, null = signed out, User = signed in
   const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
 
@@ -116,6 +126,11 @@ export default function App() {
   }, [authUser?.uid, emailVerified, termsRetry]);
 
   const [tokTab, setTokTab] = useState<string>("home");
+  const [tabTransition, setTabTransition] = useState<{ from: string; to: string; direction: 1 | -1 } | null>(null);
+  const tabTransitionTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (tabTransitionTimer.current !== null) window.clearTimeout(tabTransitionTimer.current);
+  }, []);
   const [kkorureukTab, setKkorureukTab] = useState<string>("meal-today");
   const [serviceMode, setServiceMode] = useState<"tok" | "kkorureuk">("tok");
   const [darkMode, setDarkMode] = useState<boolean>(false);
@@ -176,10 +191,9 @@ export default function App() {
 
 
   // Deep navigation sub-states
-  const [assessmentMode, setAssessmentMode] = useState<"list" | "direct" | "photo">("list");
+  const [assessmentMode, setAssessmentMode] = useState<"list" | "direct" | "photo" | "planner">("list");
   const [practiceSubTab, setPracticeSubTab] = useState<"script" | "practice">("script");
-  const [studySubTab, setStudySubTab] = useState<"helper" | "planner">("helper");
-  const [studyHelperMode, setStudyHelperMode] = useState<"summary" | "quiz" | "note" | "question">("summary");
+  const [studyHelperMode, setStudyHelperMode] = useState<"summary" | "quiz" | "note" | "question" | "photo">("summary");
 
   // Core state modules initialized from localStorage with robust fallback
   const [user, setUser] = useState<UserProfile>(() => {
@@ -593,23 +607,57 @@ export default function App() {
   };
 
   const currentActiveTab = serviceMode === "tok" ? tokTab : kkorureukTab;
+  const selectTokTab = (nextTab: string) => {
+    if (nextTab === tokTab) return;
+    if (tabTransitionTimer.current !== null) window.clearTimeout(tabTransitionTimer.current);
+    const fromIndex = TOK_TAB_ORDER.indexOf(tokTab);
+    const toIndex = TOK_TAB_ORDER.indexOf(nextTab);
+    setTabTransition(fromIndex < 0 || toIndex < 0 ? null : {
+      from: tokTab,
+      to: nextTab,
+      direction: toIndex > fromIndex ? 1 : -1,
+    });
+    setTokTab(nextTab);
+    tabTransitionTimer.current = window.setTimeout(() => {
+      setTabTransition(null);
+      tabTransitionTimer.current = null;
+    }, 240);
+  };
   const setCurrentActiveTab = (tab: string, params?: {
-    assessmentMode?: "list" | "direct" | "photo";
+    assessmentMode?: "list" | "direct" | "photo" | "planner";
     practiceSubTab?: "script" | "practice";
     studySubTab?: "helper" | "planner";
-    studyHelperMode?: "summary" | "quiz" | "note" | "question";
+    studyHelperMode?: "summary" | "quiz" | "note" | "question" | "photo";
   }) => {
     if (serviceMode === "tok") {
+      // Saved shortcuts from older versions still point to the Study planner.
+      if (tab === "study" && params?.studySubTab === "planner") {
+        setAssessmentMode("planner");
+        selectTokTab("assessment");
+        return;
+      }
       if (params) {
         if (params.assessmentMode) setAssessmentMode(params.assessmentMode);
         if (params.practiceSubTab) setPracticeSubTab(params.practiceSubTab);
-        if (params.studySubTab) setStudySubTab(params.studySubTab);
-        if (params.studyHelperMode) setStudyHelperMode(params.studyHelperMode);
       }
-      setTokTab(tab);
+      if (tab === "study") setStudyHelperMode(params?.studyHelperMode === "question" ? "summary" : params?.studyHelperMode ?? "summary");
+      selectTokTab(tab);
     } else {
       setKkorureukTab(tab);
     }
+  };
+  const tabPanelProps = (tab: string) => {
+    const active = tokTab === tab;
+    const leaving = tabTransition?.from === tab;
+    const entering = tabTransition?.to === tab;
+    const direction = tabTransition?.direction === 1 ? "right" : "left";
+    return {
+      active,
+      visible: active || leaving,
+      className: leaving
+        ? `tab-panel-leave-${direction} absolute inset-x-0 top-0 pointer-events-none`
+        : entering ? `tab-panel-enter-${direction}` : "",
+    };
   };
 
   // Still resolving the initial auth state on app startup
@@ -662,7 +710,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 pb-20 ${
+    <div className={`min-h-screen transition-colors duration-300 ${
       darkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50/50 text-slate-800"
     }`}>
 
@@ -676,7 +724,7 @@ export default function App() {
             {/* 파란색 네모로 둘러싸인 '똑 | 꼬르륵' 큰 글씨 서비스 전환 메뉴 */}
             <div className="border-2 border-brand/80 dark:border-blue-500/80 rounded-2xl p-0.5 bg-brand/5 dark:bg-blue-500/5 flex items-center gap-0.5 select-none shadow-sm">
               <button data-ui="header-mode-tok"
-                onClick={() => setServiceMode("tok")}
+                onClick={() => { setTokTab("home"); setServiceMode("tok"); setTabTransition(null); }}
                 className={`px-2 sm:px-5 py-1 sm:py-1.5 text-base sm:text-lg md:text-xl font-black rounded-xl transition-all duration-150 cursor-pointer ${
                   serviceMode === "tok"
                     ? "bg-brand text-white shadow-md shadow-brand/15"
@@ -686,7 +734,7 @@ export default function App() {
                 똑
               </button>
               <button data-ui="header-mode-kkorureuk"
-                onClick={() => setServiceMode("kkorureuk")}
+                onClick={() => { setKkorureukTab("meal-today"); setServiceMode("kkorureuk"); setTabTransition(null); }}
                 className={`px-2 sm:px-5 py-1 sm:py-1.5 text-base sm:text-lg md:text-xl font-black rounded-xl transition-all duration-150 cursor-pointer ${
                   serviceMode === "kkorureuk"
                     ? "bg-brand text-white shadow-md shadow-brand/15"
@@ -703,17 +751,15 @@ export default function App() {
               {user.school ? `${user.school} ${user.grade || "1"}학년` : "프로필 미설정"}
             </span>
             <div className="w-7 h-7 sm:w-8 sm:h-8 bg-brand-light dark:bg-brand/10 border border-brand/5 rounded-full overflow-hidden shrink-0 flex items-center justify-center">
-              {user.avatarUrl && !user.avatarUrl.startsWith("http") && !user.avatarUrl.startsWith("data:") ? (
-                <span className="text-sm select-none" role="img" aria-label="profile emoji">
-                  {user.avatarUrl}
-                </span>
-              ) : (
+              {hasPhotoAvatar(user.avatarUrl) ? (
                 <img 
-                  src={user.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=256"} 
+                  src={user.avatarUrl}
                   alt="Profile" 
                   className="w-full h-full object-cover" 
                   referrerPolicy="no-referrer"
                 />
+              ) : (
+                <DefaultAvatar />
               )}
             </div>
           </div>
@@ -721,17 +767,18 @@ export default function App() {
       </header>
 
       {/* Primary tab views - Immediately rendered for snappy transitions */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 pt-3 sm:pt-6 pb-[calc(5rem+env(safe-area-inset-bottom,12px))] sm:pb-32 relative">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 pt-3 sm:pt-6 relative">
         
         {serviceMode === "tok" ? (
-          <div className="w-full animate-fade-in">
+          <div className={`w-full relative ${tabTransition ? "tab-stage-animating" : ""}`}>
             {/* All tabs stay mounted (hidden via CSS, not unmounted) so an
                 in-flight AI request and its result survive the user
                 switching tabs or backgrounding the app mid-request - see
                 usageService "increments but never shows a result" bug. */}
-            <ScreenScope active={tokTab === "home"}>
+            <ScreenScope {...tabPanelProps("home")}>
               <HomeScreen
                 user={user}
+                planPreview={planPreview}
                 todos={todos}
                 schedules={schedules}
                 onToggleTodo={handleToggleTodo}
@@ -745,7 +792,7 @@ export default function App() {
               />
             </ScreenScope>
 
-            <ScreenScope active={tokTab === "assessment"}>
+            <ScreenScope {...tabPanelProps("assessment")}>
               <AssessmentScreen
                 schedules={schedules}
                 onAddSchedule={handleAddSchedule}
@@ -757,7 +804,7 @@ export default function App() {
               />
             </ScreenScope>
 
-            <ScreenScope active={tokTab === "practice"}>
+            <ScreenScope {...tabPanelProps("practice")}>
               <PracticeScreen
                 user={user}
                 scripts={scripts}
@@ -772,29 +819,27 @@ export default function App() {
               />
             </ScreenScope>
 
-            <ScreenScope active={tokTab === "study"}>
+            <ScreenScope {...tabPanelProps("study")}>
               <StudyScreen
-                schedules={schedules}
-                onAddSchedule={handleAddSchedule}
-                onDeleteSchedule={handleDeleteSchedule}
-                onUpdateSchedule={handleUpdateSchedule}
                 darkMode={darkMode}
-                initialSubTab={studySubTab}
+                isActive={tokTab === "study"}
                 initialHelperMode={studyHelperMode}
               />
             </ScreenScope>
 
-            <ScreenScope active={tokTab === "profile"}>
+            <ScreenScope {...tabPanelProps("profile")}>
               <ProfileScreen
                 user={user}
                 onUpdateUser={handleUpdateUser}
                 darkMode={darkMode}
+                isActive={tokTab === "profile"}
               />
             </ScreenScope>
 
-            <ScreenScope active={tokTab === "settings"}>
+            <ScreenScope {...tabPanelProps("settings")}>
               <SettingsScreen
                 darkMode={darkMode}
+                planPreview={planPreview}
                 onToggleDarkMode={handleToggleDarkMode}
                 onLogout={handleLogout}
                 onResetData={handleResetData}

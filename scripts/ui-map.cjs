@@ -34,6 +34,7 @@ function screenFor(id, group) {
   if (id.startsWith("assessment-direct-")) return "수행평가 · 직접 입력";
   if (id.startsWith("assessment-photo-") || id.startsWith("assessment-scan-")) return "수행평가 · 사진 등록·결과";
   if (id.startsWith("assessment-menu-") || id.startsWith("assessment-edit-") || id.startsWith("assessment-delete-")) return "수행평가 · 수정·삭제 팝업";
+  if (id === "assessment-tab-planner") return "수행평가 · 지필·수행 계획";
   if (id.startsWith("assessment-")) return "수행평가 · 일정 목록";
   if (id.startsWith("practice-tab-") || id.startsWith("practice-script-generate")) return "발표 · 대본 작성";
   if (id.startsWith("practice-saved-") || id.startsWith("practice-script-")) return "발표 · 저장 대본 보기";
@@ -43,10 +44,9 @@ function screenFor(id, group) {
   if (id.startsWith("practice-stop-") || id === "practice-start") return "발표 · 연습 진행";
   if (id.startsWith("practice-source-")) return "발표 · 연습 준비";
   if (id.startsWith("study-photo-")) return "공부 · 사진 문제 풀이";
-  if (id === "study-tab-helper") return "공부 · AI 공부 도우미";
-  if (id === "study-tab-planner") return "공부 · 시험 계획";
+  if (id === "study-mode-photo") return "공부 · 사진 문제 풀이";
+  if (id.startsWith("study-exam-") || id.startsWith("study-plan-") || id.startsWith("study-edit-") || id.startsWith("study-delete-")) return "수행평가 · 지필·수행 계획";
   if (id.startsWith("study-material-") || id.startsWith("study-mode-") || id.startsWith("study-run") || id.startsWith("study-quiz-")) return "공부 · AI 공부 도우미";
-  if (id.startsWith("study-exam-") || id.startsWith("study-plan-") || id.startsWith("study-menu-") || id.startsWith("study-edit-") || id.startsWith("study-delete-")) return "공부 · 시험 계획";
   if (id.startsWith("profile-school-")) return "프로필 · 학교 검색";
   if (id.startsWith("profile-avatar-") || id.startsWith("profile-camera-")) return "프로필 · 사진 설정";
   if (id.startsWith("profile-")) return "프로필 · 정보 수정";

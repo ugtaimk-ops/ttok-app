@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIService, GenerateContentOptions } from "./types";
+import { recordAiTokenUsage } from "../usageService";
 
 // Module-level (not per-instance) so the "which key is currently good" state
 // survives across requests - server.ts calls getAIService() fresh on every
@@ -139,9 +140,8 @@ export class GeminiProvider implements AIService {
   }
 
   // Tries each candidate model in order, using the given API key. Throws a
-  // tagged KEY_UNUSABLE error immediately on quota/auth errors (instead of
-  // wasting time on remaining models under the same bad key), and lets the
-  // caller decide whether to rotate to the next key.
+  // tagged KEY_UNUSABLE error on auth errors. A model-specific quota error
+  // tries the next model before rotating to another API key.
   private async generateWithKey(
     apiKey: string,
     modelsToTry: string[],
@@ -150,7 +150,8 @@ export class GeminiProvider implements AIService {
     prompt: string,
     hasImage: boolean,
     signal: AbortSignal,
-    attemptTimeoutMs: number
+    attemptTimeoutMs: number,
+    costContext?: GenerateContentOptions["costContext"]
   ): Promise<string> {
     const ai = this.getClient(apiKey);
     let lastError: any = null;
@@ -176,6 +177,10 @@ export class GeminiProvider implements AIService {
 
           if (response && response.text) {
             console.info(`Successfully generated content with model: ${modelName}`);
+            if (costContext && response.usageMetadata) {
+              void recordAiTokenUsage(costContext.uid, costContext.feature, modelName, response.usageMetadata)
+                .catch((usageError) => console.error("[Gemini] Could not record token usage:", usageError));
+            }
             return response.text;
           }
         } catch (error: any) {
@@ -188,11 +193,15 @@ export class GeminiProvider implements AIService {
             continue;
           }
 
-          if (shouldTryNextKey(error)) {
-            const reason = isQuotaError(error) ? "quota exceeded" : "auth/key error";
-            console.error(`[BACKEND] Detected ${reason} with ${modelName}. Stopping model fallback for this key.`);
+          if (isQuotaError(error)) {
+            console.warn(`[Gemini] Quota exhausted for ${modelName}; trying the next model if available.`);
+            break;
+          }
+
+          if (isKeyError(error)) {
+            console.error(`[BACKEND] Detected auth/key error with ${modelName}. Trying the next key.`);
             const keyError = new Error("KEY_UNUSABLE");
-            (keyError as any).status = error?.status || (isQuotaError(error) ? 429 : 401);
+            (keyError as any).status = error?.status || 401;
             (keyError as any).originalMessage = error.message || String(error);
             throw keyError;
           }
@@ -212,7 +221,9 @@ export class GeminiProvider implements AIService {
     // Configure ordered fallback lists of model candidates for maximum resilience
     let modelsToTry: string[] = [];
 
-    if (options.tier === "complex" || options.imageBase64 || options.videoBase64) {
+    if (options.tier === "fast") {
+      modelsToTry = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
+    } else if (options.tier === "complex" || options.imageBase64 || options.videoBase64) {
       modelsToTry = [
         "gemini-2.5-flash",       // Primary free model requested by user
         "gemini-2.5-flash-lite",  // Secondary free model requested by user
@@ -261,6 +272,9 @@ export class GeminiProvider implements AIService {
     if (options.temperature !== undefined) {
       config.temperature = options.temperature;
     }
+    if (options.maxOutputTokens !== undefined) {
+      config.maxOutputTokens = options.maxOutputTokens;
+    }
 
     if (options.responseMimeType) {
       config.responseMimeType = options.responseMimeType;
@@ -288,7 +302,7 @@ export class GeminiProvider implements AIService {
       const apiKey = apiKeys[keyIndex];
 
       try {
-        const result = await this.generateWithKey(apiKey, modelsToTry, contents, config, options.prompt, !!(options.imageBase64 || options.videoBase64), deadline, attemptTimeoutMs);
+        const result = await this.generateWithKey(apiKey, modelsToTry, contents, config, options.prompt, !!(options.imageBase64 || options.videoBase64), deadline, attemptTimeoutMs, options.costContext);
         currentKeyIndex = keyIndex;
         return result;
       } catch (error: any) {

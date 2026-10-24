@@ -2,11 +2,12 @@ import BackButton from "./BackButton";
 import { useScreenBack } from "../lib/screenBack";
 import React, { useState, useRef, useEffect } from "react";
 import { UserProfile } from "../types";
-import { Sparkles, Check, School, Award, User, Camera, Smile, X, Pencil, Trash2, Shuffle, Search, Loader2 } from "lucide-react";
+import { Sparkles, Check, School, Award, User, Camera, Image as ImageIcon, X, Pencil, Trash2, Shuffle, Search, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { isNativeApp, openNativeSettings } from "../lib/capacitor";
 import { robustFetch } from "../lib/api";
 import GlassSelect from "./GlassSelect";
+import DefaultAvatar, { hasPhotoAvatar } from "./DefaultAvatar";
 
 interface SchoolSearchItem {
   schoolName: string;
@@ -54,9 +55,10 @@ interface ProfileScreenProps {
   user: UserProfile;
   onUpdateUser: (updated: UserProfile) => void;
   darkMode: boolean;
+  isActive: boolean;
 }
 
-export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileScreenProps) {
+export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive }: ProfileScreenProps) {
   const [name, setName] = useState(user.name);
   const [school, setSchool] = useState(user.school);
   const [schoolCode, setSchoolCode] = useState(user.schoolCode || "");
@@ -67,6 +69,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
   const [classNum, setClassNum] = useState(user.classNum);
   const [goal, setGoal] = useState(user.goal);
   const [avatar, setAvatar] = useState(user.avatarUrl);
+  const avatarChangedRef = useRef(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
 
   // The cloud profile can arrive asynchronously after this screen has already
@@ -87,7 +90,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
     if (!grade && user.grade) setGrade(user.grade);
     if (!classNum && user.classNum) setClassNum(user.classNum);
     if (!goal && user.goal) setGoal(user.goal);
-    if (!avatar && user.avatarUrl) setAvatar(user.avatarUrl);
+    if (!avatarChangedRef.current && !avatar && user.avatarUrl) setAvatar(user.avatarUrl);
   }, [user]);
 
   // Grade options depend on school level: elementary goes to 6th grade, middle/high to 3rd
@@ -156,20 +159,11 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
     setDirectGoalInput(goal);
   }, [goal]);
 
-  const [activeAvatarTab, setActiveAvatarTab] = useState<"camera" | "emoji">(() => {
-    if (user?.avatarUrl && (user.avatarUrl.startsWith("http") || user.avatarUrl.startsWith("data:"))) {
-      return "camera";
-    }
-    return "emoji";
-  });
+  const [activeAvatarTab, setActiveAvatarTab] = useState<"camera" | "gallery">("camera");
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [emojiInput, setEmojiInput] = useState(() => {
-    if (user?.avatarUrl && !user.avatarUrl.startsWith("http") && !user.avatarUrl.startsWith("data:")) {
-      return user.avatarUrl;
-    }
-    return "🐰";
-  });
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -231,6 +225,10 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
     setIsCameraActive(false);
   };
 
+  useEffect(() => {
+    if (!isActive) stopCamera();
+  }, [isActive]);
+
   const capturePhoto = () => {
     if (videoRef.current) {
       const canvas = document.createElement("canvas");
@@ -243,7 +241,9 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
         ctx.scale(-1, 1);
         ctx.drawImage(videoRef.current, 0, 0, 320, 320);
         const dataUrl = canvas.toDataURL("image/jpeg");
+        avatarChangedRef.current = true;
         setAvatar(dataUrl);
+        onUpdateUser({ ...user, avatarUrl: dataUrl });
         stopCamera();
       }
     }
@@ -257,13 +257,41 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
     };
   }, []);
 
-  const avatarOptions = [
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
-    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=256",
-    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=256",
-    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=256",
-    "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=256"
-  ];
+  const selectPhoto = async (file?: File) => {
+    if (!file) return;
+    setPhotoError(null);
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("사진 파일을 선택해 주세요.");
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    try {
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 512;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("사진을 처리할 수 없습니다.");
+      const side = Math.min(image.naturalWidth, image.naturalHeight);
+      context.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, 512, 512);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+      avatarChangedRef.current = true;
+      setAvatar(dataUrl);
+      onUpdateUser({ ...user, avatarUrl: dataUrl });
+    } catch (error) {
+      setPhotoError("사진을 불러오지 못했어요. 다른 사진을 선택해 주세요.");
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const useDefaultAvatar = () => {
+    stopCamera();
+    avatarChangedRef.current = true;
+    setAvatar("");
+    onUpdateUser({ ...user, avatarUrl: "" });
+  };
 
   const buildProfileUpdate = (overrides: Partial<UserProfile> = {}): UserProfile => ({
     ...user,
@@ -352,17 +380,15 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                   className="w-full h-full object-cover"
                   style={{ transform: "scaleX(-1)" }}
                 />
-              ) : avatar && !avatar.startsWith("http") && !avatar.startsWith("data:") ? (
-                <span className="text-8xl select-none animate-fade-in" role="img" aria-label="profile emoji">
-                  {avatar}
-                </span>
-              ) : (
+              ) : hasPhotoAvatar(avatar) ? (
                 <img 
                   src={avatar} 
                   alt="User avatar" 
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                 />
+              ) : (
+                <DefaultAvatar />
               )}
             </div>
           </div>
@@ -385,20 +411,19 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
               >
                 <Camera size={14} /> 사진 촬영
               </button>
-              <button data-ui="profile-avatar-emoji-tab"
+              <button data-ui="profile-avatar-gallery-tab"
                 type="button"
                 onClick={() => {
                   stopCamera();
-                  setActiveAvatarTab("emoji");
-                  setAvatar(emojiInput || "🐰");
+                  setActiveAvatarTab("gallery");
                 }}
                 className={`flex-1 py-3 text-fluid-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                  activeAvatarTab === "emoji"
+                  activeAvatarTab === "gallery"
                     ? "bg-white dark:bg-slate-800 text-brand shadow-sm"
                     : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
                 }`}
               >
-                <Smile size={14} /> 이모티콘 입력
+                <ImageIcon size={14} /> 사진 선택
               </button>
             </div>
 
@@ -459,25 +484,23 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                 </div>
               )}
 
-              {activeAvatarTab === "emoji" && (
-                <div className="w-full py-1">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={emojiInput}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setEmojiInput(val);
-                        setAvatar(val || "👤");
-                      }}
-                      placeholder="터치하여 키보드 이모지를 입력해 주세요 (예: 🐰🦁)"
-                      className="w-full px-4 py-3 bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-2xl text-fluid-base font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
-                    />
-                  </div>
+              {activeAvatarTab === "gallery" && (
+                <div className="w-full py-1 text-center space-y-3">
+                  <input ref={photoInputRef} type="file" accept="image/*" className="hidden"
+                    onChange={(event) => { void selectPhoto(event.target.files?.[0]); event.target.value = ""; }} />
+                  <button data-ui="profile-gallery-choose" type="button" onClick={() => photoInputRef.current?.click()}
+                    className="px-5 py-3 bg-brand/10 text-brand text-fluid-sm font-bold rounded-2xl inline-flex items-center gap-2">
+                    <ImageIcon size={16} /> 내 사진 고르기
+                  </button>
+                  {photoError && <p className="text-rose-500 text-fluid-sm">{photoError}</p>}
                 </div>
               )}
 
             </div>
+            <button data-ui="profile-avatar-default" type="button" onClick={useDefaultAvatar}
+              className="w-full min-h-11 rounded-xl border border-slate-200 dark:border-slate-700 text-fluid-sm font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center gap-2">
+              <User size={16} /> 기본 프로필로 설정
+            </button>
           </div>
         </div>
 

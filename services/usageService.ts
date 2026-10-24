@@ -1,8 +1,8 @@
 import type { Request } from "express";
 import jwt from "jsonwebtoken";
 
-export const FREE_MONTHLY_LIMIT = 50;
-export const PREMIUM_MONTHLY_LIMIT = 150;
+export const FREE_MONTHLY_LIMIT = 30;
+export const PREMIUM_MONTHLY_LIMIT = 100;
 const FIRESTORE_DATABASE_ID = "ai-studio-22fbd27c-5516-4028-bd17-a6d4ba99710b";
 const FIREBASE_PROJECT_ID = "gen-lang-client-0685740024";
 const GOOGLE_CERTS_URL = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com";
@@ -177,6 +177,71 @@ async function getUsage(uid: string, consume: boolean): Promise<UsageCheckResult
 export const checkAndConsumeUsage = (uid: string) => getUsage(uid, true);
 export const getCurrentUsage = (uid: string) => getUsage(uid, false);
 
+type GeminiTokenUsage = {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  thoughtsTokenCount?: number;
+  cachedContentTokenCount?: number;
+  promptTokensDetails?: Array<{ modality?: string; tokenCount?: number }>;
+};
+
+// These are planning estimates for paid standard Gemini 2.5 requests, not an
+// invoice. Unknown models still get token counts but no dollar estimate.
+const GEMINI_USD_PER_MILLION: Record<string, { input: number; audio: number; cached: number; output: number }> = {
+  "gemini-2.5-flash": { input: 0.30, audio: 1.00, cached: 0.03, output: 2.50 },
+  "gemini-2.5-flash-lite": { input: 0.10, audio: 0.30, cached: 0.01, output: 0.40 },
+  "gemini-3.5-flash-lite": { input: 0.30, audio: 0.30, cached: 0.03, output: 2.50 },
+};
+
+export async function recordAiTokenUsage(uid: string, feature: string, model: string, usage: GeminiTokenUsage): Promise<void> {
+  const app = getAdminApp();
+  if (!app) return;
+  const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+  const prompt = Math.max(0, usage.promptTokenCount || 0);
+  const output = Math.max(0, (usage.candidatesTokenCount || 0) + (usage.thoughtsTokenCount || 0));
+  const cached = Math.min(prompt, Math.max(0, usage.cachedContentTokenCount || 0));
+  const audio = Math.min(prompt - cached, usage.promptTokensDetails?.filter(part => part.modality === "AUDIO")
+    .reduce((sum, part) => sum + (part.tokenCount || 0), 0) || 0);
+  const price = GEMINI_USD_PER_MILLION[model];
+  const estimatedUsd = price
+    ? ((prompt - cached - audio) * price.input + audio * price.audio + cached * price.cached + output * price.output) / 1_000_000
+    : null;
+  const doc = getFirestore(app, FIRESTORE_DATABASE_ID).collection("users").doc(uid)
+    .collection("aiCostMonths").doc(currentMonthKey());
+  const fields: Record<string, unknown> = {
+    requests: FieldValue.increment(1),
+    promptTokens: FieldValue.increment(prompt),
+    outputTokens: FieldValue.increment(output),
+    [`${feature}Requests`]: FieldValue.increment(1),
+    [`${feature}PromptTokens`]: FieldValue.increment(prompt),
+    [`${feature}OutputTokens`]: FieldValue.increment(output),
+    [`model_${model.replace(/[^A-Za-z0-9]/g, "_")}`]: FieldValue.increment(1),
+  };
+  if (estimatedUsd !== null) {
+    fields.estimatedUsd = FieldValue.increment(estimatedUsd);
+    fields[`${feature}EstimatedUsd`] = FieldValue.increment(estimatedUsd);
+  }
+  await doc.set(fields, { merge: true });
+}
+
+export async function getCachedAiResult(uid: string, hash: string): Promise<unknown | null> {
+  const app = getAdminApp();
+  if (!app) return null;
+  const { getFirestore } = require("firebase-admin/firestore");
+  const snap = await getFirestore(app, FIRESTORE_DATABASE_ID).collection("users").doc(uid)
+    .collection("aiResultCache").doc(hash).get();
+  const data = snap.data();
+  return data && data.expiresAt > Date.now() ? data.result : null;
+}
+
+export async function saveCachedAiResult(uid: string, hash: string, result: unknown): Promise<void> {
+  const app = getAdminApp();
+  if (!app) return;
+  const { getFirestore } = require("firebase-admin/firestore");
+  await getFirestore(app, FIRESTORE_DATABASE_ID).collection("users").doc(uid)
+    .collection("aiResultCache").doc(hash).set({ result, expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+}
+
 export async function getCachedProblem(uid: string, hash: string): Promise<any | null> {
   const app = getAdminApp();
   if (!app) return null;
@@ -187,23 +252,13 @@ export async function getCachedProblem(uid: string, hash: string): Promise<any |
   return data && data.createdAt > Date.now() - 30 * 24 * 60 * 60 * 1000 ? data.solution : null;
 }
 
-export async function saveProblemAndCost(uid: string, hash: string, solution: unknown, estimatedCostUsd: number): Promise<void> {
+export async function saveProblemResult(uid: string, hash: string, solution: unknown): Promise<void> {
   const app = getAdminApp();
   if (!app) throw new Error("Usage database unavailable");
   const { getFirestore, FieldValue } = require("firebase-admin/firestore");
   const db = getFirestore(app, FIRESTORE_DATABASE_ID);
-  const month = currentMonthKey();
-  await db.runTransaction(async (tx: any) => {
-    const userRef = db.collection("users").doc(uid);
-    const cachedRef = db.collection("problemSolutions").doc(uid).collection("items").doc(hash);
-    const user = (await tx.get(userRef)).data() || {};
-    tx.set(cachedRef, { solution, createdAt: Date.now() });
-    // This is a planning estimate per successful request, not a Gemini invoice.
-    const prior = user.aiEstimatedCostMonth === month ? Number(user.aiEstimatedCostUsd) || 0 : 0;
-    tx.set(userRef, {
-      aiEstimatedCostMonth: month,
-      aiEstimatedCostUsd: Math.round((prior + estimatedCostUsd) * 1000000) / 1000000,
-      aiProblemSolveCalls: FieldValue.increment(1),
-    }, { merge: true });
-  });
+  const batch = db.batch();
+  batch.set(db.collection("problemSolutions").doc(uid).collection("items").doc(hash), { solution, createdAt: Date.now() });
+  batch.set(db.collection("users").doc(uid), { aiProblemSolveCalls: FieldValue.increment(1) }, { merge: true });
+  await batch.commit();
 }

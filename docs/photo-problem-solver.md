@@ -11,7 +11,7 @@ AI가 글자나 조건을 충분히 읽지 못하면 임의의 답 대신 재촬
 - 로컬 계산: Gemini 호출 없음, 월간 AI 사용량 차감 없음.
 - 서버 AI: Firebase 로그인 토큰으로 인증하며 기존 월 무료 50회 / PRO 150회 한도를 적용한다.
 - 동일 계정의 동일 사진: SHA-256 해시로 Firestore에 저장한 풀이를 30일 동안 재사용한다. 서버 프로세스 안의 동시 요청도 하나로 합친다. 저장된 풀이 재조회는 한도를 추가 차감하지 않는다. 사진을 다시 인코딩하거나 잘라내면 다른 해시가 된다.
-- `users/{uid}`에 `aiProblemSolveCalls`, `aiEstimatedCostMonth`, `aiEstimatedCostUsd`를 기록한다. 기본 추정액은 성공 요청당 미화 0.002달러이며 실제 청구액이 아니다. 서버 환경변수 `GEMINI_SOLVE_ESTIMATED_USD`로 바꿀 수 있다. 기존 `aiUsageCount`도 성공 여부와 무관하게 Gemini 호출 전에 차감된다.
+- `users/{uid}`에 `aiProblemSolveCalls`를, `users/{uid}/aiCostMonths/{YYYY-MM}`에 Gemini가 보고한 입력·출력 토큰 수와 모델별 유료 요금 기준 추정액을 기록한다. 추정액은 실제 청구액이 아니다. 기존 `aiUsageCount`는 성공 여부와 관계없이 Gemini 호출 전에 차감된다.
 - Gemini API 키는 서버의 `GEMINI_API_KEYS` 또는 `GEMINI_API_KEY` 환경변수에서만 읽는다. 앱에는 넣지 않는다.
 - `firestore.rules`를 Firebase Console에 게시해야 새 비용 기록 필드를 클라이언트가 임의로 수정하지 못한다. 서버의 Admin SDK는 규칙과 무관하게 기록한다.
 

@@ -8,9 +8,10 @@ import { FREE_MONTHLY_LIMIT, PREMIUM_MONTHLY_LIMIT, getKoreanMonthKey } from "..
 interface PremiumSectionProps {
   user: UserProfile;
   darkMode: boolean;
+  planPreview?: "free" | "pro";
 }
 
-export default function PremiumSection({ user, darkMode }: PremiumSectionProps) {
+export default function PremiumSection({ user, darkMode, planPreview }: PremiumSectionProps) {
   const [offering, setOffering] = useState<any>(null);
   const [isLoadingOffering, setIsLoadingOffering] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -18,14 +19,13 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
   const [showPaywall, setShowPaywall] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
-
-  const isPremium = user.isPremium === true;
+  const isPremium = planPreview ? planPreview === "pro" : user.isPremium === true;
   const limit = isPremium ? PREMIUM_MONTHLY_LIMIT : FREE_MONTHLY_LIMIT;
-  const used = user.aiUsageMonth === getKoreanMonthKey() && typeof user.aiUsageCount === "number"
+  const used = planPreview ? 0 : user.aiUsageMonth === getKoreanMonthKey() && typeof user.aiUsageCount === "number"
     ? user.aiUsageCount : 0;
 
   useEffect(() => {
-    if (isPremium) return;
+    if (isPremium || planPreview) return;
     let active = true;
     setIsLoadingOffering(true);
     purchaseService.getCurrentOffering()
@@ -33,7 +33,7 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
       .catch(() => { if (active) setOffering(null); })
       .finally(() => { if (active) setIsLoadingOffering(false); });
     return () => { active = false; };
-  }, [isPremium]);
+  }, [isPremium, planPreview]);
 
   const handleOpenPaywall = async () => {
     if (isLoadingOffering) return;
@@ -95,6 +95,7 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
       <h3 className="text-fluid-xs font-black text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
         <Crown size={14} /> 요금제
       </h3>
+      {planPreview && <p className="text-fluid-xs font-bold text-slate-500">요금제 미리보기 · 실제 결제 상태는 변경되지 않아요.</p>}
 
       <div className="flex items-center justify-between text-fluid-sm font-semibold">
         <span className="text-slate-400">현재 플랜</span>
@@ -117,7 +118,7 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
       {!isPremium ? (
         <button data-ui="premium-subscribe"
           onClick={handleOpenPaywall}
-          disabled={isLoadingOffering}
+          disabled={isLoadingOffering || !!planPreview}
           className={`w-full py-3.5 rounded-2xl flex items-center justify-center gap-1.5 text-fluid-sm font-black text-white transition-all cursor-pointer ${
             isLoadingOffering ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.01] active:scale-[0.99]"
           } bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-amber-500/25`}
@@ -128,7 +129,7 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
       ) : (
         <button data-ui="premium-manage"
           onClick={handleManageSubscription}
-          disabled={isOpeningManage}
+          disabled={isOpeningManage || !!planPreview}
           className={`w-full py-3.5 rounded-2xl flex items-center justify-center gap-1.5 text-fluid-sm font-black transition-all cursor-pointer border-2 ${
             isOpeningManage ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.01] active:scale-[0.99]"
           } ${darkMode ? "border-slate-700 text-slate-200" : "border-slate-200 text-slate-700"}`}
@@ -138,7 +139,7 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
         </button>
       )}
 
-      <button data-ui="premium-restore"
+      {!planPreview && <button data-ui="premium-restore"
         onClick={handleRestore}
         disabled={isRestoring}
         className={`w-full py-2.5 rounded-2xl flex items-center justify-center gap-1.5 text-fluid-xs font-bold transition-colors cursor-pointer ${
@@ -147,7 +148,7 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
       >
         {isRestoring ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
         구매 내역 복원
-      </button>
+      </button>}
 
       {showPaywall && (
         <PaywallModal

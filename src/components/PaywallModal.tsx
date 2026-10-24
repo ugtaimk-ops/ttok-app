@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Crown, Check, Loader2, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { purchaseService } from "../services/purchaseService";
+import { FREE_MONTHLY_LIMIT, PREMIUM_MONTHLY_LIMIT } from "../lib/usage";
 
 interface PaywallModalProps {
   offering: any;
@@ -14,7 +15,7 @@ interface PaywallModalProps {
 }
 
 const FEATURES = [
-  { label: "월 AI 사용량", free: "50회", pro: "150회" },
+  { label: "월 AI 사용량", free: `${FREE_MONTHLY_LIMIT}회`, pro: `${PREMIUM_MONTHLY_LIMIT}회` },
   { label: "AI 추천 기능", free: "X", pro: "O" },
 ];
 

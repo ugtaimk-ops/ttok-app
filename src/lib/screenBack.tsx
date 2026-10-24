@@ -3,8 +3,15 @@ import { createContext, useContext, useEffect, useRef, type ReactNode } from "re
 const ActiveScreen = createContext(true);
 const handlers = new Map<symbol, { priority: number; run: () => boolean }>();
 
-export function ScreenScope({ active, children }: { active: boolean; children: ReactNode }) {
-  return <ActiveScreen.Provider value={active}><div className={active ? "" : "hidden"}>{children}</div></ActiveScreen.Provider>;
+export function ScreenScope({ active, visible = active, className = "", children }: {
+  active: boolean;
+  visible?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  return <ActiveScreen.Provider value={active}>
+    <div className={`${visible ? "" : "hidden"} ${className}`} aria-hidden={!active || undefined}>{children}</div>
+  </ActiveScreen.Provider>;
 }
 
 // Hidden tabs stay mounted, but must never intercept another screen's back.

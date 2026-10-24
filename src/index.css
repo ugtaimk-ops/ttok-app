@@ -5,6 +5,23 @@
 
 @variant dark (&:where(.dark, .dark *));
 
+/* Keep tab contents mounted while each tab makes a short directional entrance. */
+.tab-stage-animating { overflow-x: clip; }
+.tab-panel-enter-right, .tab-panel-enter-left { position: relative; z-index: 1; }
+.tab-panel-leave-right, .tab-panel-leave-left { z-index: 0; }
+.tab-panel-enter-right { animation: tab-enter-right 230ms cubic-bezier(.2, .75, .25, 1) both; }
+.tab-panel-enter-left { animation: tab-enter-left 230ms cubic-bezier(.2, .75, .25, 1) both; }
+.tab-panel-leave-right { animation: tab-leave-left 190ms ease-out both; }
+.tab-panel-leave-left { animation: tab-leave-right 190ms ease-out both; }
+@keyframes tab-enter-right { from { transform: translate3d(9%, 0, 0); opacity: .35; } to { transform: translate3d(0, 0, 0); opacity: 1; } }
+@keyframes tab-enter-left { from { transform: translate3d(-9%, 0, 0); opacity: .35; } to { transform: translate3d(0, 0, 0); opacity: 1; } }
+@keyframes tab-leave-left { from { transform: translate3d(0, 0, 0); opacity: 1; } to { transform: translate3d(-2%, 0, 0); opacity: 0; } }
+@keyframes tab-leave-right { from { transform: translate3d(0, 0, 0); opacity: 1; } to { transform: translate3d(2%, 0, 0); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .tab-panel-enter-right, .tab-panel-enter-left, .tab-panel-leave-right, .tab-panel-leave-left { animation: none; }
+  .tab-panel-leave-right, .tab-panel-leave-left { visibility: hidden; }
+}
+
 @layer utilities {
   /* Premium Glass Effect */
   .glass-panel {
@@ -64,13 +81,14 @@
     margin-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Safe padding for screen layouts, accommodating BottomNavigationBar + safe areas.
-     Bumped from 96px - buttons near the end of longer screens (e.g. Settings, after
-     the Premium section was added) were still getting clipped by the floating nav
-     bar on real devices, where env(safe-area-inset-bottom) can under-report inside
-     an Android WebView. */
+  /* The only bottom clearance for tab content: floating nav height + offset + a small gap. */
   .pb-safe-layout {
-    padding-bottom: calc(140px + env(safe-area-inset-bottom, 24px));
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+  @media (min-width: 640px) {
+    .pb-safe-layout {
+      padding-bottom: calc(116px + env(safe-area-inset-bottom, 0px));
+    }
   }
 
   /* Positioning offset for FABs, toasts, or bottom buttons to sit beautifully above the floating bottom navigation */

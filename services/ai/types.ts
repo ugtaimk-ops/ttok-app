@@ -16,6 +16,8 @@ export interface GenerateContentOptions {
   temperature?: number;
   tier?: "fast" | "general" | "complex";
   modelOverride?: string;
+  costContext?: { uid: string; feature: "script" | "practice" | "assessment" | "study" | "problem" | "report" };
+  maxOutputTokens?: number;
 }
 
 export interface AIService {
