@@ -11,33 +11,46 @@
     button,input,select,textarea{font:inherit}button{cursor:pointer;border:1px solid #cbd8e8;background:white;border-radius:10px;padding:9px 12px;color:#17345b}
     button:hover{border-color:#1970e9}button.primary{background:#1267db;color:white;border-color:#1267db}
     .tip{background:#e8f2ff;border:1px solid #c9e0ff;padding:12px 15px;border-radius:12px}
-    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:14px;align-items:start}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:14px;align-items:start}main{display:grid;grid-template-columns:minmax(360px,1fr) 280px;gap:14px;align-items:start}
     .card{background:white;border:1px solid #dce5ef;border-radius:16px;padding:16px;box-shadow:0 4px 20px #17345b0b}
     .screens{position:sticky;top:12px;max-height:78vh;overflow:auto}.screens button{display:block;width:100%;text-align:left;margin:3px 0;border:0}
     .screens button.active{background:#e9f2ff;color:#0863cf;font-weight:700}.count{float:right;color:#718096}
-    .filters{display:flex;gap:8px;align-items:center;margin:14px 0}.filters input{flex:1;min-width:120px;padding:10px;border:1px solid #cbd8e8;border-radius:10px}
-    .row{display:flex;gap:12px;align-items:center;border-top:1px solid #edf1f6;padding:12px 0}.row:first-child{border:0}
-    .number{font-weight:800;color:#1267db;min-width:150px;font-size:12px;overflow-wrap:anywhere}.info{flex:1;min-width:150px}
-    .preview{width:176px;min-width:130px;display:flex;justify-content:center;align-items:center;padding:7px;border-radius:13px;background:#f5f8fc;border:1px solid #e8eef6}
-    .preview-button{max-width:100%;min-height:42px;padding:9px 15px;border:1px solid #d6e2f2;border-radius:14px;background:#fff;color:#0863cf;font-weight:800;box-shadow:0 3px 8px #19375a18;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .preview-button.primary{background:linear-gradient(135deg,#1474ff,#0758db);border-color:#1267db;color:#fff;box-shadow:0 5px 12px #1267db35}
-    .preview-button.accent{background:linear-gradient(135deg,#ff3274,#ed155d);border-color:#ef2869;color:#fff;box-shadow:0 5px 12px #ed155d35}
-    .preview-button.danger{background:#fff1f2;border-color:#ffd5dc;color:#d82a4c;box-shadow:none}
-    .preview-button.segment{border-radius:999px;background:#eaf2ff;border:2px solid #94bfff;color:#245ca9;box-shadow:none}
-    .preview-button.small{min-height:34px;padding:6px 11px;border-radius:10px;font-size:13px;box-shadow:none}
-    .preview-caption{font-size:10px;color:#8290a3;text-align:center;margin-top:4px}
-    .label{font-weight:700}.meta{font-size:13px;color:#65758a;margin-top:3px;word-break:break-word}.source{font-size:11px;color:#8593a7;margin-top:3px}
-    .actions{display:flex;gap:5px;flex-wrap:wrap}.actions button{padding:6px 8px;font-size:13px}.hidden-item{opacity:.45}
+    .device-stage{display:flex;justify-content:center;align-items:flex-start;padding:18px 8px;background:radial-gradient(ellipse at 50% 20%,#e4edfa,#f5f7fb 70%);border-radius:18px;min-height:820px}
+    .phone{width:390px;height:812px;max-width:100%;padding:9px;border-radius:42px;background:#171c25;box-shadow:0 18px 50px #10203938,inset 0 0 0 1px #ffffff28;position:relative}
+    .phone-screen{height:100%;overflow:hidden;border-radius:34px;background:#f8faff;display:flex;flex-direction:column;position:relative}
+    .statusbar{height:34px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 18px;color:#1d2738;font-size:12px;font-weight:800;background:#fff}
+    .appbar{min-height:62px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:#fff;border-bottom:1px solid #eef1f6}
+    .brand-switch{display:flex;align-items:center;gap:4px;padding:3px;border:2px solid #2878f0;border-radius:24px;background:#f3f7ff}.brand-button{border:0!important;padding:7px 10px!important;border-radius:18px!important;background:transparent!important;box-shadow:none!important;font-size:13px;font-weight:900;color:#8896aa}.brand-button.on{background:#0866ed!important;color:white!important}
+    .phone-back{width:36px;height:36px;border:0;border-radius:50%;background:#f0f4fa;color:#43536b;font-size:20px;font-weight:700}
+    .student-chip{font-size:11px;font-weight:700;color:#71809a;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .phone-scroll{overflow:auto;flex:1;padding:20px 16px 88px;scrollbar-width:thin}
+    .phone-heading{font-size:23px;font-weight:900;line-height:1.25;color:#202b40;margin:3px 0 8px}.phone-subtitle{font-size:13px;line-height:1.5;color:#71809a;margin-bottom:18px}
+    .phone-card{background:#fff;border:1px solid #e6ebf3;border-radius:20px;padding:14px;margin:12px 0;box-shadow:0 4px 14px #1c34520a}
+    .phone-card-title{font-weight:850;font-size:14px;color:#26354e;margin-bottom:10px}.phone-control-list{display:flex;flex-direction:column;gap:9px}
+    .phone-control{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:46px;border:1px solid #e0e7f1;border-radius:15px;background:#fff;color:#1364d8;padding:10px 12px;font-size:14px;font-weight:800;text-align:center;box-shadow:0 3px 9px #19375a12;cursor:pointer}
+    .phone-control.primary{background:#1267ed;border-color:#1267ed;color:#fff;box-shadow:0 6px 13px #1267ed35}.phone-control.accent{background:#fb2461;border-color:#fb2461;color:white;box-shadow:0 6px 13px #fb246135}
+    .phone-control.danger{background:#fff1f3;border-color:#ffd6dd;color:#d42d4a;box-shadow:none}.phone-control.tab{min-height:40px;border-radius:13px;background:#f0f4fa;border:0;box-shadow:none;color:#64748b}.phone-control.tab.active{background:white;color:#0866ed;box-shadow:0 2px 8px #192e4a1c}
+    .phone-control.list{justify-content:flex-start;min-height:48px;text-align:left;border-radius:13px;color:#35445b;font-weight:700}.phone-control.icon{width:46px;min-width:46px;min-height:42px;border-radius:14px;padding:6px}.phone-control.selected{outline:3px solid #1783ff;outline-offset:2px;position:relative;z-index:1}
+    .phone-input{height:44px;border:1px solid #dce4ef;border-radius:12px;background:#fff;margin:8px 0;padding:12px;color:#9aa5b5;font-size:13px}
+    .phone-tabs{display:flex;gap:4px;padding:5px;border-radius:17px;background:#edf2f9;margin:10px 0 16px}.phone-tabs .phone-control{flex:1}
+    .mock-video{height:190px;background:linear-gradient(145deg,#d7dce4,#9299a3);border-radius:22px;display:flex;align-items:center;justify-content:center;color:#303744;font-size:48px;margin:16px 0;overflow:hidden}
+    .mock-score{display:flex;align-items:center;justify-content:center;width:116px;height:116px;border:10px solid #3a82f6;border-radius:50%;font-size:34px;font-weight:900;color:#244a82;margin:12px auto}
+    .phone-nav{position:absolute;bottom:12px;left:12px;right:12px;height:64px;border-radius:34px;background:#ffffffd9;border:1px solid #ffffffd9;box-shadow:0 8px 25px #152d4a22;backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:space-around;padding:4px}
+    .phone-nav-item{width:42px;height:44px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#8694a9;font-size:20px;cursor:pointer}.phone-nav-item.active{background:#0868f4;color:white;box-shadow:0 4px 10px #0868f455}
+    .selection-hint{font-size:12px;color:#6d7c91;line-height:1.5}.inspector{position:sticky;top:12px}.inspector h3{margin:0 0 12px}.selected-name{padding:12px;border-radius:12px;background:#edf4ff;color:#174a8d;font-weight:800;overflow-wrap:anywhere}
+    .screen-elements{max-height:260px;overflow:auto;border:1px solid #e3eaf3;border-radius:12px;margin:12px 0}.element-option{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #edf1f6;border-radius:0;background:white;padding:9px 10px;font-size:12px}.element-option.active{background:#eaf3ff;color:#0c5ecb;font-weight:800}
+    .label{font-weight:700}.meta{font-size:13px;color:#65758a;margin-top:3px;word-break:break-word}.source{font-size:11px;color:#8593a7;margin-top:3px}.hidden-item{opacity:.45}
     .editor{margin-top:18px;padding:16px;border-radius:14px;background:#f3f7fc}.editor label{display:block;font-weight:700;margin:10px 0 5px}
     .editor input,.editor textarea,.editor select{width:100%;border:1px solid #cbd8e8;border-radius:9px;padding:10px;background:white}
     .editor textarea{min-height:66px;resize:vertical}.editor .buttons{display:flex;gap:8px;margin-top:14px}
     .empty{padding:26px 6px;color:#627189;text-align:center}.badge{display:inline-block;margin-left:7px;border-radius:20px;background:#edf3fb;color:#53657d;padding:3px 8px;font-size:12px}
-    @media(max-width:760px){body{padding:12px}.layout{display:block}.screens{position:static;max-height:220px;margin-bottom:12px}.row{align-items:flex-start;flex-wrap:wrap}.info{min-width:calc(100% - 165px)}.preview{margin-left:0;width:auto;min-width:160px}.actions{margin-left:0;width:100%}.number{max-width:150px}}
+    @media(max-width:1100px){.layout{grid-template-columns:200px minmax(340px,1fr)}main{grid-template-columns:1fr}.inspector{position:static}}
+    @media(max-width:760px){body{padding:12px}.layout{display:flex;flex-direction:column}main{width:100%;grid-template-columns:1fr}.screens{position:static;width:100%;max-height:180px}.device-stage{width:100%;min-height:0;padding:12px 4px}.phone{height:min(790px,calc(100vh - 270px));min-height:620px}.inspector{width:100%}}
   </style>
 </head>
 <body>
   <h1>똑 화면별 UI 편집기</h1>
-  <p class="muted">왼쪽에서 화면을 고르면 해당 화면에 실제로 연결된 버튼과 선택 요소만 나옵니다. 이름표 ID와 코드 위치도 함께 표시합니다. 변경은 설계안으로 저장되며, 실제 앱 반영은 별도 코드 수정이 필요합니다.</p>
+  <p class="muted">왼쪽에서 화면을 고르면 휴대폰 비율 화면으로 미리 볼 수 있습니다. 앱의 실제 버튼을 눌러 선택하면 이름표 ID와 코드 위치가 표시됩니다. 배치는 화면 구성을 살펴보기 위한 편집 미리보기입니다.</p>
   <p class="tip">요소를 숨기거나 이름·기능 메모를 적고 순서를 정한 뒤 <b>변경안 JSON 저장</b>을 누르세요. 새 버튼은 추가 요청으로 기록됩니다.</p>
   <div class="toolbar">
     <button class="primary" id="save">변경안 JSON 저장</button>
@@ -46,26 +59,39 @@
   </div>
   <div class="layout">
     <nav class="screens card" id="screens" aria-label="화면 목록"></nav>
-    <main class="card">
-      <h2 id="screenTitle"></h2>
-      <p class="muted" id="screenDescription"></p>
-      <div class="filters"><input id="search" type="search" placeholder="이 화면에서 버튼 찾기" aria-label="버튼 검색"><label><input id="showHidden" type="checkbox"> 숨긴 항목도 보기</label></div>
-      <div id="items"></div>
-      <section class="editor" id="editor" hidden>
-        <h3 id="editorTitle">항목 편집</h3>
-        <label for="itemLabel">표시 이름 / 원하는 이름</label><input id="itemLabel">
-        <label for="itemAction">현재 기능 / 원하는 기능</label><textarea id="itemAction"></textarea>
-        <label for="itemScreen">화면</label><select id="itemScreen"></select>
-        <label for="itemNote">요청 내용 (예: 제거, 크기 축소, 오른쪽으로 이동)</label><textarea id="itemNote"></textarea>
-        <div class="buttons"><button class="primary" id="apply">저장</button><button id="cancel">취소</button></div>
-      </section>
+    <main>
+      <div class="device-stage">
+        <div class="phone" aria-label="휴대폰 화면 미리보기">
+          <div class="phone-screen">
+            <div class="statusbar"><span>9:41</span><span>●●●  ▮</span></div>
+            <div class="appbar" id="phoneAppbar"></div>
+            <div class="phone-scroll" id="phoneContent"></div>
+            <nav class="phone-nav" id="phoneNav" aria-label="앱 하단 메뉴"></nav>
+          </div>
+        </div>
+      </div>
+      <aside class="card inspector">
+        <h3 id="screenTitle"></h3>
+        <p class="selection-hint" id="screenDescription"></p>
+        <div class="filters"><input id="search" type="search" placeholder="이 화면에서 버튼 찾기" aria-label="버튼 검색"><label><input id="showHidden" type="checkbox"> 숨김</label></div>
+        <div class="screen-elements" id="items"></div>
+        <div id="selectedDetails" class="selection-hint">휴대폰 미리보기에서 버튼을 눌러 선택하세요.</div>
+        <section class="editor" id="editor" hidden>
+          <h3 id="editorTitle">항목 편집</h3>
+          <label for="itemLabel">표시 이름 / 원하는 이름</label><input id="itemLabel">
+          <label for="itemAction">현재 기능 / 원하는 기능</label><textarea id="itemAction"></textarea>
+          <label for="itemScreen">화면</label><select id="itemScreen"></select>
+          <label for="itemNote">요청 내용 (예: 제거, 크기 축소, 오른쪽으로 이동)</label><textarea id="itemNote"></textarea>
+          <div class="buttons"><button class="primary" id="apply">저장</button><button id="cancel">취소</button></div>
+        </section>
+      </aside>
     </main>
   </div>
   <script>
     const storageKey="ttok-ui-review-v2";
     const $=id=>document.getElementById(id);
     const escape=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-    let catalog=[], items=[], screens=[], activeScreen="", editingId=null;
+    let catalog=[], items=[], screens=[], activeScreen="", editingId=null, selectedId="";
     function persist(){try{localStorage.setItem(storageKey,JSON.stringify(items));}catch{}}
     function setupScreens(){
       const names=[...new Set(catalog.map(x=>x.screen))];
@@ -82,27 +108,50 @@
       $("screens").innerHTML=screens.map(({name})=>`<button class="${name===activeScreen?"active":""}" data-screen="${escape(name)}">${escape(name)} <span class="count">${items.filter(x=>x.screen===name&&!x.hidden).length}</span></button>`).join("");
       const active=screens.find(x=>x.name===activeScreen);
       $("screenTitle").innerHTML=`${escape(activeScreen)} <span class="badge">${active?.items.length||0}개 요소</span>`;
-      $("screenDescription").textContent="이 화면에서 실제로 찾은 요소입니다. 화면 내에서 ↑ ↓로 순서를 표시하고, 숨기기 또는 편집을 선택하세요.";
+      $("screenDescription").textContent="휴대폰 화면 안의 버튼이나 카드를 눌러 선택하세요. 선택한 요소의 앱 코드 위치가 오른쪽에 표시됩니다.";
       const query=$("search").value.trim().toLowerCase();
       const visible=items.filter(x=>x.screen===activeScreen&&($("showHidden").checked||!x.hidden)&&(!query||`${x.label} ${x.id} ${x.note||""}`.toLowerCase().includes(query)));
-      $("items").innerHTML=visible.length?visible.map(x=>`<div class="row ${x.hidden?"hidden-item":""}" data-id="${escape(x.id)}">
-        <span class="number">${escape(x.id)}</span><div class="info"><div class="label">${escape(x.label)}${x.hidden?" (숨김)":""}${x.added?" (추가 요청)":""}</div>
-        <div class="meta">${escape(x.note||x.description||"앱에서 선택 가능한 실제 화면 요소")}</div>${x.source?`<div class="source">코드 위치: ${escape(x.source)}</div>`:""}</div>
-        <div><div class="preview"><button class="preview-button ${previewKind(x)}" type="button" tabindex="-1">${escape(x.label)}</button></div><div class="preview-caption">버튼 모양 미리보기</div></div>
-        <div class="actions"><button data-cmd="edit">편집</button><button data-cmd="toggle">${x.hidden?"표시":"숨기기"}</button><button data-cmd="up" aria-label="위로">↑</button><button data-cmd="down" aria-label="아래로">↓</button></div></div>`).join(""):`<div class="empty">조건에 맞는 요소가 없습니다.</div>`;
+      const activeItems=items.filter(x=>x.screen===activeScreen&&!x.hidden);
+      const globalIds=["header-mode-tok","header-mode-kkorureuk","back-button",...catalog.filter(x=>x.id.startsWith("nav-")).map(x=>x.id)];
+      if(!activeItems.some(x=>x.id===selectedId)&&!globalIds.includes(selectedId))selectedId=activeItems[0]?.id||"";
+      renderPhone(activeItems);
+      const globalOptions=items.filter(x=>globalIds.includes(x.id));
+      const optionItems=[...visible,...globalOptions.filter(x=>!visible.some(v=>v.id===x.id))];
+      $("items").innerHTML=optionItems.length?optionItems.map(x=>`<button class="element-option ${x.id===selectedId?"active":""} ${x.hidden?"hidden-item":""}" data-select-id="${escape(x.id)}">${escape(x.label)}${globalIds.includes(x.id)?" · 공통":""}${x.added?" · 추가 요청":""}</button>`).join(""):`<div class="empty">조건에 맞는 요소가 없습니다.</div>`;
+      const selected=items.find(x=>x.id===selectedId);
+      $("selectedDetails").innerHTML=selected?`<div class="selected-name">${escape(selected.label)}</div><div class="source">ID: ${escape(selected.id)}<br>코드: ${escape(selected.source||"설계 요청")}</div><p class="selection-hint">${escape(selected.description||selected.note||"이 요소를 바꾸거나 숨길 수 있습니다.")}</p><div class="actions"><button data-inspect="edit">편집</button><button data-inspect="toggle">${selected.hidden?"다시 표시":"숨기기"}</button><button data-inspect="up">위로</button><button data-inspect="down">아래로</button></div>`:`<p class="selection-hint">선택할 요소가 없습니다. 버튼 추가 요청을 눌러 새 요소를 기록하세요.</p>`;
     }
-    function previewKind(item){const id=item.id; if(/delete|logout|reset-run|decline/.test(id))return "danger small";if(id==="practice-start"||id==="practice-script-generate"||id==="study-run"||id==="paywall-purchase"||id==="premium-subscribe")return id==="practice-start"?"accent":"primary";if(id.startsWith("nav-")||id.startsWith("header-")||id.includes("-tab-"))return "segment";if(id.includes("close")||id.includes("cancel")||id.includes("retry")||id.includes("edit"))return "small";return "";}
-    $("screens").onclick=e=>{const b=e.target.closest("[data-screen]");if(b){activeScreen=b.dataset.screen;$ ("search").value="";$("showHidden").checked=true;draw();}};
-    $("items").onclick=e=>{
-      const b=e.target.closest("button[data-cmd]"), row=e.target.closest("[data-id]");if(!b||!row)return;
-      const index=items.findIndex(x=>x.id===row.dataset.id),item=items[index];
-      if(b.dataset.cmd==="edit")openEditor(item);
-      if(b.dataset.cmd==="toggle"){item.hidden=!item.hidden;persist();draw();}
-      if(["up","down"].includes(b.dataset.cmd)){
-        const peers=items.filter(x=>x.screen===activeScreen),pos=peers.findIndex(x=>x.id===item.id),otherItem=peers[pos+(b.dataset.cmd==="up"?-1:1)];
-        if(otherItem){const other=items.indexOf(otherItem);[items[index],items[other]]=[items[other],items[index]];persist();draw();}
-      }
-    };
+    function previewKind(item){const id=item.id;if(/delete|logout|reset-run|decline/.test(id))return "danger";if(["practice-start","practice-script-generate","study-run","paywall-purchase","premium-subscribe","assessment-direct-save"].includes(id))return id==="practice-start"?"accent":"primary";if(id.startsWith("nav-")||id.startsWith("header-")||id.includes("-tab-"))return "tab";if(id.includes("close")||id.includes("cancel")||id.includes("retry")||id.includes("edit"))return "list";return "";}
+    function shortLabel(item){const names={"login-google":"Google로 계속하기","login-email-submit":"이메일로 계속하기","practice-start":"발표 연습 시작하기","practice-script-generate":"AI 발표 대본 만들기","study-run":"선택한 기능 시작하기","paywall-purchase":"구독하기","premium-subscribe":"똑 PRO 구독하기","nav-home":"⌂","nav-assessment":"▦","nav-practice":"◉","nav-study":"▤","nav-profile":"●","nav-settings":"⚙","nav-meal-today":"밥","nav-meal-weekly":"▦","nav-meal-school":"⌕","header-mode-tok":"똑","header-mode-kkorureuk":"꼬르륵"};return names[item.id]||item.label.replace(/^.*?:\s*/,"");}
+    function titleForScreen(){return activeScreen.replace(/^(홈|공부|발표|프로필|설정|꼬르륵|수행평가)\s*[·/ ]*/,"").replace(/·/g," ")||activeScreen;}
+    function renderPhone(activeItems){
+      const bare=activeScreen==="로그인"||activeScreen==="이메일 인증"||activeScreen==="첫 이용 약관";
+      const hasBack=!bare&&!activeScreen.includes("홈")&&!activeScreen.includes("날짜별 급식");
+      $("phoneAppbar").innerHTML=bare?`<strong style="font-size:24px;color:#0866ed">똑</strong><span class="student-chip">${escape(titleForScreen())}</span>`:`<div style="display:flex;align-items:center;gap:7px">${hasBack?`<button class="phone-back ${selectedId==="back-button"?"selected":""}" data-phone-id="back-button" aria-label="뒤로가기">‹</button>`:""}<div class="brand-switch"><button class="brand-button on ${selectedId==="header-mode-tok"?"selected":""}" data-phone-id="header-mode-tok">똑</button><button class="brand-button ${selectedId==="header-mode-kkorureuk"?"selected":""}" data-phone-id="header-mode-kkorureuk">꼬르륵</button></div></div><span class="student-chip">화곡중학교 1학년　🐰</span>`;
+      $("phoneNav").style.display=bare?"none":"flex";
+      const navItems=activeScreen.startsWith("꼬르륵")?[ ["nav-meal-today","밥"],["nav-meal-weekly","▦"],["nav-meal-school","⌕"] ]:[["nav-home","⌂"],["nav-assessment","▦"],["nav-practice","◉"],["nav-study","▤"],["nav-profile","●"],["nav-settings","⚙"]];
+      const activeNav=activeScreen.startsWith("꼬르륵")?"nav-meal-today":activeScreen.includes("홈")?"nav-home":activeScreen.includes("수행평가")?"nav-assessment":activeScreen.includes("발표")?"nav-practice":activeScreen.includes("공부")?"nav-study":activeScreen.includes("프로필")?"nav-profile":activeScreen.includes("설정")?"nav-settings":"";
+      $("phoneNav").innerHTML=navItems.map(([id,icon])=>`<div class="phone-nav-item ${id===activeNav?"active":""} ${id===selectedId?"selected":""}" data-nav-screen="${id}" data-phone-id="${id}" title="${escape(id)}">${icon}</div>`).join("");
+      const heading=bare?(activeScreen==="로그인"?"안녕하세요!":"확인해 주세요"):titleForScreen();
+      let decor="";
+      if(activeScreen==="로그인")decor=`<div class="phone-heading">똑과 함께 시작해요</div><p class="phone-subtitle">학습과 발표 준비를 한곳에서 관리해요</p><div class="phone-card"><div class="phone-input">이메일 주소</div><div class="phone-input">비밀번호</div></div>`;
+      else if(activeScreen.includes("발표")&&activeScreen.includes("분석 결과"))decor=`<div class="phone-card"><div class="phone-card-title">발표 분석 결과</div><div class="mock-score">--</div><p class="phone-subtitle" style="text-align:center">실제 연습 결과 화면 구성</p></div>`;
+      else if(activeScreen.includes("발표")&&(activeScreen.includes("진행")||activeScreen.includes("준비")))decor=`<div class="mock-video">▶</div><div class="phone-card"><div class="phone-card-title">발표 대본</div><p class="phone-subtitle">카메라 미리보기와 연습 대본이 표시됩니다.</p></div>`;
+      else if(activeScreen.includes("사진 문제 풀이"))decor=`<div class="phone-card"><div class="phone-card-title">문제 사진</div><div class="mock-video">＋</div><p class="phone-subtitle">촬영하거나 사진을 선택해 문제를 풀어보세요.</p></div>`;
+      else if(activeScreen.includes("홈"))decor=`<div class="phone-card"><div class="phone-card-title">오늘의 학습</div><p class="phone-subtitle">할 일과 일정을 확인해 보세요.</p></div>`;
+      else if(!bare)decor=`<div class="phone-heading">${escape(heading)}</div><p class="phone-subtitle">똑 앱 화면 미리보기</p>`;
+      const controls=activeItems.map(x=>{const kind=previewKind(x),isSelected=x.id===selectedId,isCard=x.id.includes("saved-open")||x.id.includes("shortcut-item")||x.id.includes("exam-")||x.id.includes("schedule-");const cls=`phone-control ${kind} ${isCard?"list":""} ${isSelected?"selected":""}`;return `<button class="${cls}" type="button" data-phone-id="${escape(x.id)}" ${x.hidden?"disabled":""}>${escape(shortLabel(x))}</button>`;}).join("");
+      const controlWrap=activeItems.length?`<div class="phone-card"><div class="phone-card-title">${bare?"계속하기":"이 화면의 기능"}</div><div class="phone-control-list">${controls}</div></div>`:`<div class="phone-card"><p class="phone-subtitle">이 화면에는 아직 선택할 수 있는 버튼이 등록되지 않았습니다.</p></div>`;
+      $("phoneContent").innerHTML=`${decor}${activeScreen.includes("발표")||activeScreen.startsWith("공부")?`<div class="phone-tabs"><button class="phone-control tab active">${activeScreen.includes("발표")?"대본 작성":"AI 공부"}</button><button class="phone-control tab">${activeScreen.includes("발표")?"연습 도와주기":"시험 계획"}</button></div>`:""}${controlWrap}`;
+    }
+    $("screens").onclick=e=>{const b=e.target.closest("[data-screen]");if(b){activeScreen=b.dataset.screen;selectedId="";$("search").value="";$("showHidden").checked=true;draw();}};
+    function moveSelected(direction){const index=items.findIndex(x=>x.id===selectedId);if(index<0)return;const peers=items.filter(x=>x.screen===activeScreen),pos=peers.findIndex(x=>x.id===selectedId),otherItem=peers[pos+direction];if(otherItem){const other=items.indexOf(otherItem);[items[index],items[other]]=[items[other],items[index]];persist();draw();}}
+    function toggleSelected(){const item=items.find(x=>x.id===selectedId);if(item){item.hidden=!item.hidden;persist();draw();}}
+    $("phoneContent").onclick=e=>{const b=e.target.closest("[data-phone-id]");if(b){selectedId=b.dataset.phoneId;draw();}};
+    $("phoneAppbar").onclick=e=>{const b=e.target.closest("[data-phone-id]");if(b){selectedId=b.dataset.phoneId;draw();}};
+    $("phoneNav").onclick=e=>{const b=e.target.closest("[data-nav-screen]");if(b){const map={"nav-home":"홈 · AI 리포트","nav-assessment":"수행평가 · 일정 목록","nav-practice":"발표 · 연습 준비","nav-study":"공부 · AI 공부 도우미","nav-profile":"프로필 · 정보 수정","nav-settings":"설정 · 앱·계정 관리","nav-meal-today":"꼬르륵 · 날짜별 급식","nav-meal-weekly":"꼬르륵 · 주간 급식","nav-meal-school":"꼬르륵 · 학교 설정"};activeScreen=map[b.dataset.navScreen]||activeScreen;selectedId=b.dataset.navScreen;draw();}};
+    $("items").onclick=e=>{const b=e.target.closest("[data-select-id]");if(b){selectedId=b.dataset.selectId;draw();}};
+    $("selectedDetails").onclick=e=>{const b=e.target.closest("[data-inspect]");if(!b)return;if(b.dataset.inspect==="edit")openEditor(items.find(x=>x.id===selectedId));if(b.dataset.inspect==="toggle")toggleSelected();if(b.dataset.inspect==="up")moveSelected(-1);if(b.dataset.inspect==="down")moveSelected(1);};
     function openEditor(item){editingId=item.id;$("editorTitle").textContent=item.id+" 편집";$("itemLabel").value=item.label;$("itemAction").value=item.description||"";$("itemScreen").value=item.screen;$("itemNote").value=item.note||"";$("editor").hidden=false;$("editor").scrollIntoView({behavior:"smooth",block:"nearest"});}
     $("apply").onclick=()=>{const item=items.find(x=>x.id===editingId);if(!item)return;item.label=$("itemLabel").value.trim()||item.label;item.description=$("itemAction").value.trim();item.screen=$("itemScreen").value;item.note=$("itemNote").value.trim();$("editor").hidden=true;editingId=null;persist();draw();};
     $("cancel").onclick=()=>{$("editor").hidden=true;editingId=null;};
