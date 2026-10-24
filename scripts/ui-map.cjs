@@ -25,6 +25,7 @@ function screenFor(id, group) {
   if (id.startsWith("login-") ) return "로그인";
   if (id.startsWith("email-verify-")) return "이메일 인증";
   if (id.startsWith("terms-") || id.startsWith("gate-")) return "첫 이용 약관";
+  if (id === "nav-meal-school") return "꼬르륵 · 학교 설정";
   if (id.startsWith("header-") || id.startsWith("nav-") || id === "back-button") return "공통 메뉴";
   if (id.startsWith("home-shortcut-")) return "홈 · 바로가기 편집";
   if (id.startsWith("home-schedule-add") || id.startsWith("home-schedule-edit")) return "홈 · 일정 추가·수정";

@@ -79,7 +79,7 @@
   {
     "id": "nav-meal-school",
     "group": "공통",
-    "screen": "공통 메뉴",
+    "screen": "꼬르륵 · 학교 설정",
     "label": "하단 탭(꼬르륵): 학교 설정",
     "source": "src/components/BottomNavigationBar.tsx:108"
   },
