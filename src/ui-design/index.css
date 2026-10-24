@@ -1,0 +1,11 @@
+/* 화면별 스타일 파일을 모아 불러옵니다. 새 파일을 만들면 여기에 한 줄 추가하세요. */
+@import "./common.css";
+@import "./login.css";
+@import "./home.css";
+@import "./assessment.css";
+@import "./practice.css";
+@import "./study.css";
+@import "./profile.css";
+@import "./settings.css";
+@import "./meal.css";
+@import "./custom.css";

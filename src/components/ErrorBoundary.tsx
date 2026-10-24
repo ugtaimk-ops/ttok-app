@@ -34,7 +34,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
           <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
             예상치 못한 오류로 화면을 표시할 수 없습니다. 아래 버튼을 눌러 다시 시도해 주세요.
           </p>
-          <button
+          <button data-ui="error-reload"
             onClick={this.handleReload}
             className="mt-2 px-6 py-3 rounded-2xl bg-brand text-white font-black text-sm shadow-md shadow-brand/20"
           >

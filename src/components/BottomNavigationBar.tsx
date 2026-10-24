@@ -56,7 +56,7 @@ export default function BottomNavigationBar({
       </svg>
 
       <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1.25rem)] xs:w-[calc(100%-2rem)] sm:w-[calc(100%-2.5rem)] max-w-2xl h-16 sm:h-20 z-45">
-        <div className={`w-full h-full relative border flex items-center justify-around px-1 xs:px-2 sm:px-4 md:px-6 overflow-visible transition-all duration-300 ${
+        <div data-ui="nav-bar" className={`w-full h-full relative border flex items-center justify-around px-1 xs:px-2 sm:px-4 md:px-6 overflow-visible transition-all duration-300 ${
           darkMode 
             ? "bg-slate-950/10 border-slate-800/40 backdrop-blur-3xl shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.05),0_20px_50px_rgba(0,0,0,0.5)]" 
             : "bg-white/10 border-white/50 backdrop-blur-3xl shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.55),inset_0_1px_0_rgba(255,255,255,0.4),0_20px_50px_rgba(15,23,42,0.12)]"
@@ -105,6 +105,7 @@ export default function BottomNavigationBar({
             return (
               <button
                 key={tab.id}
+                data-ui={`nav-${tab.id}`}
                 onClick={() => onChangeTab(tab.id)}
                 className="relative flex items-center justify-center focus:outline-none cursor-pointer group transition-all z-10 w-12 xs:w-13 sm:w-16 h-13 xs:h-14 sm:h-16"
                 id={`tab-button-${tab.id}`}

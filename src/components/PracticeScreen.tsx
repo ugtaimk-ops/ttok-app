@@ -651,7 +651,7 @@ export default function PracticeScreen({
 
                       {/* Controls */}
                       <div className="flex flex-wrap gap-2 text-fluid-sm font-bold">
-                        <button
+                        <button data-ui="practice-script-copy"
                           onClick={handleCopyScript}
                           className="h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-98"
                           title="대본 복사"
@@ -659,7 +659,7 @@ export default function PracticeScreen({
                           {isCopied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
                           {isCopied ? "복사 완료" : "대본 복사"}
                         </button>
-                        <button
+                        <button data-ui="practice-script-edit-toggle"
                           onClick={() => {
                             if (isEditingScriptText) {
                               // Finished editing! Save changes to global/local storage
@@ -684,7 +684,7 @@ export default function PracticeScreen({
                           <Edit3 size={15} />
                           {isEditingScriptText ? "저장 완료" : "대본 수정"}
                         </button>
-                        <button
+                        <button data-ui="practice-script-pdf"
                           onClick={handleSavePDF}
                           className="h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-98"
                           title="PDF 프린트/저장"
@@ -692,7 +692,7 @@ export default function PracticeScreen({
                           <Download size={15} />
                           PDF 저장
                         </button>
-                        <button
+                        <button data-ui="practice-script-share"
                           onClick={handleShareScript}
                           className="h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-98"
                           title="대본 공유"
@@ -723,7 +723,7 @@ export default function PracticeScreen({
                         <div className="flex items-center gap-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-0.5 rounded-lg self-start sm:self-auto max-w-full flex-nowrap">
                           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-extrabold px-1.5 shrink-0">크기</span>
                           {(["sm", "base", "lg"] as const).map((size, index) => (
-                            <button
+                            <button data-ui="practice-script-textsize"
                               key={size}
                               type="button"
                               onClick={() => setPrompterTextSize(size)}
@@ -778,7 +778,7 @@ export default function PracticeScreen({
         </div>
 
         <div className="flex w-full lg:w-auto bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
-          <button
+          <button data-ui="practice-tab-script"
             onClick={() => setSubTab("script")}
             className={`flex-1 lg:flex-initial h-12 px-5 text-fluid-sm font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm ${
               subTab === "script"
@@ -788,7 +788,7 @@ export default function PracticeScreen({
           >
             <FileText size={16} /> 발표 대본 작성
           </button>
-          <button
+          <button data-ui="practice-tab-practice"
             onClick={() => setSubTab("practice")}
             className={`flex-1 lg:flex-initial h-12 px-5 text-fluid-sm font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm ${
               subTab === "practice"
@@ -917,7 +917,7 @@ export default function PracticeScreen({
                       />
                     </div>
 
-                    <button
+                    <button data-ui="practice-script-generate"
                       type="submit"
                       disabled={isGeneratingScript}
                       className="w-full h-14 bg-brand hover:bg-brand-dark text-white font-extrabold rounded-2xl text-fluid-base shadow-md shadow-brand/15 flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50 active:scale-98"
@@ -1014,7 +1014,7 @@ export default function PracticeScreen({
                           </span>
                         </div>
 
-                        <button type="button" className="w-full text-left cursor-pointer" onClick={() => openSavedScript(s)}>
+                        <button data-ui="practice-saved-open" type="button" className="w-full text-left cursor-pointer" onClick={() => openSavedScript(s)}>
                           <h3 className="text-base font-bold text-slate-700 dark:text-slate-200 group-hover:text-brand transition-colors line-clamp-1">
                             {s.title}
                           </h3>
@@ -1033,7 +1033,7 @@ export default function PracticeScreen({
                         </span>
 
                         <div className="flex gap-2.5 items-center">
-                          <button
+                          <button data-ui="practice-saved-load"
                             type="button"
                             onClick={() => openSavedScript(s)}
                             className="h-11 px-4 text-fluid-sm font-black bg-brand/15 hover:bg-brand/25 text-brand rounded-xl transition-all cursor-pointer flex items-center gap-1.5 active:scale-98"
@@ -1041,7 +1041,7 @@ export default function PracticeScreen({
                             <FolderOpen size={15} /> 불러오기
                           </button>
 
-                          <button
+                          <button data-ui="practice-saved-delete"
                             type="button"
                             onClick={() => {
                               if (confirm(localizedText("정말로 이 대본을 삭제하시겠습니까?"))) {
@@ -1127,7 +1127,7 @@ export default function PracticeScreen({
                             {/* Prompter Font Size Selector */}
                             <div className="flex items-center gap-0.5 bg-white/5 p-0.5 rounded-lg border border-white/10">
                               {(["sm", "base", "lg"] as const).map((size, index) => (
-                                <button
+                                <button data-ui="practice-prompter-textsize"
                                   key={size}
                                   type="button"
                                   onClick={() => setPrompterTextSize(size)}
@@ -1138,7 +1138,7 @@ export default function PracticeScreen({
                               ))}
                             </div>
 
-                            <button
+                            <button data-ui="practice-prompter-hide"
                               type="button"
                               onClick={() => setShowTeleprompter(false)}
                               className="text-[10px] text-slate-400 hover:text-white font-bold bg-white/5 hover:bg-white/10 px-2 py-1 rounded cursor-pointer"
@@ -1152,7 +1152,7 @@ export default function PracticeScreen({
                         </div>
                       ) : (
                         <div className="flex justify-center">
-                          <button
+                          <button data-ui="practice-prompter-show"
                             type="button"
                             onClick={() => setShowTeleprompter(true)}
                             className="bg-slate-900/95 border border-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-full text-[10px] sm:text-xs text-slate-300 hover:text-white font-black flex items-center gap-1 shadow-lg cursor-pointer"
@@ -1184,7 +1184,7 @@ export default function PracticeScreen({
                         </p>
                       )}
 
-                      <button
+                      <button data-ui="practice-stop-analyze"
                         onClick={() => stopPracticeRecording()}
                         className="w-full sm:w-auto px-8 py-3.5 sm:py-4 bg-rose-600 hover:bg-rose-700 active:scale-98 text-white font-black rounded-[20px] sm:rounded-[24px] text-xs sm:text-sm flex items-center justify-center gap-2 shadow-2xl shadow-rose-600/40 transition-all cursor-pointer"
                       >
@@ -1203,9 +1203,9 @@ export default function PracticeScreen({
                       <div className="flex-1">
                         <p className="text-xs font-bold">분석을 완료하지 못했어요</p>
                         <p className="text-[11px] text-rose-500/80 mt-0.5">{analysisError}</p>
-                        <button type="button" disabled={isAnalyzing} onClick={() => stopPracticeRecording(true)} className="mt-2 min-h-11 px-3 rounded-xl bg-white dark:bg-slate-800 font-bold text-xs">분석 다시 시도</button>
+                        <button data-ui="practice-analysis-retry" type="button" disabled={isAnalyzing} onClick={() => stopPracticeRecording(true)} className="mt-2 min-h-11 px-3 rounded-xl bg-white dark:bg-slate-800 font-bold text-xs">분석 다시 시도</button>
                       </div>
-                      <button
+                      <button data-ui="practice-analysis-clear"
                         onClick={() => setAnalysisError(null)}
                         className="px-3 py-1.5 bg-rose-100 dark:bg-rose-950/50 hover:bg-rose-200 text-rose-700 dark:text-rose-300 rounded-lg text-[10px] font-bold cursor-pointer"
                       >
@@ -1245,7 +1245,7 @@ export default function PracticeScreen({
                           <p className="text-xs text-slate-400 break-keep">발표 영상을 기록하여 분석하기 위해 기기 카메라 권한이 꼭 필요합니다.</p>
 
                           <div className="flex justify-center pt-2">
-                            <button
+                            <button data-ui="practice-permission-allow"
                               onClick={handleRequestPermissions}
                               className="px-6 py-3 bg-brand hover:bg-brand-dark text-white font-black rounded-2xl text-xs cursor-pointer shadow-lg shadow-brand/20 transition-all flex items-center gap-2"
                             >
@@ -1303,7 +1303,7 @@ export default function PracticeScreen({
                           </div>
 
                           <div className="flex flex-col gap-2 pt-1">
-                            <button
+                            <button data-ui="practice-permission-reconnect"
                               onClick={handleRequestPermissions}
                               className="w-full py-2.5 bg-brand hover:bg-brand-dark text-white font-bold rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
                             >
@@ -1318,7 +1318,7 @@ export default function PracticeScreen({
                     {/* Controls below video preview */}
                     {hasPermission && (
                       <div className="flex flex-col items-center gap-3 mt-6">
-                        <button
+                        <button data-ui="practice-start"
                           onClick={startPracticeRecording}
                           className="px-6 py-4 bg-rose-500 hover:bg-rose-600 text-white font-extrabold rounded-2xl text-sm flex items-center gap-1.5 shadow-md shadow-rose-500/25 cursor-pointer"
                         >
@@ -1353,7 +1353,7 @@ export default function PracticeScreen({
 
                       {/* Selection tabs */}
                       <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl mb-4">
-                        <button
+                        <button data-ui="practice-source-saved"
                           type="button"
                           onClick={() => setScriptInputMode("saved")}
                           className={`py-2 text-xs sm:text-sm font-bold rounded-lg transition-colors cursor-pointer ${
@@ -1364,7 +1364,7 @@ export default function PracticeScreen({
                         >
                           저장된 대본 목록
                         </button>
-                        <button
+                        <button data-ui="practice-source-direct"
                           type="button"
                           onClick={() => setScriptInputMode("direct")}
                           className={`py-2 text-xs sm:text-sm font-bold rounded-lg transition-colors cursor-pointer ${
@@ -1381,7 +1381,7 @@ export default function PracticeScreen({
                         scripts.length > 0 ? (
                           <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                             {scripts.map(s => (
-                              <button
+                              <button data-ui="practice-source-pick-script"
                                 key={s.id}
                                 onClick={() => {
                                   setSelectedScriptId(s.id);
@@ -1426,7 +1426,7 @@ export default function PracticeScreen({
                           </div>
                           {customScriptText && (
                             <div className="flex flex-col gap-2">
-                              <button
+                              <button data-ui="practice-source-direct-confirm"
                                 type="button"
                                 onClick={() => {
                                   if (!customScriptText.trim()) return;
@@ -1519,7 +1519,7 @@ export default function PracticeScreen({
                     </div>
                   </div>
 
-                  <button
+                  <button data-ui="practice-retry"
                     onClick={() => setAnalysisResult(null)}
                     className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer"
                   >
@@ -1735,7 +1735,7 @@ export default function PracticeScreen({
 
                 {/* Action Buttons */}
                 <div className="w-full flex flex-col gap-2 pt-2">
-                  <button
+                  <button data-ui="practice-modal-permission-allow"
                     onClick={() => {
                       handleRequestPermissions();
                     }}
@@ -1745,7 +1745,7 @@ export default function PracticeScreen({
                   </button>
 
                   {isNativeApp() && (
-                    <button
+                    <button data-ui="practice-modal-open-settings"
                       onClick={async () => {
                         await openNativeSettings();
                       }}
@@ -1755,7 +1755,7 @@ export default function PracticeScreen({
                     </button>
                   )}
 
-                  <button
+                  <button data-ui="practice-modal-cancel"
                     onClick={() => setShowPermissionModal(false)}
                     className={`w-full py-2.5 font-bold rounded-xl text-xs transition-all cursor-pointer ${
                       darkMode ? "bg-slate-800 text-slate-400 hover:bg-slate-700" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
@@ -1790,7 +1790,7 @@ export default function PracticeScreen({
                     <p className="text-xs font-bold text-brand">저장된 발표 대본</p>
                     <h2 className="text-base font-black truncate">{generatedScript?.title}</h2>
                   </div>
-                  <button type="button" onClick={closeSavedScript} aria-label="대본 닫기" className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+                  <button data-ui="practice-script-close" type="button" onClick={closeSavedScript} aria-label="대본 닫기" className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
                     <X size={24} />
                   </button>
                 </div>

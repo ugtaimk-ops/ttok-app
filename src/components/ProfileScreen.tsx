@@ -371,7 +371,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
           <div className="flex-1 w-full space-y-4">
             {/* Tab buttons */}
             <div className="flex bg-slate-50 dark:bg-slate-900 p-1 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
-              <button
+              <button data-ui="profile-avatar-camera-tab"
                 type="button"
                 onClick={() => {
                   setActiveAvatarTab("camera");
@@ -385,7 +385,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
               >
                 <Camera size={14} /> 사진 촬영
               </button>
-              <button
+              <button data-ui="profile-avatar-emoji-tab"
                 type="button"
                 onClick={() => {
                   stopCamera();
@@ -412,7 +412,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                       <p className="whitespace-pre-line">{cameraError}</p>
                       
                       <div className="flex flex-col sm:flex-row gap-2 justify-center items-center pt-1">
-                        <button
+                        <button data-ui="profile-camera-retry"
                           type="button"
                           onClick={startCamera}
                           className="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-fluid-xs font-bold cursor-pointer transition-all hover:opacity-90"
@@ -421,7 +421,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                         </button>
                         
                         {isNativeApp() && (
-                          <button
+                          <button data-ui="profile-camera-open-settings"
                             type="button"
                             onClick={async () => {
                               await openNativeSettings();
@@ -439,7 +439,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                         <p className="text-fluid-sm font-bold text-brand animate-pulse">카메라 활성화 중...</p>
                         <p className="text-fluid-xs text-slate-450 break-keep">얼굴을 잘 맞추고 아래 촬영 버튼을 눌러주세요!</p>
                       </div>
-                      <button
+                      <button data-ui="profile-camera-capture"
                         type="button"
                         onClick={capturePhoto}
                         className="px-6 py-3 bg-brand hover:bg-brand-dark text-white text-fluid-base font-extrabold rounded-2xl flex items-center justify-center gap-1.5 shadow-md shadow-brand/15 transition-all hover:scale-105 active:scale-95 cursor-pointer w-full max-w-[150px]"
@@ -448,7 +448,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                       </button>
                     </div>
                   ) : (
-                    <button
+                    <button data-ui="profile-camera-start"
                       type="button"
                       onClick={startCamera}
                       className="px-5 py-3 bg-brand/10 hover:bg-brand/20 text-brand text-fluid-sm font-bold rounded-2xl flex items-center gap-1.5 transition-all cursor-pointer"
@@ -511,7 +511,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                     placeholder="학교 이름을 검색해 주세요 (예: 서울고)"
                     className="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-fluid-base font-bold focus:outline-none focus:ring-2 focus:ring-brand"
                   />
-                  <button
+                  <button data-ui="profile-school-search-close"
                     type="button"
                     onClick={() => {
                       setIsSchoolSearchOpen(false);
@@ -536,7 +536,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                       <div className="p-4 text-center text-fluid-sm text-slate-400">검색 결과가 없습니다.</div>
                     ) : (
                       schoolSearchResults.map((item) => (
-                        <button
+                        <button data-ui="profile-school-pick"
                           key={item.schoolCode}
                           type="button"
                           onClick={() => handleSelectSchool(item)}
@@ -551,7 +551,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                 )}
               </>
             ) : (
-              <button
+              <button data-ui="profile-school-search-open"
                 type="button"
                 onClick={() => setIsSchoolSearchOpen(true)}
                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-fluid-base font-bold text-left focus:outline-none focus:ring-2 focus:ring-brand flex items-center justify-between cursor-pointer"
@@ -610,7 +610,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                     className="w-full px-4 py-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-fluid-base font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all"
                   />
                   {directGoalInput && (
-                    <button
+                    <button data-ui="profile-goal-clear-input"
                       type="button"
                       onClick={() => setDirectGoalInput("")}
                       className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all"
@@ -621,7 +621,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                 </div>
                 
                 <div className="flex gap-2 justify-end">
-                  <button
+                  <button data-ui="profile-goal-cancel"
                     type="button"
                     onClick={() => {
                       setDirectGoalInput(goal);
@@ -631,7 +631,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                   >
                     취소
                   </button>
-                  <button
+                  <button data-ui="profile-goal-save"
                     type="button"
                     onClick={saveDirectGoal}
                     className="px-5 py-3 bg-brand text-white font-black rounded-2xl text-fluid-sm shadow-sm shadow-brand/10 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
@@ -661,7 +661,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                 )}
 
                 <div className="flex flex-wrap gap-2">
-                  <button
+                  <button data-ui="profile-goal-random"
                     type="button"
                     onClick={setRandomGoal}
                     className="flex-1 min-w-[120px] py-3.5 bg-brand-light hover:bg-brand/10 dark:bg-brand/10 dark:hover:bg-brand/20 text-brand text-fluid-sm font-black rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer hover:scale-[1.01]"
@@ -670,7 +670,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                     <span>🎲 랜덤 설정</span>
                   </button>
                   
-                  <button
+                  <button data-ui="profile-goal-edit"
                     type="button"
                     onClick={() => {
                       setDirectGoalInput(goal);
@@ -683,7 +683,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
                   </button>
 
                   {goal && (
-                    <button
+                    <button data-ui="profile-goal-delete"
                       type="button"
                       onClick={deleteGoal}
                       className="py-3.5 px-4 border border-rose-100 dark:border-rose-900/30 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-500 dark:text-rose-400 text-fluid-sm font-black rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
@@ -701,7 +701,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode }: ProfileS
 
         {/* Buttons */}
         <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <button
+          <button data-ui="profile-save"
             type="submit"
             className="px-6 py-4 bg-brand hover:bg-brand-dark text-white font-black rounded-2xl text-fluid-base flex items-center gap-1.5 shadow-md shadow-brand/10 transition-colors cursor-pointer"
           >

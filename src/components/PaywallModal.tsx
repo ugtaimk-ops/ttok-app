@@ -125,7 +125,7 @@ export default function PaywallModal({ offering, darkMode, onClose, onPurchaseCo
 
           {/* Plan selector */}
           <div className="space-y-2.5 mb-5">
-            <button
+            <button data-ui="paywall-plan-annual"
               disabled={!annualPkg || isPurchasing}
               onClick={() => setSelected("annual")}
               className={`w-full text-left px-4 py-3.5 rounded-2xl border-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
@@ -143,7 +143,7 @@ export default function PaywallModal({ offering, darkMode, onClose, onPurchaseCo
               </div>
             </button>
 
-            <button
+            <button data-ui="paywall-plan-monthly"
               disabled={!monthlyPkg || isPurchasing}
               onClick={() => setSelected("monthly")}
               className={`w-full text-left px-4 py-3.5 rounded-2xl border-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
@@ -161,7 +161,7 @@ export default function PaywallModal({ offering, darkMode, onClose, onPurchaseCo
           <div className="shrink-0 p-4 sm:p-5 border-t border-slate-200/40">
           {error && <p className="text-fluid-xs font-semibold text-rose-500 mb-3 break-keep">{error}</p>}
 
-          <button
+          <button data-ui="paywall-purchase"
             onClick={handlePurchase}
             disabled={isPurchasing || !selectedPkg}
             className={`w-full py-4 rounded-2xl flex items-center justify-center gap-1.5 text-fluid-sm font-black text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${

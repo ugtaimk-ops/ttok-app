@@ -1,0 +1,206 @@
+/*
+  [설정·구독] 화면 요소 스타일
+
+  쓰는 법
+    1. 바꾸고 싶은 요소의 블록을 찾습니다. (UI 선택 도구로 클릭하면 이름이 복사됩니다)
+    2. 그 블록을 감싼 주석 표시(슬래시-별, 별-슬래시)를 지우고 값을 고칩니다.
+    3. 저장하면 개발 화면에 바로 반영됩니다.
+
+  참고
+    - 여기에 쓴 스타일은 기존 스타일보다 우선합니다.
+    - 마우스를 올렸을 때 모양은 [data-ui="이름"]:hover { ... } 로 따로 씁니다.
+    - 다크 모드에서만 다르게: .dark [data-ui="이름"] { ... }
+    - 글자 내용(문구)은 여기서 못 바꿉니다. UI_MAP.md 의 코드 위치에서 고칩니다.
+*/
+
+/* 다크 모드 스위치  —  src/components/SettingsScreen.tsx:143 */
+/*
+[data-ui="settings-dark-mode"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 알림 규칙 적용 저장  —  src/components/SettingsScreen.tsx:276 */
+/*
+[data-ui="settings-notif-save"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 로그아웃  —  src/components/SettingsScreen.tsx:316 */
+/*
+[data-ui="settings-logout"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 약관 내용 보기  —  src/components/SettingsScreen.tsx:338 */
+/*
+[data-ui="settings-terms-open"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 데이터 전체 초기화(위험 구역)  —  src/components/SettingsScreen.tsx:356 */
+/*
+[data-ui="settings-reset-open"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 초기화 팝업: 취소  —  src/components/SettingsScreen.tsx:389 */
+/*
+[data-ui="settings-reset-cancel"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 초기화 팝업: 카운트다운 중(비활성)  —  src/components/SettingsScreen.tsx:396 */
+/*
+[data-ui="settings-reset-countdown"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 초기화 팝업: 초기화 실행  —  src/components/SettingsScreen.tsx:403 */
+/*
+[data-ui="settings-reset-run"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 약관 팝업: 닫기(X)  —  src/components/SettingsScreen.tsx:443 */
+/*
+[data-ui="settings-terms-close-x"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 약관 팝업: 닫기  —  src/components/SettingsScreen.tsx:455 */
+/*
+[data-ui="settings-terms-close"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 똑 PRO 구독하기  —  src/components/PremiumSection.tsx:118 */
+/*
+[data-ui="premium-subscribe"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 구독 관리·해지  —  src/components/PremiumSection.tsx:129 */
+/*
+[data-ui="premium-manage"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 구매 내역 복원  —  src/components/PremiumSection.tsx:141 */
+/*
+[data-ui="premium-restore"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 결제 팝업: 연간 구독 선택  —  src/components/PaywallModal.tsx:128 */
+/*
+[data-ui="paywall-plan-annual"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 결제 팝업: 월간 구독 선택  —  src/components/PaywallModal.tsx:146 */
+/*
+[data-ui="paywall-plan-monthly"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 결제 팝업: 결제하기  —  src/components/PaywallModal.tsx:164 */
+/*
+[data-ui="paywall-purchase"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/

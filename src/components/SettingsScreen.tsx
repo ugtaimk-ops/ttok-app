@@ -140,7 +140,7 @@ export default function SettingsScreen({
               <p className="text-fluid-sm text-slate-500 mt-1 break-keep">라이트 모드와 다크 모드를 자유롭게 변환하세요.</p>
             </div>
 
-            <button
+            <button data-ui="settings-dark-mode"
               onClick={onToggleDarkMode}
               className={`px-4 py-2.5 rounded-2xl border transition-all duration-300 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
                 darkMode 
@@ -273,7 +273,7 @@ export default function SettingsScreen({
           </div>
 
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
-            <button
+            <button data-ui="settings-notif-save"
               onClick={handleSaveNotif}
               className="px-5 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:bg-slate-100 text-slate-700 dark:text-slate-300 text-fluid-sm font-black rounded-2xl flex items-center gap-2 cursor-pointer shadow-sm"
             >
@@ -313,7 +313,7 @@ export default function SettingsScreen({
               </div>
             )}
 
-            <button
+            <button data-ui="settings-logout"
               onClick={onLogout}
               className="w-full mt-1 py-3 rounded-2xl flex items-center justify-center gap-1.5 text-fluid-sm font-black text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
@@ -335,7 +335,7 @@ export default function SettingsScreen({
             <p className="text-fluid-sm text-slate-550 dark:text-slate-400 mt-1">똑 (TTOK)의 정밀한 인공지능 분석 가이드 및 프라이버시 보호 약관을 확인합니다.</p>
           </div>
 
-          <button
+          <button data-ui="settings-terms-open"
             onClick={() => setShowTermsModal(true)}
             className="px-5 py-3 bg-brand hover:bg-brand-dark dark:hover:bg-brand/90 text-white text-fluid-sm font-black rounded-2xl flex items-center gap-1.5 cursor-pointer shadow-md shadow-brand/10 transition-all active:scale-95"
           >
@@ -353,7 +353,7 @@ export default function SettingsScreen({
           </div>
 
           <div className="flex gap-2 shrink-0">
-            <button
+            <button data-ui="settings-reset-open"
               onClick={() => setShowPurgeModal(true)}
               className="px-6 py-3 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 text-rose-500 text-fluid-sm font-black rounded-2xl flex items-center gap-1.5 cursor-pointer transition-colors"
             >
@@ -386,21 +386,21 @@ export default function SettingsScreen({
               </p>
 
               <div className="flex justify-center gap-3 mt-6">
-                <button
+                <button data-ui="settings-reset-cancel"
                   onClick={() => setShowPurgeModal(false)}
                   className="flex-1 h-12 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-fluid-sm font-bold rounded-xl cursor-pointer active:scale-98 transition-all"
                 >
                   취소
                 </button>
                 {purgeCountdown > 0 ? (
-                  <button
+                  <button data-ui="settings-reset-countdown"
                     disabled
                     className="flex-1 h-12 bg-slate-100 dark:bg-slate-800 text-slate-450 dark:text-slate-600 text-fluid-sm font-bold rounded-xl cursor-not-allowed opacity-60"
                   >
                     초기화 ({purgeCountdown}초)
                   </button>
                 ) : (
-                  <button
+                  <button data-ui="settings-reset-run"
                     onClick={() => {
                       onResetData();
                       setShowPurgeModal(false);
@@ -440,7 +440,7 @@ export default function SettingsScreen({
                     <p className="text-[10px] text-slate-400 font-semibold mt-0.5">최종 개정일: {TERMS_VERSION}</p>
                   </div>
                 </div>
-                <button
+                <button data-ui="settings-terms-close-x"
                   onClick={() => setShowTermsModal(false)}
                   className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer transition-colors"
                 >
@@ -452,7 +452,7 @@ export default function SettingsScreen({
 
               {/* Modal Footer */}
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800 mt-4 w-full">
-                <button
+                <button data-ui="settings-terms-close"
                   onClick={() => setShowTermsModal(false)}
                   className="w-full sm:w-auto h-12 px-8 bg-brand hover:bg-brand-dark text-white text-fluid-sm font-extrabold rounded-2xl cursor-pointer shadow-md shadow-brand/10 transition-all active:scale-95 flex items-center justify-center"
                 >

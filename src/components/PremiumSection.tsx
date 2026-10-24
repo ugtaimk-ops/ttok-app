@@ -115,7 +115,7 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
       )}
 
       {!isPremium ? (
-        <button
+        <button data-ui="premium-subscribe"
           onClick={handleOpenPaywall}
           disabled={isLoadingOffering}
           className={`w-full py-3.5 rounded-2xl flex items-center justify-center gap-1.5 text-fluid-sm font-black text-white transition-all cursor-pointer ${
@@ -126,7 +126,7 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
           똑 PRO 구독하기
         </button>
       ) : (
-        <button
+        <button data-ui="premium-manage"
           onClick={handleManageSubscription}
           disabled={isOpeningManage}
           className={`w-full py-3.5 rounded-2xl flex items-center justify-center gap-1.5 text-fluid-sm font-black transition-all cursor-pointer border-2 ${
@@ -138,7 +138,7 @@ export default function PremiumSection({ user, darkMode }: PremiumSectionProps) 
         </button>
       )}
 
-      <button
+      <button data-ui="premium-restore"
         onClick={handleRestore}
         disabled={isRestoring}
         className={`w-full py-2.5 rounded-2xl flex items-center justify-center gap-1.5 text-fluid-xs font-bold transition-colors cursor-pointer ${

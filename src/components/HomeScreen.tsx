@@ -454,7 +454,7 @@ export default function HomeScreen({
           <div className="flex items-center gap-2">
             <h3 className="text-fluid-xl font-black text-slate-800 dark:text-slate-100 tracking-tight-sf">자주 쓰는 기능</h3>
           </div>
-          <button 
+          <button data-ui="home-shortcut-edit-toggle"
             onClick={() => setIsEditingShortcuts(!isEditingShortcuts)}
             className={`w-12 h-12 rounded-xl transition-all flex items-center justify-center cursor-pointer select-none shrink-0 ${
               isEditingShortcuts 
@@ -469,7 +469,7 @@ export default function HomeScreen({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {shortcuts.map((item) => (
-            <div
+            <div data-ui="home-shortcut-item"
               key={item.id}
               onClick={() => {
                 if (isEditingShortcuts) {
@@ -525,7 +525,7 @@ export default function HomeScreen({
                 {TTOK_FEATURES.map((feat) => {
                   const isSelected = editFeatureId === feat.id;
                   return (
-                    <div
+                    <div data-ui="home-shortcut-feature-option"
                       key={feat.id}
                       onClick={() => setEditFeatureId(feat.id)}
                       className={`p-3 rounded-xl border-2 transition-all flex items-center justify-between cursor-pointer ${
@@ -556,13 +556,13 @@ export default function HomeScreen({
               </div>
 
               <div className="flex gap-2.5 mt-6">
-                <button
+                <button data-ui="home-shortcut-cancel"
                   onClick={() => setEditingShortcut(null)}
                   className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm font-bold rounded-xl cursor-pointer"
                 >
                   취소
                 </button>
-                <button
+                <button data-ui="home-shortcut-save"
                   onClick={handleSaveShortcut}
                   className="flex-1 py-2.5 bg-brand text-white text-sm font-bold rounded-xl shadow-md shadow-brand/10 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all"
                 >
@@ -727,7 +727,7 @@ export default function HomeScreen({
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-fluid-xs font-black text-slate-500 uppercase tracking-widest">오늘 스케줄 라인</span>
-                  <button
+                  <button data-ui="home-schedule-add"
                     onClick={() => {
                       setIsAddingSchedule(!isAddingSchedule);
                       setEditingSchedule(null);
@@ -751,7 +751,7 @@ export default function HomeScreen({
                     >
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-black text-brand">일정 등록하기</span>
-                        <button
+                        <button data-ui="home-schedule-add-close"
                           type="button"
                           onClick={() => setIsAddingSchedule(false)}
                           className="text-slate-400 hover:text-slate-600"
@@ -797,7 +797,7 @@ export default function HomeScreen({
                             triggerClassName="w-full flex items-center justify-between gap-2 px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl text-sm text-slate-600 dark:text-slate-300 cursor-pointer"
                           />
                         </div>
-                        <button
+                        <button data-ui="home-schedule-add-submit"
                           type="submit"
                           className="px-4 py-2 bg-brand text-white font-black rounded-xl text-sm cursor-pointer shadow-sm"
                         >
@@ -820,7 +820,7 @@ export default function HomeScreen({
                     >
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-black text-amber-500">일정 수정하기</span>
-                        <button
+                        <button data-ui="home-schedule-edit-close"
                           type="button"
                           onClick={() => setEditingSchedule(null)}
                           className="text-slate-400 hover:text-slate-600"
@@ -866,7 +866,7 @@ export default function HomeScreen({
                             triggerClassName="w-full flex items-center justify-between gap-2 px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl text-sm text-slate-600 dark:text-slate-300 cursor-pointer"
                           />
                         </div>
-                        <button
+                        <button data-ui="home-schedule-edit-save"
                           type="submit"
                           className="px-4 py-2 bg-amber-500 text-white font-black rounded-xl text-sm cursor-pointer shadow-sm"
                         >
@@ -908,7 +908,7 @@ export default function HomeScreen({
                           </div>
 
                           <div className="flex items-center gap-1 shrink-0">
-                            <button
+                            <button data-ui="home-schedule-edit"
                               onClick={() => {
                                 handleStartScheduleEdit(item);
                                 setIsAddingSchedule(false);
@@ -918,7 +918,7 @@ export default function HomeScreen({
                             >
                               <Pencil size={16} />
                             </button>
-                            <button
+                            <button data-ui="home-schedule-delete"
                               onClick={() => {
                                 if (onDeleteSchedule) onDeleteSchedule(item.id);
                               }}

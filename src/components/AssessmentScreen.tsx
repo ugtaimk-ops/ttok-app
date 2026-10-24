@@ -295,13 +295,13 @@ export default function AssessmentScreen({
 
         {mode === "list" && (
           <div className="flex gap-2 w-full sm:w-auto">
-            <button
+            <button data-ui="assessment-add-direct"
               onClick={() => setMode("direct")}
               className="flex-1 sm:flex-initial h-12 px-5 bg-brand-light dark:bg-brand/10 text-brand font-black rounded-2xl text-fluid-sm hover:bg-brand hover:text-white transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-98"
             >
               <Plus size={18} /> 직접 입력
             </button>
-            <button
+            <button data-ui="assessment-add-photo"
               onClick={() => setMode("photo")}
               className="flex-1 sm:flex-initial h-12 px-5 bg-brand-light dark:bg-brand/10 text-brand font-black rounded-2xl text-fluid-sm hover:bg-brand hover:text-white transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-98"
             >
@@ -346,7 +346,7 @@ export default function AssessmentScreen({
                         
                         {/* Always-visible action buttons for mobile UX */}
                         <div className="flex items-center gap-0.5 ml-1 shrink-0">
-                          <button
+                          <button data-ui="assessment-item-edit"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleStartEdit(item);
@@ -356,7 +356,7 @@ export default function AssessmentScreen({
                           >
                             <Edit size={16} />
                           </button>
-                          <button
+                          <button data-ui="assessment-item-delete"
                             onClick={(e) => {
                               e.stopPropagation();
                               setDeletingItem(item);
@@ -411,13 +411,13 @@ export default function AssessmentScreen({
                 <h3 className="text-fluid-lg font-black text-slate-750 dark:text-slate-300 mb-1.5">등록된 수행평가 일정 없음</h3>
                 <p className="text-fluid-sm text-slate-400 mb-6 break-keep max-w-sm mx-auto">수행평가 계획서를 등록하면 AI가 캘린더 자동 등록, 일정 생성 및 알림 예약을 수행합니다.</p>
                 <div className="flex flex-col sm:flex-row justify-center gap-2 max-w-xs mx-auto">
-                  <button
+                  <button data-ui="assessment-empty-add-direct"
                     onClick={() => setMode("direct")}
                     className="h-12 px-5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-fluid-sm font-extrabold rounded-xl cursor-pointer active:scale-98"
                   >
                     직접 입력
                   </button>
-                  <button
+                  <button data-ui="assessment-empty-add-photo"
                     onClick={() => setMode("photo")}
                     className="h-12 px-5 bg-brand text-white font-extrabold rounded-xl text-fluid-sm flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-98"
                   >
@@ -528,14 +528,14 @@ export default function AssessmentScreen({
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button
+                <button data-ui="assessment-direct-cancel"
                   type="button"
                   onClick={() => setMode("list")}
                   className="flex-1 h-12 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-fluid-base font-bold rounded-xl cursor-pointer active:scale-98 transition-all"
                 >
                   취소
                 </button>
-                <button
+                <button data-ui="assessment-direct-save"
                   type="submit"
                   className="flex-1 h-12 bg-brand hover:bg-brand-dark text-white text-fluid-base font-bold rounded-xl cursor-pointer shadow-md shadow-brand/10 active:scale-98 transition-all"
                 >
@@ -610,7 +610,7 @@ export default function AssessmentScreen({
               {/* Cancel button in scanner mode */}
               {!scanResult && (
                 <div className="flex justify-end mt-4">
-                  <button
+                  <button data-ui="assessment-photo-back"
                     type="button"
                     onClick={() => setMode("list")}
                     className="h-12 px-6 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-fluid-base font-bold rounded-xl cursor-pointer active:scale-98 transition-all"
@@ -715,14 +715,14 @@ export default function AssessmentScreen({
                 </div>
 
                 <div className="flex gap-2.5 mt-6">
-                  <button
+                  <button data-ui="assessment-scan-retry"
                     type="button"
                     onClick={() => setScanResult(null)}
                     className="flex-1 h-12 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-fluid-base font-bold rounded-xl cursor-pointer active:scale-98 transition-all"
                   >
                     다시 스캔
                   </button>
-                  <button
+                  <button data-ui="assessment-scan-save"
                     type="button"
                     onClick={handleSaveScannedResult}
                     className="flex-2 h-12 bg-brand hover:bg-brand-dark text-white text-fluid-base font-bold rounded-xl flex items-center justify-center gap-1 cursor-pointer active:scale-98 transition-all shadow-md shadow-brand/15"
@@ -744,14 +744,14 @@ export default function AssessmentScreen({
           className="fixed z-50 min-w-[150px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-1.5 animate-fade-in text-fluid-sm font-bold text-slate-700 dark:text-slate-200"
           onClick={(e) => e.stopPropagation()}
         >
-          <button
+          <button data-ui="assessment-menu-edit"
             onClick={() => handleStartEdit(contextMenu.item)}
             className="w-full px-4 py-3 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer transition-colors"
           >
             <Edit size={16} className="text-slate-400" />
             일정 수정
           </button>
-          <button
+          <button data-ui="assessment-menu-delete"
             onClick={() => {
               setDeletingItem(contextMenu.item);
               setContextMenu(prev => ({ ...prev, visible: false }));
@@ -847,13 +847,13 @@ export default function AssessmentScreen({
             </div>
 
             <div className="flex gap-3 mt-6">
-              <button
+              <button data-ui="assessment-edit-cancel"
                 onClick={() => setEditingItem(null)}
                 className="flex-1 h-12 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-650 dark:text-slate-300 font-bold rounded-xl text-fluid-base cursor-pointer transition-all active:scale-98"
               >
                 취소
               </button>
-              <button
+              <button data-ui="assessment-edit-save"
                 onClick={handleSaveEdit}
                 className="flex-1 h-12 bg-brand hover:bg-brand-dark text-white font-bold rounded-xl text-fluid-base cursor-pointer transition-all active:scale-98 shadow-md shadow-brand/10"
               >
@@ -882,13 +882,13 @@ export default function AssessmentScreen({
             </div>
 
             <div className="flex gap-3 pt-2">
-              <button
+              <button data-ui="assessment-delete-cancel"
                 onClick={() => setDeletingItem(null)}
                 className="flex-1 h-12 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-650 dark:text-slate-300 font-bold rounded-xl text-fluid-base cursor-pointer transition-all active:scale-98"
               >
                 취소
               </button>
-              <button
+              <button data-ui="assessment-delete-confirm"
                 onClick={() => {
                   onDeleteSchedule(deletingItem.id);
                   setDeletingItem(null);

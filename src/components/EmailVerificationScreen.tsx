@@ -89,7 +89,7 @@ export default function EmailVerificationScreen({ email, darkMode, onVerified, o
         )}
 
         <div className="w-full space-y-3 mt-6">
-          <button
+          <button data-ui="email-verify-check"
             onClick={handleCheck}
             disabled={isChecking}
             className={`w-full py-4 rounded-2xl font-black text-fluid-base flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
@@ -100,7 +100,7 @@ export default function EmailVerificationScreen({ email, darkMode, onVerified, o
             <span>인증 확인하고 계속하기</span>
           </button>
 
-          <button
+          <button data-ui="email-verify-resend"
             onClick={handleResend}
             disabled={isResending}
             className={`w-full py-3.5 rounded-2xl font-bold text-fluid-sm transition-colors cursor-pointer ${
@@ -110,7 +110,7 @@ export default function EmailVerificationScreen({ email, darkMode, onVerified, o
             {isResending ? "전송 중..." : "인증 메일 다시 보내기"}
           </button>
 
-          <button
+          <button data-ui="email-verify-logout"
             onClick={onLogout}
             className={`w-full py-2 flex items-center justify-center gap-1.5 text-fluid-xs font-bold ${
               darkMode ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600"

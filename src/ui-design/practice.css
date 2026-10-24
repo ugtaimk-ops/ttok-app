@@ -1,0 +1,362 @@
+/*
+  [발표연습] 화면 요소 스타일
+
+  쓰는 법
+    1. 바꾸고 싶은 요소의 블록을 찾습니다. (UI 선택 도구로 클릭하면 이름이 복사됩니다)
+    2. 그 블록을 감싼 주석 표시(슬래시-별, 별-슬래시)를 지우고 값을 고칩니다.
+    3. 저장하면 개발 화면에 바로 반영됩니다.
+
+  참고
+    - 여기에 쓴 스타일은 기존 스타일보다 우선합니다.
+    - 마우스를 올렸을 때 모양은 [data-ui="이름"]:hover { ... } 로 따로 씁니다.
+    - 다크 모드에서만 다르게: .dark [data-ui="이름"] { ... }
+    - 글자 내용(문구)은 여기서 못 바꿉니다. UI_MAP.md 의 코드 위치에서 고칩니다.
+*/
+
+/* 위쪽 탭: 발표 대본 작성  —  src/components/PracticeScreen.tsx:781 */
+/*
+[data-ui="practice-tab-script"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 위쪽 탭: 발표 연습 도와주기  —  src/components/PracticeScreen.tsx:791 */
+/*
+[data-ui="practice-tab-practice"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* AI 발표 대본 만들기 버튼  —  src/components/PracticeScreen.tsx:920 */
+/*
+[data-ui="practice-script-generate"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 저장된 대본 카드(눌러서 열기)  —  src/components/PracticeScreen.tsx:1017 */
+/*
+[data-ui="practice-saved-open"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 저장된 대본: 불러오기  —  src/components/PracticeScreen.tsx:1036 */
+/*
+[data-ui="practice-saved-load"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 저장된 대본: 삭제  —  src/components/PracticeScreen.tsx:1044 */
+/*
+[data-ui="practice-saved-delete"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 대본 보기 팝업: 복사  —  src/components/PracticeScreen.tsx:654 */
+/*
+[data-ui="practice-script-copy"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 대본 보기 팝업: 편집/저장  —  src/components/PracticeScreen.tsx:662 */
+/*
+[data-ui="practice-script-edit-toggle"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 대본 보기 팝업: PDF 저장  —  src/components/PracticeScreen.tsx:687 */
+/*
+[data-ui="practice-script-pdf"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 대본 보기 팝업: 공유  —  src/components/PracticeScreen.tsx:695 */
+/*
+[data-ui="practice-script-share"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 대본 보기 팝업: 글자 크기 선택  —  src/components/PracticeScreen.tsx:726 */
+/*
+[data-ui="practice-script-textsize"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 대본 보기 팝업: 닫기  —  src/components/PracticeScreen.tsx:1793 */
+/*
+[data-ui="practice-script-close"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 프롬프터 글자 크기 선택  —  src/components/PracticeScreen.tsx:1130 */
+/*
+[data-ui="practice-prompter-textsize"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 프롬프터 숨기기  —  src/components/PracticeScreen.tsx:1141 */
+/*
+[data-ui="practice-prompter-hide"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 대본 프롬프터 켜기  —  src/components/PracticeScreen.tsx:1155 */
+/*
+[data-ui="practice-prompter-show"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 연습 종료 및 AI 종합 분석  —  src/components/PracticeScreen.tsx:1187 */
+/*
+[data-ui="practice-stop-analyze"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 분석 다시 시도  —  src/components/PracticeScreen.tsx:1206 */
+/*
+[data-ui="practice-analysis-retry"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 분석 오류 지우기  —  src/components/PracticeScreen.tsx:1208 */
+/*
+[data-ui="practice-analysis-clear"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 카메라 권한 직접 허용하기  —  src/components/PracticeScreen.tsx:1248 */
+/*
+[data-ui="practice-permission-allow"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 기기 다시 연결 및 권한 요청  —  src/components/PracticeScreen.tsx:1306 */
+/*
+[data-ui="practice-permission-reconnect"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 발표 연습 시작하기  —  src/components/PracticeScreen.tsx:1321 */
+/*
+[data-ui="practice-start"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 연습용 대본: 저장된 대본 목록  —  src/components/PracticeScreen.tsx:1356 */
+/*
+[data-ui="practice-source-saved"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 연습용 대본: 텍스트 직접 입력  —  src/components/PracticeScreen.tsx:1367 */
+/*
+[data-ui="practice-source-direct"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 저장된 대본 하나 선택  —  src/components/PracticeScreen.tsx:1384 */
+/*
+[data-ui="practice-source-pick-script"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 직접 입력한 대본 확정  —  src/components/PracticeScreen.tsx:1429 */
+/*
+[data-ui="practice-source-direct-confirm"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 분석 결과: 다시 연습하기  —  src/components/PracticeScreen.tsx:1522 */
+/*
+[data-ui="practice-retry"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 권한 팝업: 다시 연결 및 권한 허용  —  src/components/PracticeScreen.tsx:1738 */
+/*
+[data-ui="practice-modal-permission-allow"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 권한 팝업: 앱 설정 열기  —  src/components/PracticeScreen.tsx:1748 */
+/*
+[data-ui="practice-modal-open-settings"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 권한 팝업: 취소 및 닫기  —  src/components/PracticeScreen.tsx:1758 */
+/*
+[data-ui="practice-modal-cancel"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/

@@ -1,0 +1,182 @@
+/*
+  [홈] 화면 요소 스타일
+
+  쓰는 법
+    1. 바꾸고 싶은 요소의 블록을 찾습니다. (UI 선택 도구로 클릭하면 이름이 복사됩니다)
+    2. 그 블록을 감싼 주석 표시(슬래시-별, 별-슬래시)를 지우고 값을 고칩니다.
+    3. 저장하면 개발 화면에 바로 반영됩니다.
+
+  참고
+    - 여기에 쓴 스타일은 기존 스타일보다 우선합니다.
+    - 마우스를 올렸을 때 모양은 [data-ui="이름"]:hover { ... } 로 따로 씁니다.
+    - 다크 모드에서만 다르게: .dark [data-ui="이름"] { ... }
+    - 글자 내용(문구)은 여기서 못 바꿉니다. UI_MAP.md 의 코드 위치에서 고칩니다.
+*/
+
+/* 자주 쓰는 기능: 단축키 수정/편집 완료  —  src/components/HomeScreen.tsx:457 */
+/*
+[data-ui="home-shortcut-edit-toggle"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 자주 쓰는 기능 카드 하나하나  —  src/components/HomeScreen.tsx:472 */
+/*
+[data-ui="home-shortcut-item"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 단축키 변경 팝업: 연결할 기능 선택 항목  —  src/components/HomeScreen.tsx:528 */
+/*
+[data-ui="home-shortcut-feature-option"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 단축키 변경 팝업: 취소  —  src/components/HomeScreen.tsx:559 */
+/*
+[data-ui="home-shortcut-cancel"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 단축키 변경 팝업: 변경하기  —  src/components/HomeScreen.tsx:565 */
+/*
+[data-ui="home-shortcut-save"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 스케줄 추가(열기/닫기) 버튼  —  src/components/HomeScreen.tsx:730 */
+/*
+[data-ui="home-schedule-add"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 스케줄 추가 폼: 닫기(X)  —  src/components/HomeScreen.tsx:754 */
+/*
+[data-ui="home-schedule-add-close"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 스케줄 추가 폼: 등록  —  src/components/HomeScreen.tsx:800 */
+/*
+[data-ui="home-schedule-add-submit"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 스케줄 수정 폼: 닫기(X)  —  src/components/HomeScreen.tsx:823 */
+/*
+[data-ui="home-schedule-edit-close"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 스케줄 수정 폼: 저장  —  src/components/HomeScreen.tsx:869 */
+/*
+[data-ui="home-schedule-edit-save"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 스케줄 카드의 수정 아이콘  —  src/components/HomeScreen.tsx:911 */
+/*
+[data-ui="home-schedule-edit"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 스케줄 카드의 삭제 아이콘  —  src/components/HomeScreen.tsx:921 */
+/*
+[data-ui="home-schedule-delete"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* AI 리포트 새로고침 아이콘  —  src/components/AiReportCard.tsx:76 */
+/*
+[data-ui="ai-report-refresh"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* AI 리포트: 지금 뭘 하면 좋을지 물어보기  —  src/components/AiReportCard.tsx:96 */
+/*
+[data-ui="ai-report-generate"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/

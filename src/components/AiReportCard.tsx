@@ -73,7 +73,7 @@ export default function AiReportCard({ uid, todos, schedules, darkMode }: AiRepo
           AI 리포트
           <span className="text-fluid-xs font-black text-white bg-amber-500 px-2 py-0.5 rounded-full">PRO</span>
         </h3>
-        <button
+        <button data-ui="ai-report-refresh"
           onClick={handleGenerate}
           disabled={isLoading}
           className={`p-2 rounded-full transition-colors cursor-pointer ${
@@ -93,7 +93,7 @@ export default function AiReportCard({ uid, todos, schedules, darkMode }: AiRepo
       )}
 
       {!error && !report && !isLoading && (
-        <button
+        <button data-ui="ai-report-generate"
           onClick={handleGenerate}
           className="w-full py-3 rounded-2xl flex items-center justify-center gap-1.5 text-fluid-sm font-black text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-amber-500/25 cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all"
         >

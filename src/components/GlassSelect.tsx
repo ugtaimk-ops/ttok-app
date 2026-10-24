@@ -83,7 +83,7 @@ export default function GlassSelect({
 
   return (
     <div ref={containerRef} className="relative">
-      <button
+      <button data-ui="select-trigger"
         type="button"
         onClick={() => setIsOpen((v) => !v)}
         className={
@@ -120,7 +120,7 @@ export default function GlassSelect({
             }`}
           >
             {options.map((opt) => (
-              <button
+              <button data-ui="select-option"
                 key={opt.value}
                 type="button"
                 onClick={() => {

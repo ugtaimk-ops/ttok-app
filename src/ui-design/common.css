@@ -1,0 +1,230 @@
+/*
+  [공통] 화면 요소 스타일
+
+  쓰는 법
+    1. 바꾸고 싶은 요소의 블록을 찾습니다. (UI 선택 도구로 클릭하면 이름이 복사됩니다)
+    2. 그 블록을 감싼 주석 표시(슬래시-별, 별-슬래시)를 지우고 값을 고칩니다.
+    3. 저장하면 개발 화면에 바로 반영됩니다.
+
+  참고
+    - 여기에 쓴 스타일은 기존 스타일보다 우선합니다.
+    - 마우스를 올렸을 때 모양은 [data-ui="이름"]:hover { ... } 로 따로 씁니다.
+    - 다크 모드에서만 다르게: .dark [data-ui="이름"] { ... }
+    - 글자 내용(문구)은 여기서 못 바꿉니다. UI_MAP.md 의 코드 위치에서 고칩니다.
+*/
+
+/* 상단 서비스 전환: 똑  —  src/App.tsx:678 */
+/*
+[data-ui="header-mode-tok"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 상단 서비스 전환: 꼬르륵  —  src/App.tsx:688 */
+/*
+[data-ui="header-mode-kkorureuk"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 하단 탭 바 전체(떠 있는 유리 막대)  —  src/components/BottomNavigationBar.tsx:59 */
+/*
+[data-ui="nav-bar"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 하단 탭: 홈  —  src/components/BottomNavigationBar.tsx:108 */
+/*
+[data-ui="nav-home"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 하단 탭: 수행평가  —  src/components/BottomNavigationBar.tsx:108 */
+/*
+[data-ui="nav-assessment"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 하단 탭: 발표연습  —  src/components/BottomNavigationBar.tsx:108 */
+/*
+[data-ui="nav-practice"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 하단 탭: 공부  —  src/components/BottomNavigationBar.tsx:108 */
+/*
+[data-ui="nav-study"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 하단 탭: 프로필  —  src/components/BottomNavigationBar.tsx:108 */
+/*
+[data-ui="nav-profile"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 하단 탭: 설정  —  src/components/BottomNavigationBar.tsx:108 */
+/*
+[data-ui="nav-settings"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 하단 탭(꼬르륵): 오늘 급식  —  src/components/BottomNavigationBar.tsx:108 */
+/*
+[data-ui="nav-meal-today"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 하단 탭(꼬르륵): 이번 주 급식  —  src/components/BottomNavigationBar.tsx:108 */
+/*
+[data-ui="nav-meal-weekly"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 하단 탭(꼬르륵): 학교 설정  —  src/components/BottomNavigationBar.tsx:108 */
+/*
+[data-ui="nav-meal-school"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 뒤로가기/취소 버튼(여러 화면 공통)  —  src/components/BackButton.tsx:9 */
+/*
+[data-ui="back-button"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 드롭다운 선택 상자(열기 버튼)  —  src/components/GlassSelect.tsx:86 */
+/*
+[data-ui="select-trigger"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 드롭다운 선택 항목 하나하나  —  src/components/GlassSelect.tsx:123 */
+/*
+[data-ui="select-option"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 오류 화면의 다시 시작하기  —  src/components/ErrorBoundary.tsx:37 */
+/*
+[data-ui="error-reload"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 약관 확인 실패 화면: 다시 시도  —  src/App.tsx:653 */
+/*
+[data-ui="gate-terms-retry"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 약관 확인 실패 화면: 로그아웃  —  src/App.tsx:654 */
+/*
+[data-ui="gate-logout"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/

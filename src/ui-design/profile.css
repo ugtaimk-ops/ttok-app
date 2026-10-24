@@ -1,0 +1,206 @@
+/*
+  [프로필] 화면 요소 스타일
+
+  쓰는 법
+    1. 바꾸고 싶은 요소의 블록을 찾습니다. (UI 선택 도구로 클릭하면 이름이 복사됩니다)
+    2. 그 블록을 감싼 주석 표시(슬래시-별, 별-슬래시)를 지우고 값을 고칩니다.
+    3. 저장하면 개발 화면에 바로 반영됩니다.
+
+  참고
+    - 여기에 쓴 스타일은 기존 스타일보다 우선합니다.
+    - 마우스를 올렸을 때 모양은 [data-ui="이름"]:hover { ... } 로 따로 씁니다.
+    - 다크 모드에서만 다르게: .dark [data-ui="이름"] { ... }
+    - 글자 내용(문구)은 여기서 못 바꿉니다. UI_MAP.md 의 코드 위치에서 고칩니다.
+*/
+
+/* 프로필 사진: 사진 촬영 탭  —  src/components/ProfileScreen.tsx:374 */
+/*
+[data-ui="profile-avatar-camera-tab"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 프로필 사진: 이모티콘 입력 탭  —  src/components/ProfileScreen.tsx:388 */
+/*
+[data-ui="profile-avatar-emoji-tab"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 카메라 켜기  —  src/components/ProfileScreen.tsx:451 */
+/*
+[data-ui="profile-camera-start"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 촬영 버튼  —  src/components/ProfileScreen.tsx:442 */
+/*
+[data-ui="profile-camera-capture"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 카메라 다시 시도  —  src/components/ProfileScreen.tsx:415 */
+/*
+[data-ui="profile-camera-retry"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 카메라 권한: 앱 설정 열기  —  src/components/ProfileScreen.tsx:424 */
+/*
+[data-ui="profile-camera-open-settings"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 학교 검색 열기  —  src/components/ProfileScreen.tsx:554 */
+/*
+[data-ui="profile-school-search-open"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 학교 검색 닫기  —  src/components/ProfileScreen.tsx:514 */
+/*
+[data-ui="profile-school-search-close"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 검색된 학교 한 줄(선택)  —  src/components/ProfileScreen.tsx:539 */
+/*
+[data-ui="profile-school-pick"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 학기 목표 입력 지우기(X)  —  src/components/ProfileScreen.tsx:613 */
+/*
+[data-ui="profile-goal-clear-input"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 학기 목표 편집: 취소  —  src/components/ProfileScreen.tsx:624 */
+/*
+[data-ui="profile-goal-cancel"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 학기 목표 저장  —  src/components/ProfileScreen.tsx:634 */
+/*
+[data-ui="profile-goal-save"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 학기 목표 랜덤 선택(주사위)  —  src/components/ProfileScreen.tsx:664 */
+/*
+[data-ui="profile-goal-random"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 학기 목표 수정(연필)  —  src/components/ProfileScreen.tsx:673 */
+/*
+[data-ui="profile-goal-edit"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 학기 목표 삭제  —  src/components/ProfileScreen.tsx:686 */
+/*
+[data-ui="profile-goal-delete"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 똑 부러지게 프로필 수정 완료(저장)  —  src/components/ProfileScreen.tsx:704 */
+/*
+[data-ui="profile-save"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/

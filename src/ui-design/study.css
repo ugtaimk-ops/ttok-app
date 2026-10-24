@@ -1,0 +1,290 @@
+/*
+  [공부] 화면 요소 스타일
+
+  쓰는 법
+    1. 바꾸고 싶은 요소의 블록을 찾습니다. (UI 선택 도구로 클릭하면 이름이 복사됩니다)
+    2. 그 블록을 감싼 주석 표시(슬래시-별, 별-슬래시)를 지우고 값을 고칩니다.
+    3. 저장하면 개발 화면에 바로 반영됩니다.
+
+  참고
+    - 여기에 쓴 스타일은 기존 스타일보다 우선합니다.
+    - 마우스를 올렸을 때 모양은 [data-ui="이름"]:hover { ... } 로 따로 씁니다.
+    - 다크 모드에서만 다르게: .dark [data-ui="이름"] { ... }
+    - 글자 내용(문구)은 여기서 못 바꿉니다. UI_MAP.md 의 코드 위치에서 고칩니다.
+*/
+
+/* 위쪽 탭: AI 공부 도우미  —  src/components/StudyScreen.tsx:554 */
+/*
+[data-ui="study-tab-helper"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 위쪽 탭: 지필 수행 계획  —  src/components/StudyScreen.tsx:564 */
+/*
+[data-ui="study-tab-planner"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 사진 문제 풀이: 촬영  —  src/components/StudyScreen.tsx:595 */
+/*
+[data-ui="study-photo-camera"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 사진 문제 풀이: 갤러리  —  src/components/StudyScreen.tsx:596 */
+/*
+[data-ui="study-photo-gallery"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 사진 문제 풀이 실행  —  src/components/StudyScreen.tsx:600 */
+/*
+[data-ui="study-photo-solve"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* AI 요약 카드  —  src/components/StudyScreen.tsx:628 */
+/*
+[data-ui="study-mode-summary"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* AI 문제생성 카드  —  src/components/StudyScreen.tsx:641 */
+/*
+[data-ui="study-mode-quiz"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* AI 오답노트 카드  —  src/components/StudyScreen.tsx:654 */
+/*
+[data-ui="study-mode-note"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* AI 질문하기 카드  —  src/components/StudyScreen.tsx:667 */
+/*
+[data-ui="study-mode-question"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 공부 자료: 사진/파일 선택 박스  —  src/components/StudyScreen.tsx:695 */
+/*
+[data-ui="study-material-pick"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 공부 자료: 촬영 박스  —  src/components/StudyScreen.tsx:711 */
+/*
+[data-ui="study-material-camera"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 선택한 공부 기능 실행(AI 분석) 버튼  —  src/components/StudyScreen.tsx:748 */
+/*
+[data-ui="study-run"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 퀴즈: 정답 채점 및 해설 보기  —  src/components/StudyScreen.tsx:860 */
+/*
+[data-ui="study-quiz-check"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 시험 일정으로 캘린더 등록  —  src/components/StudyScreen.tsx:960 */
+/*
+[data-ui="study-exam-add"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 시험 일정 카드: 수정  —  src/components/StudyScreen.tsx:1032 */
+/*
+[data-ui="study-exam-edit"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 시험 일정 카드: 삭제  —  src/components/StudyScreen.tsx:1039 */
+/*
+[data-ui="study-exam-delete"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* AI 공부 계획 생성  —  src/components/StudyScreen.tsx:1053 */
+/*
+[data-ui="study-plan-generate"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 길게 누름 메뉴: 일정 수정  —  src/components/StudyScreen.tsx:1140 */
+/*
+[data-ui="study-menu-edit"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 길게 누름 메뉴: 일정 삭제  —  src/components/StudyScreen.tsx:1147 */
+/*
+[data-ui="study-menu-delete"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 수정 팝업: 취소  —  src/components/StudyScreen.tsx:1202 */
+/*
+[data-ui="study-edit-cancel"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 수정 팝업: 저장하기  —  src/components/StudyScreen.tsx:1208 */
+/*
+[data-ui="study-edit-save"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 삭제 확인: 취소  —  src/components/StudyScreen.tsx:1237 */
+/*
+[data-ui="study-delete-cancel"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 삭제 확인: 삭제하기  —  src/components/StudyScreen.tsx:1243 */
+/*
+[data-ui="study-delete-confirm"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/

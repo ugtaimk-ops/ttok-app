@@ -1,0 +1,122 @@
+/*
+  [로그인] 화면 요소 스타일
+
+  쓰는 법
+    1. 바꾸고 싶은 요소의 블록을 찾습니다. (UI 선택 도구로 클릭하면 이름이 복사됩니다)
+    2. 그 블록을 감싼 주석 표시(슬래시-별, 별-슬래시)를 지우고 값을 고칩니다.
+    3. 저장하면 개발 화면에 바로 반영됩니다.
+
+  참고
+    - 여기에 쓴 스타일은 기존 스타일보다 우선합니다.
+    - 마우스를 올렸을 때 모양은 [data-ui="이름"]:hover { ... } 로 따로 씁니다.
+    - 다크 모드에서만 다르게: .dark [data-ui="이름"] { ... }
+    - 글자 내용(문구)은 여기서 못 바꿉니다. UI_MAP.md 의 코드 위치에서 고칩니다.
+*/
+
+/* Google 로그인 버튼  —  src/components/LoginScreen.tsx:224 */
+/*
+[data-ui="login-google"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 비밀번호 보이기/숨기기 눈 아이콘  —  src/components/LoginScreen.tsx:297 */
+/*
+[data-ui="login-password-toggle"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 비밀번호를 잊으셨나요?  —  src/components/LoginScreen.tsx:308 */
+/*
+[data-ui="login-password-reset"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 이메일로 계속하기  —  src/components/LoginScreen.tsx:318 */
+/*
+[data-ui="login-email-submit"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 이메일 인증 확인하고 계속하기  —  src/components/EmailVerificationScreen.tsx:92 */
+/*
+[data-ui="email-verify-check"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 인증 메일 다시 보내기  —  src/components/EmailVerificationScreen.tsx:103 */
+/*
+[data-ui="email-verify-resend"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 다른 계정으로 로그인  —  src/components/EmailVerificationScreen.tsx:113 */
+/*
+[data-ui="email-verify-logout"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 이용약관 동의하고 시작  —  src/components/TermsConsentScreen.tsx:46 */
+/*
+[data-ui="terms-agree"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 동의하지 않고 로그아웃  —  src/components/TermsConsentScreen.tsx:50 */
+/*
+[data-ui="terms-decline-logout"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/

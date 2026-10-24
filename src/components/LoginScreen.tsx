@@ -1,4 +1,3 @@
-import BackButton from "./BackButton";
 import { useScreenBack } from "../lib/screenBack";
 import React, { useState } from "react";
 import { Sparkles, Loader2, AlertCircle, Mail, Lock, Eye, EyeOff } from "lucide-react";
@@ -157,7 +156,6 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
             : "bg-white border-slate-200/60 shadow-xl shadow-slate-100/70"
         } relative overflow-hidden`}
       >
-        <BackButton label="취소" disabled={isLoading || (!selectedProvider && !error)} onClick={() => { setSelectedProvider(null); setError(null); setInfoMessage(null); setPassword(""); }} className="mb-4" />
         {/* Glow effect on hover/focus */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-1 bg-gradient-to-r from-transparent via-brand to-transparent opacity-80" />
 
@@ -221,7 +219,7 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
           {/* Federated Sign In Buttons */}
           <div className="w-full space-y-3.5 pt-2">
             {/* Google Login Button */}
-            <button
+            <button data-ui="login-google"
               onClick={() => handleSignIn("google")}
               disabled={isLoading}
               className={`w-full py-4.5 px-6 rounded-2xl font-black text-fluid-base flex items-center justify-between transition-all duration-200 cursor-pointer ${
@@ -294,7 +292,7 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
                     : "bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-brand/50"
                 }`}
               />
-              <button
+              <button data-ui="login-password-toggle"
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 className={`absolute right-4 top-1/2 -translate-y-1/2 ${darkMode ? "text-slate-500" : "text-slate-400"}`}
@@ -305,7 +303,7 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
             </div>
 
             <div className="flex justify-end">
-              <button
+              <button data-ui="login-password-reset"
                 type="button"
                 onClick={handlePasswordReset}
                 disabled={isLoading}
@@ -315,7 +313,7 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
               </button>
             </div>
 
-            <button
+            <button data-ui="login-email-submit"
               type="submit"
               disabled={isLoading}
               className={`w-full py-4 rounded-2xl font-black text-fluid-base flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
@@ -328,9 +326,6 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
                 <span>이메일로 계속하기</span>
               )}
             </button>
-            <p className={`text-fluid-xs text-center ${darkMode ? "text-slate-500" : "text-slate-400"}`}>
-              처음이면 자동으로 회원가입, 이미 계정이 있으면 로그인됩니다
-            </p>
           </form>
         </div>
       </motion.div>

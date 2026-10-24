@@ -1,0 +1,218 @@
+/*
+  [수행평가] 화면 요소 스타일
+
+  쓰는 법
+    1. 바꾸고 싶은 요소의 블록을 찾습니다. (UI 선택 도구로 클릭하면 이름이 복사됩니다)
+    2. 그 블록을 감싼 주석 표시(슬래시-별, 별-슬래시)를 지우고 값을 고칩니다.
+    3. 저장하면 개발 화면에 바로 반영됩니다.
+
+  참고
+    - 여기에 쓴 스타일은 기존 스타일보다 우선합니다.
+    - 마우스를 올렸을 때 모양은 [data-ui="이름"]:hover { ... } 로 따로 씁니다.
+    - 다크 모드에서만 다르게: .dark [data-ui="이름"] { ... }
+    - 글자 내용(문구)은 여기서 못 바꿉니다. UI_MAP.md 의 코드 위치에서 고칩니다.
+*/
+
+/* 목록 상단: 직접 입력  —  src/components/AssessmentScreen.tsx:298 */
+/*
+[data-ui="assessment-add-direct"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 목록 상단: 사진 등록  —  src/components/AssessmentScreen.tsx:304 */
+/*
+[data-ui="assessment-add-photo"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 일정이 없을 때: 직접 입력  —  src/components/AssessmentScreen.tsx:414 */
+/*
+[data-ui="assessment-empty-add-direct"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 일정이 없을 때: 이미지/계획서 등록  —  src/components/AssessmentScreen.tsx:420 */
+/*
+[data-ui="assessment-empty-add-photo"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 일정 카드의 수정  —  src/components/AssessmentScreen.tsx:349 */
+/*
+[data-ui="assessment-item-edit"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 일정 카드의 삭제  —  src/components/AssessmentScreen.tsx:359 */
+/*
+[data-ui="assessment-item-delete"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 직접 입력 화면: 취소  —  src/components/AssessmentScreen.tsx:531 */
+/*
+[data-ui="assessment-direct-cancel"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 직접 입력 화면: 완료 및 저장  —  src/components/AssessmentScreen.tsx:538 */
+/*
+[data-ui="assessment-direct-save"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 사진 등록 화면: 돌아가기  —  src/components/AssessmentScreen.tsx:613 */
+/*
+[data-ui="assessment-photo-back"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 사진 스캔 결과: 다시 스캔  —  src/components/AssessmentScreen.tsx:718 */
+/*
+[data-ui="assessment-scan-retry"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 사진 스캔 결과: 캘린더 및 알림 자동 등록  —  src/components/AssessmentScreen.tsx:725 */
+/*
+[data-ui="assessment-scan-save"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 길게 누름 메뉴: 일정 수정  —  src/components/AssessmentScreen.tsx:747 */
+/*
+[data-ui="assessment-menu-edit"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 길게 누름 메뉴: 일정 삭제  —  src/components/AssessmentScreen.tsx:754 */
+/*
+[data-ui="assessment-menu-delete"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 수정 팝업: 취소  —  src/components/AssessmentScreen.tsx:850 */
+/*
+[data-ui="assessment-edit-cancel"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 수정 팝업: 저장하기  —  src/components/AssessmentScreen.tsx:856 */
+/*
+[data-ui="assessment-edit-save"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 삭제 확인 팝업: 취소  —  src/components/AssessmentScreen.tsx:885 */
+/*
+[data-ui="assessment-delete-cancel"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/
+
+/* 삭제 확인 팝업: 삭제하기  —  src/components/AssessmentScreen.tsx:891 */
+/*
+[data-ui="assessment-delete-confirm"] {
+  background: #0066ff;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 20px;
+}
+*/

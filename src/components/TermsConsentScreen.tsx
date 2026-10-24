@@ -43,11 +43,11 @@ export default function TermsConsentScreen({ darkMode, onAgree, onLogout }: Term
             <span>이용약관을 읽었으며, 발표 연습 영상·음성의 AI 분석 처리를 포함한 내용에 동의합니다.</span>
           </label>
           {error && <p role="alert" className="text-xs text-rose-500 font-semibold">{error}</p>}
-          <button type="button" onClick={handleAgree} disabled={!agreed || saving} className="w-full h-11 bg-brand text-white font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
+          <button data-ui="terms-agree" type="button" onClick={handleAgree} disabled={!agreed || saving} className="w-full h-11 bg-brand text-white font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
             {saving && <Loader2 size={16} className="animate-spin" />}
             동의하고 시작하기
           </button>
-          <button type="button" onClick={onLogout} disabled={saving} className="w-full py-1 text-xs text-slate-500 underline disabled:opacity-50">동의하지 않고 로그아웃</button>
+          <button data-ui="terms-decline-logout" type="button" onClick={onLogout} disabled={saving} className="w-full py-1 text-xs text-slate-500 underline disabled:opacity-50">동의하지 않고 로그아웃</button>
         </div>
       </section>
     </div>

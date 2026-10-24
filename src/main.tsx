@@ -3,6 +3,9 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 import './index.css';
+// 화면별 디자인 덮어쓰기 파일(src/ui-design). 기본 스타일보다 나중에 불러와야 우선 적용됩니다.
+import './ui-design/index.css';
+import { startUiInspector } from './ui-design/inspector';
 import { startLocalization } from './lib/localization';
 
 // Global error and unhandled Promise rejection listeners to prevent app crashes
@@ -46,3 +49,4 @@ createRoot(document.getElementById('root')!).render(
 );
 
 startLocalization();
+startUiInspector();

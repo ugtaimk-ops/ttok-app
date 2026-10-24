@@ -650,8 +650,8 @@ export default function App() {
     if (termsGate?.uid === authUser.uid && termsGate.status === "error") {
       return <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">
         <p>이용약관을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.</p>
-        <button type="button" onClick={() => setTermsRetry(value => value + 1)} className="px-5 py-2 rounded-xl bg-brand text-white">다시 시도</button>
-        <button type="button" onClick={handleLogout} className="text-sm text-slate-500 underline">로그아웃</button>
+        <button data-ui="gate-terms-retry" type="button" onClick={() => setTermsRetry(value => value + 1)} className="px-5 py-2 rounded-xl bg-brand text-white">다시 시도</button>
+        <button data-ui="gate-logout" type="button" onClick={handleLogout} className="text-sm text-slate-500 underline">로그아웃</button>
       </div>;
     }
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand" /></div>;
@@ -675,7 +675,7 @@ export default function App() {
             <BackButton onClick={handleBack} />
             {/* 파란색 네모로 둘러싸인 '똑 | 꼬르륵' 큰 글씨 서비스 전환 메뉴 */}
             <div className="border-2 border-brand/80 dark:border-blue-500/80 rounded-2xl p-0.5 bg-brand/5 dark:bg-blue-500/5 flex items-center gap-0.5 select-none shadow-sm">
-              <button
+              <button data-ui="header-mode-tok"
                 onClick={() => setServiceMode("tok")}
                 className={`px-2 sm:px-5 py-1 sm:py-1.5 text-base sm:text-lg md:text-xl font-black rounded-xl transition-all duration-150 cursor-pointer ${
                   serviceMode === "tok"
@@ -685,7 +685,7 @@ export default function App() {
               >
                 똑
               </button>
-              <button
+              <button data-ui="header-mode-kkorureuk"
                 onClick={() => setServiceMode("kkorureuk")}
                 className={`px-2 sm:px-5 py-1 sm:py-1.5 text-base sm:text-lg md:text-xl font-black rounded-xl transition-all duration-150 cursor-pointer ${
                   serviceMode === "kkorureuk"

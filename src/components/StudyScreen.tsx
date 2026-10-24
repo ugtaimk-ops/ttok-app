@@ -551,7 +551,7 @@ export default function StudyScreen({
         </div>
 
         <div className="flex w-full sm:w-auto bg-slate-100 dark:bg-slate-850 p-1.5 rounded-2xl">
-          <button
+          <button data-ui="study-tab-helper"
             onClick={() => setActiveSubTab("helper")}
             className={`flex-1 sm:flex-initial px-4 h-11 text-fluid-sm font-black rounded-xl transition-all cursor-pointer ${
               activeSubTab === "helper" 
@@ -561,7 +561,7 @@ export default function StudyScreen({
           >
             <span className="flex items-center justify-center gap-1.5"><BookOpen size={15} /> AI 공부 도우미</span>
           </button>
-          <button
+          <button data-ui="study-tab-planner"
             onClick={() => setActiveSubTab("planner")}
             className={`flex-1 sm:flex-initial px-4 h-11 text-fluid-sm font-black rounded-xl transition-all cursor-pointer ${
               activeSubTab === "planner" 
@@ -592,12 +592,12 @@ export default function StudyScreen({
               <p className="text-sm text-slate-500 mt-1">간단한 수학은 기기에서 풀고, 복잡하거나 읽기 어려운 문제는 AI가 사진을 확인해 풀이해요.</p>
               <input ref={problemFileRef} type="file" accept="image/*" className="hidden" onChange={onProblemFile} />
               <div className="flex gap-2 mt-4">
-                <button type="button" onClick={() => void chooseProblemPhoto(CameraSource.Camera)} className="flex-1 min-h-12 rounded-xl border border-brand text-brand font-bold flex items-center justify-center gap-2"><CameraIcon size={17} /> 촬영</button>
-                <button type="button" onClick={() => void chooseProblemPhoto(CameraSource.Photos)} className="flex-1 min-h-12 rounded-xl border border-brand text-brand font-bold flex items-center justify-center gap-2"><ImageIcon size={17} /> 갤러리</button>
+                <button data-ui="study-photo-camera" type="button" onClick={() => void chooseProblemPhoto(CameraSource.Camera)} className="flex-1 min-h-12 rounded-xl border border-brand text-brand font-bold flex items-center justify-center gap-2"><CameraIcon size={17} /> 촬영</button>
+                <button data-ui="study-photo-gallery" type="button" onClick={() => void chooseProblemPhoto(CameraSource.Photos)} className="flex-1 min-h-12 rounded-xl border border-brand text-brand font-bold flex items-center justify-center gap-2"><ImageIcon size={17} /> 갤러리</button>
               </div>
               {problemImage && <div className="mt-4 space-y-3">
                 <img src={`data:${problemMime};base64,${problemImage}`} alt="풀이할 문제 사진" className="max-h-72 w-full object-contain rounded-xl bg-slate-50 dark:bg-slate-800" />
-                <button type="button" disabled={problemBusy} onClick={() => void solvePhotoProblem()} className="w-full min-h-12 bg-brand text-white rounded-xl font-extrabold disabled:opacity-50">
+                <button data-ui="study-photo-solve" type="button" disabled={problemBusy} onClick={() => void solvePhotoProblem()} className="w-full min-h-12 bg-brand text-white rounded-xl font-extrabold disabled:opacity-50">
                   {problemBusy ? "문제를 읽고 있어요..." : "이 문제 풀기"}
                 </button>
               </div>}
@@ -625,7 +625,7 @@ export default function StudyScreen({
                 <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 text-left">공부 기능 선택</h3>
                 
                 <div className="grid grid-cols-2 gap-3">
-                  <button
+                  <button data-ui="study-mode-summary"
                     onClick={() => { setHelperMode("summary"); setStudyResult(null); }}
                     className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                       helperMode === "summary" 
@@ -638,7 +638,7 @@ export default function StudyScreen({
                     <p className="text-xs text-slate-450 dark:text-slate-400 mt-0.5">교과서 핵심 요약화</p>
                   </button>
 
-                  <button
+                  <button data-ui="study-mode-quiz"
                     onClick={() => { setHelperMode("quiz"); setStudyResult(null); }}
                     className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                       helperMode === "quiz" 
@@ -651,7 +651,7 @@ export default function StudyScreen({
                     <p className="text-xs text-slate-450 dark:text-slate-400 mt-0.5">3단 자가진단 평가</p>
                   </button>
 
-                  <button
+                  <button data-ui="study-mode-note"
                     onClick={() => { setHelperMode("note"); setStudyResult(null); }}
                     className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                       helperMode === "note" 
@@ -664,7 +664,7 @@ export default function StudyScreen({
                     <p className="text-xs text-slate-450 dark:text-slate-400 mt-0.5">클리닉 핵심 처방</p>
                   </button>
 
-                  <button
+                  <button data-ui="study-mode-question"
                     onClick={() => { setHelperMode("question"); setStudyResult(null); }}
                     className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                       helperMode === "question" 
@@ -692,7 +692,7 @@ export default function StudyScreen({
                       </div>
                     )}
                     <div className="grid grid-cols-2 gap-2">
-                      <div
+                      <div data-ui="study-material-pick"
                         onClick={() => fileInputRef.current?.click()}
                         className="p-4 border border-dashed border-slate-200 dark:border-slate-800 hover:border-brand rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-colors"
                       >
@@ -708,7 +708,7 @@ export default function StudyScreen({
                           사진 선택
                         </span>
                       </div>
-                      <div
+                      <div data-ui="study-material-camera"
                         onClick={handleTakePhoto}
                         className="p-4 border border-dashed border-slate-200 dark:border-slate-800 hover:border-brand rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-colors"
                       >
@@ -745,7 +745,7 @@ export default function StudyScreen({
                   )}
 
                   <div className="flex gap-2">
-                    <button
+                    <button data-ui="study-run"
                       type="submit"
                       disabled={isProcessing}
                       className="w-full h-14 bg-brand hover:bg-brand-dark text-white font-extrabold rounded-2xl text-fluid-base flex items-center justify-center gap-1.5 shadow-md shadow-brand/15 cursor-pointer disabled:opacity-50 active:scale-98 transition-all"
@@ -857,7 +857,7 @@ export default function StudyScreen({
                             🎉 1번 정답: 2번, 2번 정답: 3번, 3번 정답: 3번 입니다! 해설을 대조해 보세요.
                           </p>
                         ) : (
-                          <button
+                          <button data-ui="study-quiz-check"
                             onClick={() => setQuizChecked(true)}
                             className="px-4 py-2 bg-brand text-white font-bold rounded-xl text-sm cursor-pointer"
                           >
@@ -957,7 +957,7 @@ export default function StudyScreen({
                       />
                     </div>
 
-                    <button
+                    <button data-ui="study-exam-add"
                       type="submit"
                       className="w-full h-14 bg-brand hover:bg-brand-dark text-white font-extrabold rounded-2xl text-fluid-base cursor-pointer shadow-md shadow-brand/10 transition-all active:scale-98"
                     >
@@ -1029,14 +1029,14 @@ export default function StudyScreen({
                               <span className="text-sm font-black text-rose-500 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-1 rounded-xl">
                                 D-{dday}
                               </span>
-                              <button
+                              <button data-ui="study-exam-edit"
                                 onClick={() => handleStartEdit(item)}
                                 className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-brand transition-colors cursor-pointer"
                                 title="일정 수정"
                               >
                                 <Pencil size={15} />
                               </button>
-                              <button
+                              <button data-ui="study-exam-delete"
                                 onClick={() => setDeletingItem(item)}
                                 className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
                                 title="일정 삭제"
@@ -1050,7 +1050,7 @@ export default function StudyScreen({
 
                       {/* Planner trigger button */}
                       <div className="pt-2">
-                        <button
+                        <button data-ui="study-plan-generate"
                           onClick={generateAIStudyPlan}
                           disabled={isGeneratingPlan}
                           className="w-full py-3 bg-brand/10 hover:bg-brand text-brand hover:text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
@@ -1137,14 +1137,14 @@ export default function StudyScreen({
           className="fixed z-50 min-w-[130px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-1.5 animate-fade-in text-sm font-bold text-slate-700 dark:text-slate-200"
           onClick={(e) => e.stopPropagation()}
         >
-          <button
+          <button data-ui="study-menu-edit"
             onClick={() => handleStartEdit(contextMenu.item)}
             className="w-full px-4 py-2.5 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer transition-colors"
           >
             <Edit size={13} className="text-slate-400" />
             일정 수정
           </button>
-          <button
+          <button data-ui="study-menu-delete"
             onClick={() => {
               setDeletingItem(contextMenu.item);
               setContextMenu(prev => ({ ...prev, visible: false }));
@@ -1199,13 +1199,13 @@ export default function StudyScreen({
             </div>
 
             <div className="flex gap-3 mt-6">
-              <button
+              <button data-ui="study-edit-cancel"
                 onClick={() => setEditingItem(null)}
                 className="flex-1 h-12 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-650 dark:text-slate-300 font-bold rounded-xl text-fluid-sm cursor-pointer transition-all active:scale-98"
               >
                 취소
               </button>
-              <button
+              <button data-ui="study-edit-save"
                 onClick={handleSaveEdit}
                 className="flex-1 h-12 bg-brand hover:bg-brand-dark text-white font-bold rounded-xl text-fluid-sm cursor-pointer transition-all active:scale-98"
               >
@@ -1234,13 +1234,13 @@ export default function StudyScreen({
             </div>
 
             <div className="flex gap-3 pt-2">
-              <button
+              <button data-ui="study-delete-cancel"
                 onClick={() => setDeletingItem(null)}
                 className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-sm cursor-pointer transition-colors"
               >
                 취소
               </button>
-              <button
+              <button data-ui="study-delete-confirm"
                 onClick={() => {
                   onDeleteSchedule(deletingItem.id);
                   setDeletingItem(null);

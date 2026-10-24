@@ -1,16 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
+/* 색·글꼴 같은 전체 디자인 값은 src/ui-design/tokens.css 에서 바꿉니다. */
+@import "./ui-design/tokens.css";
 
 @variant dark (&:where(.dark, .dark *));
-
-@theme {
-  --font-sans: "Inter", "Pretendard", "SF Pro Text", system-ui, sans-serif;
-  --font-display: "Plus Jakarta Sans", "SF Pro Display", system-ui, sans-serif;
-  
-  --color-brand: #0066FF;
-  --color-brand-light: #EBF3FF;
-  --color-brand-dark: #004ecc;
-}
 
 @layer utilities {
   /* Premium Glass Effect */

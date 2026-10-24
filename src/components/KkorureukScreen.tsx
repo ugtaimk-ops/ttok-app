@@ -521,7 +521,7 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
             </div>
             
             <div className="flex items-center gap-1.5 select-none">
-              <button 
+              <button data-ui="meal-month-prev"
                 onClick={() => shiftMonth(-1)}
                 className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer border border-slate-100/50 dark:border-slate-800/80 active:scale-95"
                 title="이전 달"
@@ -531,7 +531,7 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
               <span className="text-fluid-sm font-black text-slate-800 dark:text-slate-100 px-2 min-w-[95px] text-center">
                 {calendarViewDate.getFullYear()}년 {calendarViewDate.getMonth() + 1}월
               </span>
-              <button 
+              <button data-ui="meal-month-next"
                 onClick={() => shiftMonth(1)}
                 className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer border border-slate-100/50 dark:border-slate-800/80 active:scale-95"
                 title="다음 달"
@@ -574,7 +574,7 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
               const isSaturday = dateItem.getDay() === 6;
 
               return (
-                <button
+                <button data-ui="meal-date-select"
                   key={idx}
                   onClick={() => setSelectedDate(dateItem)}
                   className={`relative aspect-square flex flex-col items-center justify-center rounded-full text-xs font-bold transition-all select-none cursor-pointer focus:outline-none group ${
@@ -737,19 +737,19 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
           </div>
 
           <div className="flex gap-2.5 select-none flex-wrap justify-center w-full sm:w-auto">
-            <button
+            <button data-ui="meal-week-prev"
               onClick={() => setWeekOffset(prev => prev - 1)}
               className="h-12 px-4 bg-slate-50 dark:bg-slate-950 border border-slate-150 dark:border-slate-800 text-fluid-sm font-bold text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 flex-1 sm:flex-initial"
             >
               <ChevronLeft size={16} /> 이전 주
             </button>
-            <button
+            <button data-ui="meal-week-this"
               onClick={() => setWeekOffset(0)}
               className="h-12 px-5 bg-brand/10 hover:bg-brand/20 text-brand text-fluid-sm font-black rounded-xl transition-all cursor-pointer flex items-center justify-center active:scale-98 flex-1 sm:flex-initial"
             >
               이번 주
             </button>
-            <button
+            <button data-ui="meal-week-next"
               onClick={() => setWeekOffset(prev => prev + 1)}
               className="h-12 px-4 bg-slate-50 dark:bg-slate-950 border border-slate-150 dark:border-slate-800 text-fluid-sm font-bold text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 flex-1 sm:flex-initial"
             >
@@ -893,7 +893,7 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
             </div>
             
             {/* Toggle Switch */}
-            <button
+            <button data-ui="meal-alarm-toggle"
               onClick={() => handleSaveMealAlarm(!mealNotifEnabled, mealNotifHour, mealNotifMinute)}
               className={`w-14 h-8 rounded-full p-1 transition-colors duration-250 cursor-pointer outline-none shrink-0 ${
                 mealNotifEnabled ? "bg-brand" : "bg-slate-200 dark:bg-slate-800"
