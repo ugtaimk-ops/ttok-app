@@ -76,11 +76,14 @@ export const dataSyncService = {
       termsAcceptedAt: new Date().toISOString()
     }, { merge: true });
   },
-  subscribeToProfile(uid: string, cb: (data: Partial<UserProfile> | null) => void): Unsubscribe {
+  subscribeToProfile(uid: string, cb: (data: Partial<UserProfile> | null) => void, onError?: (error: Error) => void): Unsubscribe {
     return onSnapshot(
       userDocRef(uid),
       (snap) => cb(snap.exists() ? (snap.data() as Partial<UserProfile>) : null),
-      (err) => console.error("[Sync] profile listener error:", err)
+      (err) => {
+        console.error("[Sync] profile listener error:", err);
+        onError?.(err);
+      }
     );
   },
   saveProfile(uid: string, profile: UserProfile): Promise<void> {

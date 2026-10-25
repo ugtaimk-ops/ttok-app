@@ -14,74 +14,74 @@
     "source": "src/App.tsx:736"
   },
   {
+    "id": "header-profile",
+    "group": "공통",
+    "screen": "공통 메뉴",
+    "label": "우측 상단 프로필 열기",
+    "source": "src/App.tsx:754"
+  },
+  {
     "id": "nav-bar",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭 바 전체(떠 있는 유리 막대)",
-    "source": "src/components/BottomNavigationBar.tsx:139"
+    "source": "src/components/BottomNavigationBar.tsx:137"
   },
   {
     "id": "nav-home",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭: 홈",
-    "source": "src/components/BottomNavigationBar.tsx:194"
+    "source": "src/components/BottomNavigationBar.tsx:189"
   },
   {
     "id": "nav-assessment",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭: 수행평가",
-    "source": "src/components/BottomNavigationBar.tsx:194"
+    "source": "src/components/BottomNavigationBar.tsx:189"
   },
   {
     "id": "nav-practice",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭: 발표연습",
-    "source": "src/components/BottomNavigationBar.tsx:194"
+    "source": "src/components/BottomNavigationBar.tsx:189"
   },
   {
     "id": "nav-study",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭: 공부",
-    "source": "src/components/BottomNavigationBar.tsx:194"
-  },
-  {
-    "id": "nav-profile",
-    "group": "공통",
-    "screen": "공통 메뉴",
-    "label": "하단 탭: 프로필",
-    "source": "src/components/BottomNavigationBar.tsx:194"
+    "source": "src/components/BottomNavigationBar.tsx:189"
   },
   {
     "id": "nav-settings",
     "group": "공통",
     "screen": "공통 메뉴",
-    "label": "하단 탭: 설정",
-    "source": "src/components/BottomNavigationBar.tsx:194"
+    "label": "하단 탭: 메뉴(설정)",
+    "source": "src/components/BottomNavigationBar.tsx:189"
   },
   {
     "id": "nav-meal-today",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭(꼬르륵): 오늘 급식",
-    "source": "src/components/BottomNavigationBar.tsx:194"
+    "source": "src/components/BottomNavigationBar.tsx:189"
   },
   {
     "id": "nav-meal-weekly",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭(꼬르륵): 이번 주 급식",
-    "source": "src/components/BottomNavigationBar.tsx:194"
+    "source": "src/components/BottomNavigationBar.tsx:189"
   },
   {
     "id": "nav-meal-school",
     "group": "공통",
     "screen": "꼬르륵 · 학교 설정",
     "label": "하단 탭(꼬르륵): 학교 설정",
-    "source": "src/components/BottomNavigationBar.tsx:194"
+    "source": "src/components/BottomNavigationBar.tsx:189"
   },
   {
     "id": "back-button",
@@ -746,126 +746,126 @@
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "프로필 사진: 사진 촬영 탭",
-    "source": "src/components/ProfileScreen.tsx:395"
+    "source": "src/components/ProfileScreen.tsx:400"
   },
   {
     "id": "profile-avatar-gallery-tab",
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "프로필 사진: 사진 선택 탭",
-    "source": "src/components/ProfileScreen.tsx:409"
+    "source": "src/components/ProfileScreen.tsx:414"
   },
   {
     "id": "profile-gallery-choose",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "내 사진 고르기",
-    "source": "src/components/ProfileScreen.tsx:486"
+    "source": "src/components/ProfileScreen.tsx:491"
   },
   {
     "id": "profile-avatar-default",
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "기본 프로필로 설정",
-    "source": "src/components/ProfileScreen.tsx:495"
+    "source": "src/components/ProfileScreen.tsx:500"
   },
   {
     "id": "profile-camera-start",
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "카메라 켜기",
-    "source": "src/components/ProfileScreen.tsx:471"
+    "source": "src/components/ProfileScreen.tsx:476"
   },
   {
     "id": "profile-camera-capture",
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "촬영 버튼",
-    "source": "src/components/ProfileScreen.tsx:462"
+    "source": "src/components/ProfileScreen.tsx:467"
   },
   {
     "id": "profile-camera-retry",
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "카메라 다시 시도",
-    "source": "src/components/ProfileScreen.tsx:435"
+    "source": "src/components/ProfileScreen.tsx:440"
   },
   {
     "id": "profile-camera-open-settings",
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "카메라 권한: 앱 설정 열기",
-    "source": "src/components/ProfileScreen.tsx:444"
+    "source": "src/components/ProfileScreen.tsx:449"
   },
   {
     "id": "profile-school-search-open",
     "group": "프로필",
     "screen": "프로필 · 학교 검색",
     "label": "학교 검색 열기",
-    "source": "src/components/ProfileScreen.tsx:572"
+    "source": "src/components/ProfileScreen.tsx:577"
   },
   {
     "id": "profile-school-search-close",
     "group": "프로필",
     "screen": "프로필 · 학교 검색",
     "label": "학교 검색 닫기",
-    "source": "src/components/ProfileScreen.tsx:532"
+    "source": "src/components/ProfileScreen.tsx:537"
   },
   {
     "id": "profile-school-pick",
     "group": "프로필",
     "screen": "프로필 · 학교 검색",
     "label": "검색된 학교 한 줄(선택)",
-    "source": "src/components/ProfileScreen.tsx:557"
+    "source": "src/components/ProfileScreen.tsx:562"
   },
   {
     "id": "profile-goal-clear-input",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "학기 목표 입력 지우기(X)",
-    "source": "src/components/ProfileScreen.tsx:631"
+    "source": "src/components/ProfileScreen.tsx:636"
   },
   {
     "id": "profile-goal-cancel",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "학기 목표 편집: 취소",
-    "source": "src/components/ProfileScreen.tsx:642"
+    "source": "src/components/ProfileScreen.tsx:647"
   },
   {
     "id": "profile-goal-save",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "학기 목표 저장",
-    "source": "src/components/ProfileScreen.tsx:652"
+    "source": "src/components/ProfileScreen.tsx:657"
   },
   {
     "id": "profile-goal-random",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "학기 목표 랜덤 선택(주사위)",
-    "source": "src/components/ProfileScreen.tsx:682"
+    "source": "src/components/ProfileScreen.tsx:687"
   },
   {
     "id": "profile-goal-edit",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "학기 목표 수정(연필)",
-    "source": "src/components/ProfileScreen.tsx:691"
+    "source": "src/components/ProfileScreen.tsx:696"
   },
   {
     "id": "profile-goal-delete",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "학기 목표 삭제",
-    "source": "src/components/ProfileScreen.tsx:704"
+    "source": "src/components/ProfileScreen.tsx:709"
   },
   {
     "id": "profile-save",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "똑 부러지게 프로필 수정 완료(저장)",
-    "source": "src/components/ProfileScreen.tsx:722"
+    "source": "src/components/ProfileScreen.tsx:727"
   },
   {
     "id": "settings-dark-mode",

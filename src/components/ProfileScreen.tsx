@@ -56,9 +56,10 @@ interface ProfileScreenProps {
   onUpdateUser: (updated: UserProfile) => void;
   darkMode: boolean;
   isActive: boolean;
+  isOnboarding?: boolean;
 }
 
-export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive }: ProfileScreenProps) {
+export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive, isOnboarding = false }: ProfileScreenProps) {
   const [name, setName] = useState(user.name);
   const [school, setSchool] = useState(user.school);
   const [schoolCode, setSchoolCode] = useState(user.schoolCode || "");
@@ -71,6 +72,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive }
   const [avatar, setAvatar] = useState(user.avatarUrl);
   const avatarChangedRef = useRef(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
+  const [setupError, setSetupError] = useState(false);
 
   // The cloud profile can arrive asynchronously after this screen has already
   // mounted with the pre-sync (often blank) local values - e.g. signing in on
@@ -310,6 +312,11 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isOnboarding && (!name.trim() || !school.trim() || !grade || !classNum)) {
+      setSetupError(true);
+      return;
+    }
+    setSetupError(false);
     onUpdateUser(buildProfileUpdate());
     setShowSavedToast(true);
     setTimeout(() => setShowSavedToast(false), 2000);
@@ -359,7 +366,8 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive }
       
       {/* Header */}
       <div>
-        <h1 className="text-fluid-3xl font-extrabold tracking-tight-sf">학생 프로필 관리</h1>
+        <h1 className="text-fluid-3xl font-extrabold tracking-tight-sf">{isOnboarding ? "처음 프로필 설정" : "학생 프로필 관리"}</h1>
+        {isOnboarding && <p className="mt-2 text-fluid-sm text-slate-500">이용약관 동의를 마쳤어요. 이름, 학교, 학년, 반을 입력하면 똑을 시작할 수 있어요.</p>}
       </div>
 
       <form onSubmit={handleSubmit} className={`p-6 sm:p-8 rounded-[32px] border ${
@@ -723,12 +731,13 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive }
         </div>
 
         {/* Buttons */}
+        {setupError && <p role="alert" className="text-sm font-bold text-rose-500">이름, 학교, 학년, 반을 모두 입력해 주세요.</p>}
         <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
           <button data-ui="profile-save"
             type="submit"
             className="px-6 py-4 bg-brand hover:bg-brand-dark text-white font-black rounded-2xl text-fluid-base flex items-center gap-1.5 shadow-md shadow-brand/10 transition-colors cursor-pointer"
           >
-            <Sparkles size={16} /> 똑 부러지게 프로필 수정 완료
+            <Sparkles size={16} /> {isOnboarding ? "프로필 저장하고 시작하기" : "똑 부러지게 프로필 수정 완료"}
           </button>
         </div>
 

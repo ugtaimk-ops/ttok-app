@@ -285,6 +285,9 @@ export default function App() {
   const scriptsRef = useRef(scripts);
   const practiceLogsRef = useRef(practiceLogs);
   const [activeDataOwner, setActiveDataOwner] = useState<string | null>(getStoredDataOwner);
+  const [profileLoadedUid, setProfileLoadedUid] = useState<string | null>(null);
+  const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
+  const [profileRetry, setProfileRetry] = useState(0);
   const schedulesOwnerRef = useRef<string | null>(null);
   const todosOwnerRef = useRef<string | null>(null);
   useEffect(() => { schedulesRef.current = schedules; }, [schedules]);
@@ -350,13 +353,15 @@ export default function App() {
     const uid = authUser.uid;
     let cancelled = false;
     const unsubscribers: Array<() => void> = [];
+    setProfileLoadedUid(null);
+    setProfileLoadError(null);
     schedulesOwnerRef.current = null;
     todosOwnerRef.current = null;
 
     // The old localStorage keys were shared by every account on this device.
     // Only migrate them if they belong to this user; otherwise a new account
     // could receive the previous account's private data.
-    const cachedOwner = activeDataOwner;
+    const cachedOwner = getStoredDataOwner();
     if (cachedOwner !== uid) {
       // Clear persistent data before assigning the new owner. An app restart
       // between these writes must not make old data appear to belong to uid.
@@ -388,8 +393,10 @@ export default function App() {
 
       unsubscribers.push(
         dataSyncService.subscribeToProfile(uid, (data) => {
-          if (!cancelled && data) setUser(prev => ({ ...prev, ...data, uid }));
-        }),
+          if (cancelled) return;
+          if (data) setUser(prev => ({ ...prev, ...data, uid }));
+          setProfileLoadedUid(uid);
+        }, () => { if (!cancelled) setProfileLoadError(uid); }),
         dataSyncService.subscribeToSchedules(uid, items => {
           if (cancelled) return;
           schedulesOwnerRef.current = uid;
@@ -411,7 +418,7 @@ export default function App() {
       todosOwnerRef.current = null;
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [authUser?.uid, consentAccepted]);
+  }, [authUser?.uid, consentAccepted, profileRetry]);
 
   // Initialize device-specific native local notification listeners on mount
   useEffect(() => {
@@ -705,8 +712,21 @@ export default function App() {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand" /></div>;
   }
 
-  if (activeDataOwner !== authUser.uid) {
+  if (profileLoadError === authUser.uid) {
+    return <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">
+      <p>프로필을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</p>
+      <button type="button" onClick={() => setProfileRetry(value => value + 1)} className="px-5 py-2 rounded-xl bg-brand text-white">다시 시도</button>
+      <button type="button" onClick={handleLogout} className="text-sm text-slate-500 underline">로그아웃</button>
+    </div>;
+  }
+  if (activeDataOwner !== authUser.uid || profileLoadedUid !== authUser.uid) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand" /></div>;
+  }
+
+  if (!user.name?.trim() || !user.school?.trim() || !user.grade || !user.classNum) {
+    return <div className={`min-h-screen px-4 pt-6 safe-top ${darkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-800"}`}>
+      <ProfileScreen key={authUser.uid} user={user} onUpdateUser={handleUpdateUser} darkMode={darkMode} isActive isOnboarding />
+    </div>;
   }
 
   return (
@@ -750,18 +770,36 @@ export default function App() {
             <span className="text-[11px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 hidden min-[400px]:block max-w-[90px] sm:max-w-none truncate">
               {user.school ? `${user.school} ${user.grade || "1"}학년` : "프로필 미설정"}
             </span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-brand-light dark:bg-brand/10 border border-brand/5 rounded-full overflow-hidden shrink-0 flex items-center justify-center">
-              {hasPhotoAvatar(user.avatarUrl) ? (
-                <img 
-                  src={user.avatarUrl}
-                  alt="Profile" 
-                  className="w-full h-full object-cover" 
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <DefaultAvatar />
-              )}
-            </div>
+            <button
+              data-ui="header-profile"
+              type="button"
+              onClick={() => {
+                if (serviceMode === "tok") selectTokTab("profile");
+                else {
+                  setTabTransition(null);
+                  setTokTab("profile");
+                  setServiceMode("tok");
+                }
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              aria-label="프로필 열기"
+              aria-current={serviceMode === "tok" && tokTab === "profile" ? "page" : undefined}
+              title="프로필"
+              className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 flex items-center justify-center rounded-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              <span className={`w-8 h-8 sm:w-9 sm:h-9 bg-brand-light dark:bg-brand/10 border rounded-full overflow-hidden flex items-center justify-center ${serviceMode === "tok" && tokTab === "profile" ? "border-brand ring-2 ring-brand/25" : "border-brand/5"}`}>
+                {hasPhotoAvatar(user.avatarUrl) ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <DefaultAvatar />
+                )}
+              </span>
+            </button>
           </div>
         </div>
       </header>

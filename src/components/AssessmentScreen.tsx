@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import ExamPlanner from "./ExamPlanner";
+import CalendarDatePicker from "./CalendarDatePicker";
 import { prepareAiImage } from "../lib/prepareAiImage";
 
 type AssessmentMode = "list" | "direct" | "photo" | "planner";
@@ -477,11 +478,11 @@ export default function AssessmentScreen({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-fluid-sm font-bold text-slate-500 mb-1.5">최종 제출일 및 평가일</label>
-                  <input
-                    type="date"
-                    required
+                  <CalendarDatePicker
                     value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
+                    onChange={setDueDate}
+                    darkMode={darkMode}
+                    ariaLabel="최종 제출일 및 평가일"
                     className="w-full h-12 px-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-fluid-base focus:outline-none focus:ring-2 focus:ring-brand text-slate-800 dark:text-slate-100 transition-all"
                   />
                 </div>
@@ -663,10 +664,11 @@ export default function AssessmentScreen({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <span className="text-fluid-xs text-slate-400 font-bold block mb-1">제출 마감일 (자동 알림 생성)</span>
-                      <input
-                        type="date"
+                      <CalendarDatePicker
                         value={scanResult.dueDate}
-                        onChange={(e) => setScanResult({ ...scanResult, dueDate: e.target.value })}
+                        onChange={(date) => setScanResult({ ...scanResult, dueDate: date })}
+                        darkMode={darkMode}
+                        ariaLabel="제출 마감일"
                         className="w-full h-12 px-4 bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl text-fluid-base focus:outline-none focus:ring-2 focus:ring-brand text-slate-800 dark:text-slate-100 transition-all"
                       />
                     </div>
@@ -800,10 +802,11 @@ export default function AssessmentScreen({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-fluid-xs font-bold text-slate-400 mb-1">최종 제출일</label>
-                  <input
-                    type="date"
+                  <CalendarDatePicker
                     value={editDate}
-                    onChange={(e) => setEditDate(e.target.value)}
+                    onChange={setEditDate}
+                    darkMode={darkMode}
+                    ariaLabel="최종 제출일"
                     className="w-full h-12 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-150 dark:border-slate-850 rounded-xl text-fluid-base focus:outline-none focus:ring-2 focus:ring-brand text-slate-800 dark:text-slate-100"
                   />
                 </div>

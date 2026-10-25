@@ -766,7 +766,7 @@ export default function HomeScreen({
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
                       onSubmit={handleAddScheduleSubmit}
-                      className="mb-3.5 p-3.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/85 rounded-2xl space-y-2.5 overflow-hidden text-left"
+                      className="mb-3.5 p-3.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/85 rounded-2xl space-y-2.5 text-left"
                     >
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-black text-brand">일정 등록하기</span>
@@ -813,6 +813,7 @@ export default function HomeScreen({
                             onChange={(v) => setNewSchedType(v as "assessment" | "exam" | "study" | "homework")}
                             options={SCHEDULE_TYPE_OPTIONS}
                             darkMode={darkMode}
+                            placement="up"
                             triggerClassName="w-full flex items-center justify-between gap-2 px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl text-sm text-slate-600 dark:text-slate-300 cursor-pointer"
                           />
                         </div>
@@ -835,7 +836,7 @@ export default function HomeScreen({
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
                       onSubmit={handleSaveScheduleEdit}
-                      className="mb-3.5 p-3.5 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-2.5 overflow-hidden text-left"
+                      className="mb-3.5 p-3.5 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-2.5 text-left"
                     >
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-black text-amber-500">일정 수정하기</span>
@@ -882,6 +883,7 @@ export default function HomeScreen({
                             onChange={(v) => setEditSchedType(v as "assessment" | "exam" | "study" | "homework")}
                             options={SCHEDULE_TYPE_OPTIONS}
                             darkMode={darkMode}
+                            placement="up"
                             triggerClassName="w-full flex items-center justify-between gap-2 px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl text-sm text-slate-600 dark:text-slate-300 cursor-pointer"
                           />
                         </div>

@@ -97,9 +97,9 @@
 }
 */
 
-/* 하단 탭: 프로필  —  src/components/BottomNavigationBar.tsx:108 */
+/* 우측 상단 프로필 열기  —  src/App.tsx */
 /*
-[data-ui="nav-profile"] {
+[data-ui="header-profile"] {
   background: #0066ff;
   color: #ffffff;
   border-radius: 16px;

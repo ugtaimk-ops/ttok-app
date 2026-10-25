@@ -8,16 +8,16 @@
 |---|---|---|
 | `header-mode-tok` | 상단 서비스 전환: 똑 | src/App.tsx:726 |
 | `header-mode-kkorureuk` | 상단 서비스 전환: 꼬르륵 | src/App.tsx:736 |
-| `nav-bar` | 하단 탭 바 전체(떠 있는 유리 막대) | src/components/BottomNavigationBar.tsx:139 |
-| `nav-home` | 하단 탭: 홈 | src/components/BottomNavigationBar.tsx:194 |
-| `nav-assessment` | 하단 탭: 수행평가 | src/components/BottomNavigationBar.tsx:194 |
-| `nav-practice` | 하단 탭: 발표연습 | src/components/BottomNavigationBar.tsx:194 |
-| `nav-study` | 하단 탭: 공부 | src/components/BottomNavigationBar.tsx:194 |
-| `nav-profile` | 하단 탭: 프로필 | src/components/BottomNavigationBar.tsx:194 |
-| `nav-settings` | 하단 탭: 설정 | src/components/BottomNavigationBar.tsx:194 |
-| `nav-meal-today` | 하단 탭(꼬르륵): 오늘 급식 | src/components/BottomNavigationBar.tsx:194 |
-| `nav-meal-weekly` | 하단 탭(꼬르륵): 이번 주 급식 | src/components/BottomNavigationBar.tsx:194 |
-| `nav-meal-school` | 하단 탭(꼬르륵): 학교 설정 | src/components/BottomNavigationBar.tsx:194 |
+| `header-profile` | 우측 상단 프로필 열기 | src/App.tsx:754 |
+| `nav-bar` | 하단 탭 바 전체(떠 있는 유리 막대) | src/components/BottomNavigationBar.tsx:137 |
+| `nav-home` | 하단 탭: 홈 | src/components/BottomNavigationBar.tsx:189 |
+| `nav-assessment` | 하단 탭: 수행평가 | src/components/BottomNavigationBar.tsx:189 |
+| `nav-practice` | 하단 탭: 발표연습 | src/components/BottomNavigationBar.tsx:189 |
+| `nav-study` | 하단 탭: 공부 | src/components/BottomNavigationBar.tsx:189 |
+| `nav-settings` | 하단 탭: 메뉴(설정) | src/components/BottomNavigationBar.tsx:189 |
+| `nav-meal-today` | 하단 탭(꼬르륵): 오늘 급식 | src/components/BottomNavigationBar.tsx:189 |
+| `nav-meal-weekly` | 하단 탭(꼬르륵): 이번 주 급식 | src/components/BottomNavigationBar.tsx:189 |
+| `nav-meal-school` | 하단 탭(꼬르륵): 학교 설정 | src/components/BottomNavigationBar.tsx:189 |
 | `back-button` | 뒤로가기/취소 버튼(여러 화면 공통) | src/components/BackButton.tsx:9 |
 | `select-trigger` | 드롭다운 선택 상자(열기 버튼) | src/components/GlassSelect.tsx:86 |
 | `select-option` | 드롭다운 선택 항목 하나하나 | src/components/GlassSelect.tsx:123 |
@@ -142,24 +142,24 @@
 
 | 이름(data-ui) | 무엇인가 | 코드 위치 |
 |---|---|---|
-| `profile-avatar-camera-tab` | 프로필 사진: 사진 촬영 탭 | src/components/ProfileScreen.tsx:395 |
-| `profile-avatar-gallery-tab` | 프로필 사진: 사진 선택 탭 | src/components/ProfileScreen.tsx:409 |
-| `profile-gallery-choose` | 내 사진 고르기 | src/components/ProfileScreen.tsx:486 |
-| `profile-avatar-default` | 기본 프로필로 설정 | src/components/ProfileScreen.tsx:495 |
-| `profile-camera-start` | 카메라 켜기 | src/components/ProfileScreen.tsx:471 |
-| `profile-camera-capture` | 촬영 버튼 | src/components/ProfileScreen.tsx:462 |
-| `profile-camera-retry` | 카메라 다시 시도 | src/components/ProfileScreen.tsx:435 |
-| `profile-camera-open-settings` | 카메라 권한: 앱 설정 열기 | src/components/ProfileScreen.tsx:444 |
-| `profile-school-search-open` | 학교 검색 열기 | src/components/ProfileScreen.tsx:572 |
-| `profile-school-search-close` | 학교 검색 닫기 | src/components/ProfileScreen.tsx:532 |
-| `profile-school-pick` | 검색된 학교 한 줄(선택) | src/components/ProfileScreen.tsx:557 |
-| `profile-goal-clear-input` | 학기 목표 입력 지우기(X) | src/components/ProfileScreen.tsx:631 |
-| `profile-goal-cancel` | 학기 목표 편집: 취소 | src/components/ProfileScreen.tsx:642 |
-| `profile-goal-save` | 학기 목표 저장 | src/components/ProfileScreen.tsx:652 |
-| `profile-goal-random` | 학기 목표 랜덤 선택(주사위) | src/components/ProfileScreen.tsx:682 |
-| `profile-goal-edit` | 학기 목표 수정(연필) | src/components/ProfileScreen.tsx:691 |
-| `profile-goal-delete` | 학기 목표 삭제 | src/components/ProfileScreen.tsx:704 |
-| `profile-save` | 똑 부러지게 프로필 수정 완료(저장) | src/components/ProfileScreen.tsx:722 |
+| `profile-avatar-camera-tab` | 프로필 사진: 사진 촬영 탭 | src/components/ProfileScreen.tsx:400 |
+| `profile-avatar-gallery-tab` | 프로필 사진: 사진 선택 탭 | src/components/ProfileScreen.tsx:414 |
+| `profile-gallery-choose` | 내 사진 고르기 | src/components/ProfileScreen.tsx:491 |
+| `profile-avatar-default` | 기본 프로필로 설정 | src/components/ProfileScreen.tsx:500 |
+| `profile-camera-start` | 카메라 켜기 | src/components/ProfileScreen.tsx:476 |
+| `profile-camera-capture` | 촬영 버튼 | src/components/ProfileScreen.tsx:467 |
+| `profile-camera-retry` | 카메라 다시 시도 | src/components/ProfileScreen.tsx:440 |
+| `profile-camera-open-settings` | 카메라 권한: 앱 설정 열기 | src/components/ProfileScreen.tsx:449 |
+| `profile-school-search-open` | 학교 검색 열기 | src/components/ProfileScreen.tsx:577 |
+| `profile-school-search-close` | 학교 검색 닫기 | src/components/ProfileScreen.tsx:537 |
+| `profile-school-pick` | 검색된 학교 한 줄(선택) | src/components/ProfileScreen.tsx:562 |
+| `profile-goal-clear-input` | 학기 목표 입력 지우기(X) | src/components/ProfileScreen.tsx:636 |
+| `profile-goal-cancel` | 학기 목표 편집: 취소 | src/components/ProfileScreen.tsx:647 |
+| `profile-goal-save` | 학기 목표 저장 | src/components/ProfileScreen.tsx:657 |
+| `profile-goal-random` | 학기 목표 랜덤 선택(주사위) | src/components/ProfileScreen.tsx:687 |
+| `profile-goal-edit` | 학기 목표 수정(연필) | src/components/ProfileScreen.tsx:696 |
+| `profile-goal-delete` | 학기 목표 삭제 | src/components/ProfileScreen.tsx:709 |
+| `profile-save` | 똑 부러지게 프로필 수정 완료(저장) | src/components/ProfileScreen.tsx:727 |
 
 ## 설정·구독  (스타일 파일: src/ui-design/settings.css)
 

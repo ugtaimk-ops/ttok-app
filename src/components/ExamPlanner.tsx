@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { CalendarDays, CheckCircle2, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import BackButton from "./BackButton";
+import CalendarDatePicker from "./CalendarDatePicker";
 import { useScreenBack } from "../lib/screenBack";
 import { getTodayDateString } from "../lib/api";
 import type { ScheduleItem } from "../types";
@@ -99,7 +100,7 @@ export default function ExamPlanner({ schedules, onAddSchedule, onDeleteSchedule
             <input className={`${inputClass} mt-1.5`} required value={subject} onChange={event => setSubject(event.target.value)} placeholder="예: 역사" />
           </label>
           <label className="block text-sm font-bold text-slate-500">평가 날짜
-            <input className={`${inputClass} mt-1.5`} type="date" required value={date} onChange={event => setDate(event.target.value)} />
+            <CalendarDatePicker className={`${inputClass} mt-1.5 flex items-center justify-between text-left`} value={date} onChange={setDate} darkMode={darkMode} ariaLabel="평가 날짜" />
           </label>
           <label className="block text-sm font-bold text-slate-500">시험 범위 (선택)
             <input className={`${inputClass} mt-1.5`} value={scope} onChange={event => setScope(event.target.value)} placeholder="예: 교과서 3~5단원" />
@@ -147,7 +148,7 @@ export default function ExamPlanner({ schedules, onAddSchedule, onDeleteSchedule
           <h3 className="font-extrabold">지필평가 일정 수정</h3>
           <input className={inputClass} aria-label="시험 평가명" value={editTitle} onChange={event => setEditTitle(event.target.value)} />
           <input className={inputClass} aria-label="시험 과목" value={editSubject} onChange={event => setEditSubject(event.target.value)} />
-          <input className={inputClass} aria-label="평가 날짜" type="date" value={editDate} onChange={event => setEditDate(event.target.value)} />
+          <CalendarDatePicker className={`${inputClass} flex items-center justify-between text-left`} ariaLabel="평가 날짜" value={editDate} onChange={setEditDate} darkMode={darkMode} />
           <button data-ui="study-edit-save" type="button" onClick={saveEdit} className="w-full min-h-12 bg-brand text-white font-bold rounded-xl">저장하기</button>
         </div>
       </div>}

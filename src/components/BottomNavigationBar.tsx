@@ -3,8 +3,7 @@ import {
   Calendar,
   Video,
   BookOpen,
-  User,
-  Settings,
+  Menu,
   Utensils,
   CalendarDays,
   Search
@@ -41,8 +40,7 @@ export default function BottomNavigationBar({
     { id: "assessment", label: "수행평가", icon: Calendar },
     { id: "practice", label: "발표연습", icon: Video },
     { id: "study", label: "공부", icon: BookOpen },
-    { id: "profile", label: "프로필", icon: User },
-    { id: "settings", label: "설정", icon: Settings },
+    { id: "settings", label: "메뉴", icon: Menu },
   ];
 
   const kkorureukTabs = [
