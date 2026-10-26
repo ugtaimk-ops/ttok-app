@@ -33,26 +33,6 @@ app.use((req, res, next) => {
 // Enable JSON parsing after CORS so parse errors also have CORS headers.
 app.use(express.json({ limit: "25mb" }));
 
-// Reject requests that don't carry the shared app secret, so the AI/school-search
-// endpoints (which cost real API quota) aren't wide open to anyone who finds the
-// server URL. This is a deterrent against casual scraping/bots, not a substitute
-// for real per-user auth - the secret ships inside the app bundle and can be
-// extracted by a determined attacker.
-app.use((req, res, next) => {
-  if (req.path === "/api/health" || !req.path.startsWith("/api/")) {
-    return next();
-  }
-  const expected = process.env.APP_SHARED_SECRET;
-  if (!expected) {
-    // No secret configured on the backend - skip the check rather than lock everyone out.
-    return next();
-  }
-  if (req.header("x-app-secret") !== expected) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  next();
-});
-
 // General API rate limit: protects against runaway costs from bots/scanners hitting
 // the public backend URL that ships inside the APK/IPA.
 const apiLimiter = rateLimit({
@@ -74,6 +54,17 @@ const aiLimiter = rateLimit({
 });
 
 app.use("/api/", apiLimiter);
+
+// A value bundled into an APK is extractable, so authenticate every API caller
+// with their Firebase ID token. Older app versions may still send X-App-Secret;
+// it is ignored and kept only in the CORS allow-header for compatibility.
+app.use("/api/", async (req, res, next) => {
+  if (req.path === "/health") return next();
+  const uid = await verifyRequestUser(req);
+  if (!uid) return res.status(401).json({ error: "로그인이 필요해요.", code: "AUTH_REQUIRED" });
+  (req as any).uid = uid;
+  next();
+});
 
 const AI_ROUTES = ["/api/script/generate", "/api/practice/analyze", "/api/assessment/extract", "/api/study/action", "/api/home/ai-report"];
 const CACHEABLE_AI_ROUTES = new Set(["/api/assessment/extract", "/api/study/action"]);
@@ -102,8 +93,7 @@ app.post("/api/practice/analyze", (req, res, next) => {
 // so they don't need a second Firestore read.
 app.use(AI_ROUTES, async (req, res, next) => {
   try {
-    const uid = await verifyRequestUser(req);
-    if (!uid) return res.status(401).json({ error: "로그인이 필요해요.", code: "AUTH_REQUIRED" });
+    const uid = (req as any).uid as string;
     const route = req.originalUrl.split("?")[0];
     const isRepeatableStudyRequest = route === "/api/study/action" &&
       (req.body?.actionType === "quiz" || req.body?.actionType === "question");
@@ -151,8 +141,7 @@ app.get("/api/health", (req, res) => {
 // when the Korean calendar month changes, so all devices show the new month
 // immediately after opening the app rather than waiting for an AI request.
 app.get("/api/usage/status", async (req, res) => {
-  const uid = await verifyRequestUser(req);
-  if (!uid) return res.status(401).json({ error: "로그인이 필요해요.", code: "AUTH_REQUIRED" });
+  const uid = (req as any).uid as string;
   try {
     const { month, used, limit, isPremium } = await getCurrentUsage(uid);
     return res.json({ month, used, limit, isPremium });
@@ -173,8 +162,7 @@ app.post("/api/problem/solve", async (req, res) => {
       (ocrText !== undefined && (typeof ocrText !== "string" || ocrText.length > 5000))) {
     return res.status(400).json({ error: "JPG, PNG 또는 WebP 문제 사진을 다시 선택해 주세요." });
   }
-  const uid = await verifyRequestUser(req);
-  if (!uid) return res.status(401).json({ error: "로그인이 필요해요." });
+  const uid = (req as any).uid as string;
   const hash = createHash("sha256").update(mimeType).update(imageBase64).digest("hex");
   const key = `${uid}:${hash}`;
   try {
@@ -230,17 +218,6 @@ app.post("/api/problem/solve", async (req, res) => {
 
 // School Search Endpoint (SchoolInfo.go.kr Integration & Fallback)
 app.get("/api/school/search", async (req, res) => {
-  // Add server-side log for request confirmation (Req 6)
-  const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-  console.log(`[SERVER_DEBUG] [INCOMING_REQUEST] ==========================================`);
-  console.log(`[SERVER_DEBUG] Endpoint: GET /api/school/search`);
-  console.log(`[SERVER_DEBUG] Query params: ${JSON.stringify(req.query)}`);
-  console.log(`[SERVER_DEBUG] Origin Header: ${req.headers.origin || "None"}`);
-  console.log(`[SERVER_DEBUG] Referer Header: ${req.headers.referer || "None"}`);
-  console.log(`[SERVER_DEBUG] User-Agent: ${req.headers["user-agent"]}`);
-  console.log(`[SERVER_DEBUG] Client IP: ${clientIp}`);
-  console.log(`[SERVER_DEBUG] ==========================================================`);
-
   try {
     const { keyword } = req.query;
     if (!keyword || String(keyword).trim().length < 2) {
@@ -502,7 +479,8 @@ app.get("/api/meal/info", async (req, res) => {
       return res.status(400).json({ error: "Either date or startDate/endDate is required" });
     }
 
-    console.log(`[Proxy] Fetching meals: ${url}`);
+    // The NEIS API key is in the query string; never write that URL to logs.
+    console.log("[Proxy] Fetching meals from NEIS");
     
     // We run both the SFIC portal status hit and NEIS API in parallel to guarantee actual real data
     const [resSfic, resNeis] = await Promise.allSettled([
@@ -565,7 +543,7 @@ app.get("/api/meal/info", async (req, res) => {
 // 1. Script Generation Endpoint
 app.post("/api/script/generate", async (req, res) => {
   console.log(`[BACKEND] [POST /api/script/generate] Request received at ${new Date().toISOString()}`);
-  console.log(`[BACKEND] Request Body:`, JSON.stringify(req.body));
+  // Student-entered topics may contain private information; do not log the body.
 
   try {
     const { topic, time, grade, subject, audience, tone, purpose, style } = req.body;
@@ -995,8 +973,8 @@ app.post("/api/home/ai-report", async (req, res) => {
 
 // RevenueCat subscription webhook - flips isPremium in Firestore when a
 // purchase/renewal/cancellation/expiration happens. Not gated behind the
-// X-App-Secret/apiLimiter middleware above (those only apply to /api/* paths
-// this app's own client calls) since RevenueCat's servers call this
+// API authentication/rate limiting above (which only applies to /api/* paths)
+// since RevenueCat's servers call this
 // directly; instead it's authenticated via its own shared secret header,
 // configured in the RevenueCat dashboard (Project Settings > Webhooks).
 app.post("/revenuecat/webhook", async (req, res) => {

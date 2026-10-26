@@ -8,7 +8,6 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss()],
     define: {
       'import.meta.env.VITE_API_URL': JSON.stringify(process.env.APP_URL || (process.env.NODE_ENV === 'production' ? 'https://ttok-backend.onrender.com' : '')),
-      'import.meta.env.VITE_APP_SHARED_SECRET': JSON.stringify(process.env.APP_SHARED_SECRET || ''),
       // RevenueCat's Public SDK key - like Firebase's client apiKey, this is designed to
       // ship inside the app (it can only initiate purchases/read entitlements for the
       // configured app_user_id, not access account-wide secrets).

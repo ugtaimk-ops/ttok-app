@@ -21,6 +21,9 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Check dependency advisories
+        run: npm audit --audit-level=high
+
       - name: Verify Google Play RevenueCat key
         env:
           RC_ANDROID_KEY: ${{ vars.REVENUECAT_API_KEY_ANDROID }}
@@ -36,7 +39,10 @@ jobs:
           APP_URL: ${{ vars.APP_URL }}
           REVENUECAT_API_KEY_ANDROID: ${{ vars.REVENUECAT_API_KEY_ANDROID }}
           REVENUECAT_API_KEY_IOS: ${{ vars.REVENUECAT_API_KEY_IOS }}
-          APP_SHARED_SECRET: ${{ secrets.APP_SHARED_SECRET }}
+
+      - name: Verify API authorization
+        # Keep the authentication boundary checked on every signed release.
+        run: npm run test:security
 
       - name: Sync Capacitor Android
         run: npx cap sync android

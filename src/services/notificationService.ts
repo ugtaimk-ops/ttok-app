@@ -1,7 +1,7 @@
 import { LocalNotifications, LocalNotificationSchema } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import { ScheduleItem } from '../types';
-import { getApiUrl, logFetchFailure } from '../lib/api';
+import { getApiUrl, logFetchFailure, robustFetch } from '../lib/api';
 
 // Utility to format Date to YYYYMMDD
 const formatDateToYMD = (date: Date): string => {
@@ -62,7 +62,7 @@ const fetchUpcomingMealsInService = async (
   const proxyPath = `/api/meal/info?officeCode=${officeCode}&schoolCode=${schoolCode}&schoolName=${encodeURIComponent(schoolName)}&startDate=${startDate}&endDate=${endDate}`;
   const proxyUrl = getApiUrl(proxyPath);
   try {
-    const proxyResponse = await fetch(proxyUrl);
+    const proxyResponse = await robustFetch(proxyPath);
     if (proxyResponse.ok) {
       return await proxyResponse.json();
     } else {

@@ -18,8 +18,6 @@ services:
         sync: false
       - key: NEIS_API_KEY
         sync: false
-      - key: APP_SHARED_SECRET
-        sync: false
       - key: FIREBASE_SERVICE_ACCOUNT_KEY
         sync: false
       - key: REVENUECAT_WEBHOOK_SECRET

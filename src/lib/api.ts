@@ -28,8 +28,6 @@ export function logFetchFailure(url: string, error: unknown, statusCode?: number
 
 export async function robustFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const headers = new Headers(options.headers);
-  const appSecret = (import.meta as any).env?.VITE_APP_SHARED_SECRET;
-  if (appSecret) headers.set("X-App-Secret", appSecret);
   const idToken = await auth.currentUser?.getIdToken();
   if (idToken) headers.set("Authorization", `Bearer ${idToken}`);
   headers.set("Accept", "application/json");

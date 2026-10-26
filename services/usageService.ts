@@ -109,7 +109,13 @@ export async function verifyRequestUser(req: Request): Promise<string | null> {
       audience: FIREBASE_PROJECT_ID,
     }) as jwt.JwtPayload;
 
-    if (!payload.sub) throw new Error("Token payload is missing sub");
+    const now = Math.floor(Date.now() / 1000);
+    if (typeof payload.exp !== "number" || payload.exp <= now ||
+        typeof payload.iat !== "number" || payload.iat > now ||
+        typeof payload.auth_time !== "number" || payload.auth_time > now ||
+        typeof payload.sub !== "string" || !payload.sub || payload.sub.length > 128) {
+      throw new Error("Token has invalid Firebase claims");
+    }
     return payload.sub;
   } catch (err) {
     console.warn("[UsageService] ID token verification failed:", (err as Error).message);

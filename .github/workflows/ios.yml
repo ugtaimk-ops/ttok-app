@@ -29,7 +29,6 @@ jobs:
           APP_URL: ${{ vars.APP_URL }}
           REVENUECAT_API_KEY_ANDROID: ${{ vars.REVENUECAT_API_KEY_ANDROID }}
           REVENUECAT_API_KEY_IOS: ${{ vars.REVENUECAT_API_KEY_IOS }}
-          APP_SHARED_SECRET: ${{ secrets.APP_SHARED_SECRET }}
 
       - name: Add iOS platform (if missing)
         run: |
