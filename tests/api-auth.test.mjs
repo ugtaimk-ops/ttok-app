@@ -95,6 +95,22 @@ test("private APIs reject callers without a verified Firebase token", async () =
     });
     assert.equal(unverified.status, 401, "unverified password accounts must not use private APIs");
 
+    const missingDeleteAuth = await fetch(`${origin}/api/account/delete`, { method: "POST" });
+    assert.equal(missingDeleteAuth.status, 401, "account deletion requires a signed-in user");
+    const staleLogin = jwt.sign({ ...claims, auth_time: now - 301 }, privateKey, {
+      algorithm: "RS256", keyid: "test-key",
+    });
+    const staleDelete = await fetch(`${origin}/api/account/delete`, {
+      method: "POST", headers: { Authorization: `Bearer ${staleLogin}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmation: "DELETE" }),
+    });
+    assert.equal(staleDelete.status, 403, "deleting an account requires recent sign-in");
+    const noConfirmation = await fetch(`${origin}/api/account/delete`, {
+      method: "POST", headers: { Authorization: `Bearer ${validToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmation: "" }),
+    });
+    assert.equal(noConfirmation.status, 400, "account deletion must require an explicit confirmation");
+
     const rotatedToken = jwt.sign(claims, privateKey, { algorithm: "RS256", keyid: "rotated-key" });
     const rotated = await fetch(`${origin}/api/school/search?keyword=a`, {
       headers: { Authorization: `Bearer ${rotatedToken}` },
