@@ -146,6 +146,7 @@ export const authService = {
    * address that doesn't really exist will never receive that email.
    */
   async signUpWithEmail(email: string, password: string): Promise<User> {
+    if (password.length < 12) throw new Error("새 계정의 비밀번호는 12자 이상으로 설정해 주세요.");
     try {
       const result = await fbCreateUserWithEmailAndPassword(auth, email, password);
       try {
@@ -181,6 +182,17 @@ export const authService = {
    * sign-in's own errors ambiguous about whether the account exists).
    */
   async signInOrSignUpWithEmail(email: string, password: string): Promise<User> {
+    // Existing accounts with older, shorter passwords may still sign in.
+    // A new account, however, must use the stronger minimum.
+    if (password.length < 12) {
+      try { return await authService.signInWithEmail(email, password); }
+      catch (error: any) {
+        if (["auth/invalid-credential", "auth/user-not-found", "auth/wrong-password"].includes(error?.code)) {
+          throw new Error("로그인 정보를 확인해 주세요. 새 계정은 12자 이상의 비밀번호가 필요해요.");
+        }
+        throw error;
+      }
+    }
     try {
       const result = await fbCreateUserWithEmailAndPassword(auth, email, password);
       try {

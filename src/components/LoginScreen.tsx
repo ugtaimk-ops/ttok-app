@@ -27,7 +27,7 @@ function friendlyAuthError(err: any): string {
   } else if (err.code === "auth/email-already-in-use") {
     message = "이미 가입된 이메일입니다. 로그인을 시도해 주세요.";
   } else if (err.code === "auth/weak-password") {
-    message = "비밀번호는 6자 이상이어야 합니다.";
+    message = "새 계정의 비밀번호는 12자 이상으로 설정해 주세요.";
   } else if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") {
     message = "이메일 또는 비밀번호가 올바르지 않습니다.";
   } else if (err.code === "auth/user-not-found") {
@@ -278,7 +278,7 @@ export default function LoginScreen({ onLogin, darkMode }: LoginScreenProps) {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="비밀번호 (6자 이상)"
+                placeholder="비밀번호 (새 계정은 12자 이상)"
                 disabled={isLoading}
                 className={`w-full py-3.5 pl-11 pr-11 rounded-2xl text-fluid-sm font-semibold outline-none transition-colors ${
                   darkMode
