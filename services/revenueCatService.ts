@@ -3,6 +3,7 @@
 // current entitlement state (rather than trying to infer it from the event
 // type alone, which is easy to get subtly wrong across renewals/
 // cancellations/grace periods/refunds) and writes isPremium accordingly.
+import { timingSafeEqual } from "crypto";
 
 const ENTITLEMENT_ID = "똑 Pro";
 const FIRESTORE_DATABASE_ID = "ai-studio-22fbd27c-5516-4028-bd17-a6d4ba99710b";
@@ -13,7 +14,23 @@ export function verifyWebhookAuth(authHeader: string | undefined): boolean {
     console.warn("[RevenueCat] REVENUECAT_WEBHOOK_SECRET is not set - rejecting all webhook calls.");
     return false;
   }
-  return authHeader === `Bearer ${expected}`;
+  const actual = Buffer.from(authHeader || "");
+  const wanted = Buffer.from(`Bearer ${expected}`);
+  return actual.length === wanted.length && timingSafeEqual(actual, wanted);
+}
+
+export async function deleteRevenueCatCustomer(uid: string): Promise<void> {
+  const secretKey = process.env.REVENUECAT_SECRET_API_KEY;
+  if (!secretKey) throw new Error("REVENUECAT_SECRET_API_KEY is not set");
+  const res = await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(uid)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${secretKey}` },
+    signal: AbortSignal.timeout(10_000),
+  });
+  // RevenueCat queues successful deletions; 404 means there is no customer.
+  if (res.status !== 200 && res.status !== 404) {
+    throw new Error(`RevenueCat customer deletion failed: ${res.status}`);
+  }
 }
 
 async function fetchIsEntitlementActive(appUserId: string): Promise<boolean> {
@@ -63,7 +80,15 @@ async function setIsPremium(uid: string, isPremium: boolean): Promise<void> {
 
   const app = getApps().length > 0 ? getApps()[0] : initializeApp({ credential: cert(JSON.parse(rawKey)) });
   const db = getFirestore(app, FIRESTORE_DATABASE_ID);
-  await db.collection("users").doc(uid).set({ isPremium }, { merge: true });
+  await db.runTransaction(async (tx: any) => {
+    const deleted = await tx.get(db.collection("deletedAccounts").doc(uid));
+    if (deleted.exists) return;
+    // Late renewals must not recreate a profile after account deletion.
+    const userRef = db.collection("users").doc(uid);
+    const user = await tx.get(userRef);
+    if (!user.exists) return;
+    tx.update(userRef, { isPremium });
+  });
   console.log(`[RevenueCat] Set isPremium=${isPremium} for uid=${uid}`);
 }
 
@@ -76,9 +101,18 @@ export async function handleWebhookEvent(body: any): Promise<void> {
   const appUserId: string | undefined = body?.event?.app_user_id;
   const eventType: string | undefined = body?.event?.type;
   console.log(`[RevenueCat] Webhook event received: type=${eventType} app_user_id=${appUserId}`);
-  if (!appUserId) {
-    console.warn("[RevenueCat] Webhook event missing app_user_id, ignoring:", eventType);
+  const validUid = (uid: unknown): uid is string =>
+    typeof uid === "string" && uid.length > 0 && uid.length <= 128 && !uid.startsWith("$RCAnonymousID");
+  if (eventType === "TRANSFER") {
+    const users = [...(Array.isArray(body.event.transferred_from) ? body.event.transferred_from : []),
+      ...(Array.isArray(body.event.transferred_to) ? body.event.transferred_to : [])];
+    await Promise.all([...new Set(users.filter(validUid))].map(async (uid) =>
+      setIsPremium(uid, await fetchIsEntitlementActive(uid))));
     return;
+  }
+  if (!validUid(appUserId)) {
+    if (String(appUserId || "").startsWith("$RCAnonymousID")) return;
+    throw new Error("RevenueCat webhook is missing a Firebase user id");
   }
 
   const isActive = await fetchIsEntitlementActive(appUserId);

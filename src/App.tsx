@@ -516,6 +516,23 @@ export default function App() {
     // onAuthStateChanged will flip authUser to null and return to LoginScreen
   };
 
+  const handleDeleteAccount = async () => {
+    const response = await robustFetch("/api/account/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmation: "DELETE" }),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(typeof data.error === "string" ? data.error : "계정을 삭제하지 못했어요.");
+    }
+    await handleLogout();
+    for (const key of ["ttok_user_profile", "ttok_schedules", "ttok_todos", "ttok_scripts",
+      "ttok_practice_logs", "ttok_data_owner_uid", "ttok_onboarding_complete"]) {
+      localStorage.removeItem(key);
+    }
+  };
+
   const handleLoginSuccess = (profile: UserProfile) => {
     setUser(prev => ({ ...prev, ...profile }));
   };
@@ -880,6 +897,7 @@ export default function App() {
                 planPreview={planPreview}
                 onToggleDarkMode={handleToggleDarkMode}
                 onLogout={handleLogout}
+                onDeleteAccount={handleDeleteAccount}
                 onResetData={handleResetData}
                 user={user}
                 onUpdateUser={handleUpdateUser}

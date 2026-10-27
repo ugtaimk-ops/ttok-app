@@ -22,6 +22,7 @@ interface SettingsScreenProps {
   planPreview?: "free" | "pro";
   onToggleDarkMode: () => void;
   onLogout: () => void;
+  onDeleteAccount: () => Promise<void>;
   onResetData: () => void;
   user: UserProfile;
   onUpdateUser: (updatedUser: UserProfile) => void;
@@ -35,6 +36,7 @@ export default function SettingsScreen({
   planPreview,
   onToggleDarkMode, 
   onLogout, 
+  onDeleteAccount,
   onResetData,
   user,
   onUpdateUser,
@@ -69,6 +71,10 @@ export default function SettingsScreen({
 
   // Security and Purge modal states
   const [showPurgeModal, setShowPurgeModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [purgeCountdown, setPurgeCountdown] = useState(5);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const syncNotificationsRef = useRef(onSyncNotifications);
@@ -112,6 +118,7 @@ export default function SettingsScreen({
   }, [examNotif, assessNotif, dailyNotif, mealNotifEnabled, mealNotifHour, mealNotifMinute]);
 
   useScreenBack(() => {
+    if (showDeleteModal && !deleting) { setShowDeleteModal(false); return true; }
     if (showTermsModal) { setShowTermsModal(false); return true; }
     if (showPurgeModal) { setShowPurgeModal(false); return true; }
     return false;
@@ -296,6 +303,10 @@ export default function SettingsScreen({
             >
               <LogOut size={15} /> 로그아웃
             </button>
+            <button type="button" onClick={() => { setDeleteError(""); setDeleteConfirmation(""); setShowDeleteModal(true); }}
+              className="w-full py-3 rounded-2xl text-fluid-sm font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/20 cursor-pointer">
+              계정 및 데이터 삭제
+            </button>
           </div>
         </div>
 
@@ -340,6 +351,35 @@ export default function SettingsScreen({
         </div>
 
       </div>
+
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-[60] bg-slate-950/60 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+              className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 p-6 space-y-4 text-left shadow-xl">
+              <h3 className="font-black text-lg text-rose-600">계정 및 데이터 삭제</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Firebase 로그인 계정, 프로필, 일정, 대본, 발표 기록과 서버에 저장된 AI 결과를 삭제하고 RevenueCat 고객 기록 삭제를 요청합니다. 되돌릴 수 없어요. 구독 중이라면 Google Play에서 별도로 구독을 해지해야 다음 결제가 멈춥니다.</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">최근 5분 안에 로그인한 계정만 삭제할 수 있어요. 아래에 <strong>삭제</strong>를 입력해 주세요.</p>
+              <input value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)}
+                className="w-full rounded-xl border p-3 dark:bg-slate-800" aria-label="삭제 확인 입력" placeholder="삭제" />
+              {deleteError && <p role="alert" className="text-sm text-rose-600">{deleteError}</p>}
+              <div className="flex gap-2">
+                <button type="button" disabled={deleting} onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 py-3 font-bold">취소</button>
+                <button type="button" disabled={deleting || deleteConfirmation !== "삭제"}
+                  onClick={async () => {
+                    setDeleting(true);
+                    setDeleteError("");
+                    try { await onDeleteAccount(); setShowDeleteModal(false); }
+                    catch (error) { setDeleteError(error instanceof Error ? error.message : "삭제에 실패했어요."); }
+                    finally { setDeleting(false); }
+                  }}
+                  className="flex-1 rounded-xl bg-rose-600 py-3 font-bold text-white disabled:opacity-40">{deleting ? "삭제 중..." : "영구 삭제"}</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Purge Modal overlay */}
       <AnimatePresence>

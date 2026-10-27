@@ -66,12 +66,19 @@ test("private APIs reject callers without a verified Firebase token", async () =
 
     const ai = await fetch(`${origin}/api/script/generate`, { method: "POST" });
     assert.equal(ai.status, 401);
+    const oversizedAnonymous = await fetch(`${origin}/api/practice/analyze`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ videoBase64: "A".repeat(2_000_000) }),
+    });
+    assert.equal(oversizedAnonymous.status, 401, "authenticate before parsing large media requests");
 
     const now = Math.floor(Date.now() / 1000);
     const claims = {
       sub: "test-uid", iat: now, exp: now + 300, auth_time: now,
       aud: "gen-lang-client-0685740024",
       iss: "https://securetoken.google.com/gen-lang-client-0685740024",
+      email_verified: true,
+      firebase: { sign_in_provider: "password" },
     };
     const validToken = jwt.sign(claims, privateKey, { algorithm: "RS256", keyid: "test-key" });
     for (const headers of [
@@ -79,8 +86,20 @@ test("private APIs reject callers without a verified Firebase token", async () =
       { Authorization: `Bearer ${validToken}`, "X-App-Secret": "legacy-test-secret" },
     ]) {
       const authenticated = await fetch(`${origin}/api/school/search?keyword=a`, { headers });
-      assert.equal(authenticated.status, 200, "valid Firebase claims must pass authentication");
+      assert.equal(authenticated.status, 503, "valid Firebase claims pass auth, then fail closed without Firestore");
     }
+
+    const unverifiedToken = jwt.sign({ ...claims, email_verified: false }, privateKey, { algorithm: "RS256", keyid: "test-key" });
+    const unverified = await fetch(`${origin}/api/school/search?keyword=a`, {
+      headers: { Authorization: `Bearer ${unverifiedToken}` },
+    });
+    assert.equal(unverified.status, 401, "unverified password accounts must not use private APIs");
+
+    const rotatedToken = jwt.sign(claims, privateKey, { algorithm: "RS256", keyid: "rotated-key" });
+    const rotated = await fetch(`${origin}/api/school/search?keyword=a`, {
+      headers: { Authorization: `Bearer ${rotatedToken}` },
+    });
+    assert.equal(rotated.status, 503, "an unknown kid must refresh cached Google certs before rejecting login");
 
     const missingAuthTime = jwt.sign({ ...claims, auth_time: undefined }, privateKey, {
       algorithm: "RS256", keyid: "test-key",
@@ -92,6 +111,11 @@ test("private APIs reject callers without a verified Firebase token", async () =
 
     const webhook = await fetch(`${origin}/revenuecat/webhook`, { method: "POST" });
     assert.equal(webhook.status, 401);
+    const oversizedWebhook = await fetch(`${origin}/revenuecat/webhook`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: "A".repeat(200_000) }),
+    });
+    assert.equal(oversizedWebhook.status, 401, "reject webhook calls before body parsing");
 
     const serverFile = await fetch(`${origin}/server.cjs.map`);
     assert.equal(serverFile.headers.get("content-type")?.startsWith("text/html"), true);

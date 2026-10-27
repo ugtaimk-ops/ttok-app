@@ -1,11 +1,20 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import fs from 'fs';
 import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), {
+      name: 'exclude-ui-editor-catalog-from-release',
+      apply: 'build' as const,
+      closeBundle() {
+        // The catalog is used only by the local UI editor and need not ship
+        // inside production APK/AAB assets or the Render web directory.
+        fs.rmSync(path.resolve(__dirname, 'dist/ui-catalog.json'), { force: true });
+      },
+    }],
     define: {
       'import.meta.env.VITE_API_URL': JSON.stringify(process.env.APP_URL || (process.env.NODE_ENV === 'production' ? 'https://ttok-backend.onrender.com' : '')),
       // RevenueCat's Public SDK key - like Firebase's client apiKey, this is designed to

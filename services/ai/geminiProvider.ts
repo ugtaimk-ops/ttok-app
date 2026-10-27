@@ -44,7 +44,7 @@ function getApiKeys(): string[] {
 function isQuotaError(error: any): boolean {
   const errorMsg = String(error?.message || error);
   return (
-    errorMsg.includes("429") ||
+    errorMsg.includes('"code":429') ||
     errorMsg.includes("RESOURCE_EXHAUSTED") ||
     errorMsg.includes("Quota exceeded") ||
     error?.status === 429 ||
@@ -60,8 +60,8 @@ function isQuotaError(error: any): boolean {
 function isKeyError(error: any): boolean {
   const errorMsg = String(error?.message || error);
   return (
-    errorMsg.includes("401") ||
-    errorMsg.includes("403") ||
+    errorMsg.includes('"code":401') ||
+    errorMsg.includes('"code":403') ||
     errorMsg.includes("UNAUTHENTICATED") ||
     errorMsg.includes("PERMISSION_DENIED") ||
     errorMsg.includes("API_KEY_INVALID") ||
@@ -183,6 +183,7 @@ export class GeminiProvider implements AIService {
             }
             return response.text;
           }
+          throw new Error("AI returned an empty response");
         } catch (error: any) {
           if (signal.aborted) throw aiTimeoutError();
           console.warn(`Gemini generation with ${modelName} failed:`, error.message || error);
@@ -205,6 +206,9 @@ export class GeminiProvider implements AIService {
             (keyError as any).originalMessage = error.message || String(error);
             throw keyError;
           }
+          // Empty output and other client/model errors should not trigger a
+          // second paid request with the same input.
+          throw error;
         }
       }
     }
@@ -224,19 +228,9 @@ export class GeminiProvider implements AIService {
     if (options.tier === "fast") {
       modelsToTry = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
     } else if (options.tier === "complex" || options.imageBase64 || options.videoBase64) {
-      modelsToTry = [
-        "gemini-2.5-flash",       // Primary free model requested by user
-        "gemini-2.5-flash-lite",  // Secondary free model requested by user
-        "gemini-3.6-flash",       // High performance fallback
-        "gemini-3.5-flash",       // High performance standard fallback
-      ];
+      modelsToTry = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
     } else {
-      modelsToTry = [
-        "gemini-2.5-flash",       // Primary free model requested by user
-        "gemini-2.5-flash-lite",  // Secondary free model requested by user
-        "gemini-3.6-flash",       // High performance fallback
-        "gemini-3.5-flash",       // High performance standard fallback
-      ];
+      modelsToTry = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
     }
 
     if (options.modelOverride) modelsToTry = [options.modelOverride];

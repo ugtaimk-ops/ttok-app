@@ -13,7 +13,8 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId
+        && !exists(/databases/$(database)/documents/deletedAccounts/$(userId));
     }
 
     // Rules for Users collection and subcollections

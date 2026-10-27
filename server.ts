@@ -6,7 +6,7 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import { getAIService, parseJSONResponse } from "./services/ai";
-import { verifyRequestUser, checkAndConsumeUsage, getCurrentUsage, getCachedProblem, saveProblemResult, getCachedAiResult, saveCachedAiResult } from "./services/usageService";
+import { verifyRequestIdentity, isAccountDeleted, deleteAccountData, pruneExpiredServerData, checkAndConsumeUsage, getCurrentUsage, refundUsage, getCachedProblem, saveProblemResult, getCachedAiResult, saveCachedAiResult } from "./services/usageService";
 import { verifyWebhookAuth, handleWebhookEvent } from "./services/revenueCatService";
 
 dotenv.config();
@@ -21,6 +21,9 @@ if (process.env.RENDER === "true") app.set("trust proxy", 1);
 
 // Enable lightweight CORS middleware to prevent any browser cross-origin blocks
 app.use((req, res, next) => {
+  res.header("X-Content-Type-Options", "nosniff");
+  res.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.header("X-Frame-Options", "SAMEORIGIN");
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-App-Secret");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
@@ -29,9 +32,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-
-// Enable JSON parsing after CORS so parse errors also have CORS headers.
-app.use(express.json({ limit: "25mb" }));
 
 // General API rate limit: protects against runaway costs from bots/scanners hitting
 // the public backend URL that ships inside the APK/IPA.
@@ -60,14 +60,70 @@ app.use("/api/", apiLimiter);
 // it is ignored and kept only in the CORS allow-header for compatibility.
 app.use("/api/", async (req, res, next) => {
   if (req.path === "/health") return next();
-  const uid = await verifyRequestUser(req);
-  if (!uid) return res.status(401).json({ error: "로그인이 필요해요.", code: "AUTH_REQUIRED" });
-  (req as any).uid = uid;
-  next();
+  const identity = await verifyRequestIdentity(req);
+  if (!identity) return res.status(401).json({ error: "로그인이 필요해요. 이메일 계정은 인증 후 다시 로그인해 주세요.", code: "AUTH_REQUIRED" });
+  try {
+    if (req.path !== "/account/delete" && await isAccountDeleted(identity.uid)) {
+      return res.status(401).json({ error: "삭제된 계정이에요.", code: "ACCOUNT_DELETED" });
+    }
+    (req as any).uid = identity.uid;
+    (req as any).authTime = identity.authTime;
+    next();
+  } catch (error) {
+    console.error("[Auth] Account status check failed:", error);
+    return res.status(503).json({ error: "계정 상태를 확인하지 못했어요. 잠시 후 다시 시도해 주세요." });
+  }
 });
+
+// Authenticate before parsing large image/video bodies. The webhook has its
+// own secret and a small body cap; unauthenticated clients cannot allocate
+// 25 MB of JSON parser memory or submit a paid AI prompt.
+app.use("/revenuecat/webhook", (req, res, next) =>
+  verifyWebhookAuth(req.header("authorization")) ? next() : res.status(401).json({ error: "Unauthorized" }));
+app.use("/api/practice/analyze", express.json({ limit: "23mb" }));
+for (const route of ["/api/problem/solve", "/api/assessment/extract", "/api/study/action"]) {
+  app.use(route, express.json({ limit: "13mb" }));
+}
+app.use("/revenuecat/webhook", express.json({ limit: "128kb" }));
+app.use(express.json({ limit: "1mb" }));
 
 const AI_ROUTES = ["/api/script/generate", "/api/practice/analyze", "/api/assessment/extract", "/api/study/action", "/api/home/ai-report"];
 const CACHEABLE_AI_ROUTES = new Set(["/api/assessment/extract", "/api/study/action"]);
+const validString = (value: unknown, max: number) => value === undefined || (typeof value === "string" && value.length <= max);
+const validImage = (image: unknown, mime: unknown) =>
+  image === undefined || (typeof image === "string" && image.length >= 100 && image.length <= 12_000_000 &&
+    /^[A-Za-z0-9+/=]+$/.test(image) && ["image/jpeg", "image/png", "image/webp"].includes(String(mime)));
+const validReportList = (items: unknown, fields: string[]) => items === undefined ||
+  (Array.isArray(items) && items.length <= 100 && items.every((item) =>
+    item && typeof item === "object" && fields.every((field) => validString(item[field], 300))));
+
+// Validate user-controlled prompt fields before the quota reservation and
+// before building Gemini prompts. One huge string must not cost one request.
+app.use(AI_ROUTES, (req, res, next) => {
+  const body = req.body;
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return res.status(400).json({ error: "요청 형식을 확인해 주세요." });
+  }
+  const route = req.originalUrl.split("?")[0];
+  let valid = true;
+  if (route === "/api/script/generate") {
+    valid = ["topic", "time", "grade", "subject", "audience", "tone", "purpose", "style"]
+      .every((field) => validString(body[field], field === "topic" ? 300 : 100));
+  } else if (route === "/api/practice/analyze") {
+    valid = validString(body.topic, 120) && validString(body.expectedScript, 5000);
+  } else if (route === "/api/assessment/extract") {
+    valid = validImage(body.imageBase64, body.mimeType) && typeof body.imageBase64 === "string";
+  } else if (route === "/api/study/action") {
+    valid = ["summary", "quiz", "note", "question"].includes(body.actionType) &&
+      validString(body.text, 20_000) && validString(body.additionalQuestion, 1000) &&
+      validImage(body.imageBase64, body.mimeType);
+  } else if (route === "/api/home/ai-report") {
+    valid = validReportList(body.todos, ["text", "category", "dueDate"]) &&
+      validReportList(body.schedules, ["title", "type", "subject", "date"]);
+  }
+  if (!valid) return res.status(400).json({ error: "입력 내용이나 이미지 크기를 확인해 주세요." });
+  next();
+});
 app.use(AI_ROUTES, aiLimiter);
 app.use("/api/problem/solve", aiLimiter);
 
@@ -107,10 +163,13 @@ app.use(AI_ROUTES, async (req, res, next) => {
         console.warn("[AI] Cache lookup unavailable:", cacheError);
       }
     }
-    const result = await checkAndConsumeUsage(uid);
+    const result = await checkAndConsumeUsage(uid, route === "/api/home/ai-report");
     (req as any).uid = uid;
     (req as any).isPremium = result.isPremium;
     if (!result.allowed) {
+      if (route === "/api/home/ai-report" && !result.isPremium) {
+        return res.status(403).json({ error: "AI 리포트는 똑 PRO 전용 기능이에요.", code: "PREMIUM_REQUIRED" });
+      }
       return res.status(403).json({
         error: result.isPremium
           ? "이번 달 이용 횟수를 모두 사용했어요. 다음 달에 다시 이용해 주세요."
@@ -121,6 +180,12 @@ app.use(AI_ROUTES, async (req, res, next) => {
         isPremium: result.isPremium
       });
     }
+    // A failed response releases this one reservation. Firestore transaction
+    // keeps the count nonnegative even when several requests finish together.
+    res.once("finish", () => {
+      if (res.statusCode >= 400) void refundUsage(uid, result.month)
+        .catch((error) => console.error("[UsageLimit] Refund failed:", error));
+    });
     next();
   } catch (err) {
     console.error("[UsageLimit] Check failed:", err);
@@ -151,6 +216,23 @@ app.get("/api/usage/status", async (req, res) => {
   }
 });
 
+app.post("/api/account/delete", async (req, res) => {
+  const authTime = (req as any).authTime as number;
+  if (req.body?.confirmation !== "DELETE") {
+    return res.status(400).json({ error: "계정 삭제 확인이 필요해요." });
+  }
+  if (!Number.isFinite(authTime) || Date.now() / 1000 - authTime > 300) {
+    return res.status(403).json({ error: "보안을 위해 다시 로그인한 뒤 5분 안에 계정 삭제를 요청해 주세요.", code: "RECENT_LOGIN_REQUIRED" });
+  }
+  try {
+    await deleteAccountData((req as any).uid);
+    return res.json({ deleted: true });
+  } catch (error) {
+    console.error("[Account] Deletion failed:", error);
+    return res.status(503).json({ error: "계정을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요." });
+  }
+});
+
 // Photo problem solving has its own usage gate: a cached duplicate must not
 // consume another monthly AI request. The cache key is scoped to the user.
 const problemRequests = new Map<string, Promise<any>>();
@@ -177,6 +259,7 @@ app.post("/api/problem/solve", async (req, res) => {
           error.status = 403;
           throw error;
         }
+        try {
         const response = await getAIService("gemini").generateContent({
           modelOverride: "gemini-2.5-flash-lite",
           tier: "complex",
@@ -204,6 +287,11 @@ app.post("/api/problem/solve", async (req, res) => {
         try { await saveProblemResult(uid, hash, result); }
         catch (error) { console.error("[ProblemSolve] Cache record failed:", error); }
         return result;
+        } catch (error) {
+          try { await refundUsage(uid, usage.month); }
+          catch (refundError) { console.error("[ProblemSolve] Refund failed:", refundError); }
+          throw error;
+        }
       })();
       problemRequests.set(key, pending);
       void pending.finally(() => problemRequests.delete(key)).catch(() => {});
@@ -220,6 +308,9 @@ app.post("/api/problem/solve", async (req, res) => {
 app.get("/api/school/search", async (req, res) => {
   try {
     const { keyword } = req.query;
+    if (typeof keyword !== "string" || keyword.length > 80) {
+      return res.status(400).json({ error: "학교 이름은 80자 이내로 입력해 주세요." });
+    }
     if (!keyword || String(keyword).trim().length < 2) {
       console.log(`[SERVER_DEBUG] Search rejected: keyword is empty or less than 2 characters.`);
       return res.json([]);
@@ -347,31 +438,20 @@ app.get("/api/school/search", async (req, res) => {
       console.log(`[SchoolInfo Proxy] Successfully hit and retrieved SchoolInfo.go.kr page content. (Size: ${resSchoolInfo.value.length} bytes)`);
     }
 
-    // AI Fallback for abbreviations/slangs (e.g. "외대부고" or "민사고" or "대구과고") when no schools are found
+    // Common abbreviations have a deterministic NEIS lookup. School search
+    // must never spend unmetered Gemini quota on an arbitrary query.
     if (collectedSchoolsMap.size === 0) {
-      console.log(`[AI Fallback] No schools found for "${searchWord}". Activating AI school resolver...`);
+      const aliases: Record<string, string> = {
+        "외대부고": "용인한국외국어대학교부설고등학교",
+        "용인외대부고": "용인한국외국어대학교부설고등학교",
+        "민사고": "민족사관고등학교",
+        "대구과고": "대구과학고등학교",
+        "과천외고": "과천외국어고등학교",
+      };
+      const officialName = aliases[searchWord];
+      if (officialName) {
       try {
-        const ai = getAIService();
-        const prompt = `사용자가 입력한 학교 검색어 "${searchWord}"는 공식 학교명이 아니거나 줄임말 또는 약칭(예: "용인외대부고", "민사고", "대구과고", "과천외고")일 수 있습니다.
-대한민국의 실제 존재하는 초등학교, 중학교, 고등학교, 특수학교 중 이 검색어와 대응되는 가장 유력한 공식 학교명(예: "용인한국외국어대학교부설고등학교", "민족사관고등학교", "대구과학고등학교", "과천외국어고등학교")을 딱 1개만 찾아서 아래 JSON 형식으로 응답해주세요. 
-반드시 다른 추가 설명 없이 오직 JSON만 반환해야 합니다.
-
-{
-  "officialName": "공식 학교명"
-}`;
-        
-        const aiResponseText = await ai.generateContent({
-          prompt,
-          temperature: 0.1,
-          tier: "fast",
-          maxOutputTokens: 128,
-          responseMimeType: "application/json"
-        });
-        
-        const resolved = parseJSONResponse(aiResponseText);
-        if (resolved && resolved.officialName && resolved.officialName !== searchWord) {
-          console.log(`[AI School Resolver] Resolved informal name "${searchWord}" to official name "${resolved.officialName}"`);
-          const aiUrlByName = `https://open.neis.go.kr/hub/schoolInfo?Type=json&pIndex=1&pSize=100&SCHUL_NM=${encodeURIComponent(resolved.officialName)}`;
+          const aiUrlByName = `https://open.neis.go.kr/hub/schoolInfo?Type=json&pIndex=1&pSize=100&SCHUL_NM=${encodeURIComponent(officialName)}`;
           const response = await fetch(aiUrlByName, { headers, signal: AbortSignal.timeout(8000) });
           if (response.ok) {
             const data = await response.json();
@@ -390,9 +470,9 @@ app.get("/api/school/search", async (req, res) => {
               });
             }
           }
-        }
-      } catch (aiErr) {
-        console.error("[AI School Resolver] Error during resolution:", aiErr);
+      } catch (lookupError) {
+        console.error("[School Search] Alias lookup failed:", lookupError);
+      }
       }
     }
 
@@ -438,7 +518,7 @@ app.get("/api/school/search", async (req, res) => {
     return res.json(mergedSchools);
   } catch (error: any) {
     console.error(`[SERVER_DEBUG] [ERROR] School search error:`, error);
-    res.status(500).json({ error: error.message || "학교 조회 도중 오류 발생" });
+    res.status(500).json({ error: "학교 조회 도중 오류가 발생했어요." });
   }
 });
 
@@ -663,7 +743,7 @@ JSON 스키마를 정확히 따르세요.`;
     try {
       responseText = await ai.generateContent({
         tier: "complex",
-        modelOverride: "gemini-3.5-flash-lite",
+        modelOverride: "gemini-2.5-flash-lite",
         costContext: { uid: (req as any).uid, feature: "practice" },
         prompt,
         videoBase64,
@@ -808,7 +888,7 @@ app.post("/api/assessment/extract", async (req, res) => {
     console.error("Assessment extraction error:", error);
     const is429 = error.status === 429 || error.message?.includes("RESOURCE_EXHAUSTED_429");
     res.status(is429 ? 429 : 500).json({ 
-      error: is429 ? "RESOURCE_EXHAUSTED_429" : (error.message || "수행평가 이미지 분석에 실패했습니다.")
+      error: is429 ? "RESOURCE_EXHAUSTED_429" : "수행평가 이미지 분석에 실패했습니다. 잠시 후 다시 시도해 주세요."
     });
   }
 });
@@ -915,7 +995,7 @@ app.post("/api/study/action", async (req, res) => {
     console.error("Study helper error:", error);
     const is429 = error.status === 429 || error.message?.includes("RESOURCE_EXHAUSTED_429");
     res.status(is429 ? 429 : 500).json({ 
-      error: is429 ? "RESOURCE_EXHAUSTED_429" : (error.message || "공부 도우미 처리 중 오류가 발생했습니다.")
+      error: is429 ? "RESOURCE_EXHAUSTED_429" : "공부 도우미 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
     });
   }
 });
@@ -966,7 +1046,7 @@ app.post("/api/home/ai-report", async (req, res) => {
     console.error("AI report error:", error);
     const is429 = error.status === 429 || error.message?.includes("RESOURCE_EXHAUSTED_429");
     res.status(is429 ? 429 : 500).json({
-      error: is429 ? "RESOURCE_EXHAUSTED_429" : (error.message || "AI 리포트를 생성하지 못했습니다.")
+      error: is429 ? "RESOURCE_EXHAUSTED_429" : "AI 리포트를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요."
     });
   }
 });
@@ -1000,7 +1080,7 @@ app.use("/api", (_req, res) => {
   res.status(404).json({ code: "API_NOT_FOUND", error: "요청한 기능을 찾을 수 없어요. 앱을 업데이트해 주세요." });
 });
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  if (!req.path.startsWith("/api/")) return next(err);
+  if (!req.path.startsWith("/api/") && req.path !== "/revenuecat/webhook") return next(err);
   const status = err?.status === 413 ? 413 : err?.status === 400 ? 400 : 500;
   res.status(status).json({ code: "API_REQUEST_FAILED", error: status === 413 ? "첨부한 파일이 너무 커요." : "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요." });
 });
@@ -1033,6 +1113,12 @@ async function startServer() {
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`[똑 App Server] Server running on port ${PORT}`);
   });
+  if (process.env.NODE_ENV === "production" && process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    const prune = () => void pruneExpiredServerData()
+      .catch((error) => console.error("[Cleanup] Expired data removal failed:", error));
+    setTimeout(prune, 60_000).unref();
+    setInterval(prune, 6 * 60 * 60 * 1000).unref();
+  }
 }
 
 startServer();
