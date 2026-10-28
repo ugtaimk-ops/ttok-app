@@ -134,7 +134,7 @@ test("private APIs reject callers without a verified Firebase token", async () =
     assert.equal(oversizedWebhook.status, 401, "reject webhook calls before body parsing");
 
     const serverFile = await fetch(`${origin}/server.cjs.map`);
-    assert.equal(serverFile.headers.get("content-type")?.startsWith("text/html"), true);
+    assert.equal(serverFile.status, 404, "server source maps must not be publicly accessible");
     assert.equal((await serverFile.text()).includes("FIREBASE_SERVICE_ACCOUNT_KEY"), false);
   } finally {
     server.kill();
