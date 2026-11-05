@@ -8,16 +8,21 @@ import rateLimit from "express-rate-limit";
 import { getAIService, parseJSONResponse } from "./services/ai";
 import { verifyRequestIdentity, isAccountDeleted, deleteAccountData, pruneExpiredServerData, checkAndConsumeUsage, getCurrentUsage, refundUsage, getCachedProblem, saveProblemResult, getCachedAiResult, saveCachedAiResult } from "./services/usageService";
 import { verifyWebhookAuth, handleWebhookEvent } from "./services/revenueCatService";
+import { isPostgresConfigured, validCollection, validDocumentId, validUserPayload, getUserDocuments, putUserDocument, deleteUserDocument, getStorageStatus } from "./services/postgresStore";
+import { ADMIN_SECTIONS, configuredAdminUids, getAdminSection } from "./services/adminDashboardService";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const HOST = process.env.HOST || "0.0.0.0";
 
 // Render forwards requests through one trusted proxy. Without this, the rate
 // limiter treats every visitor as the same proxy IP and logs X-Forwarded-For
 // validation errors instead of applying limits to each client.
-if (process.env.RENDER === "true") app.set("trust proxy", 1);
+// Self-hosted deployments may opt in when the origin listens only on loopback
+// and a single local reverse proxy (for example Caddy) is in front of it.
+if (process.env.RENDER === "true" || process.env.TRUST_PROXY_HOPS === "1") app.set("trust proxy", 1);
 
 // Enable lightweight CORS middleware to prevent any browser cross-origin blocks
 app.use((req, res, next) => {
@@ -62,6 +67,11 @@ app.use("/api/", async (req, res, next) => {
   if (req.path === "/health") return next();
   const identity = await verifyRequestIdentity(req);
   if (!identity) return res.status(401).json({ error: "로그인이 필요해요. 이메일 계정은 인증 후 다시 로그인해 주세요.", code: "AUTH_REQUIRED" });
+  if (req.path.startsWith("/admin/")) {
+    const admins = configuredAdminUids();
+    if (admins.length === 0) return res.status(503).json({ code: "ADMIN_NOT_CONFIGURED", error: "관리자 UID가 서버에 설정되지 않았습니다." });
+    if (!admins.includes(identity.uid)) return res.status(403).json({ code: "ADMIN_FORBIDDEN", error: "관리자 권한이 없습니다." });
+  }
   try {
     if (req.path !== "/account/delete" && await isAccountDeleted(identity.uid)) {
       return res.status(401).json({ error: "삭제된 계정이에요.", code: "ACCOUNT_DELETED" });
@@ -522,31 +532,15 @@ app.get("/api/school/search", async (req, res) => {
   }
 });
 
-// Meal Info Endpoint (NEIS & SFIC Portal Proxy)
+// Meal Info Endpoint (official NEIS API)
 app.get("/api/meal/info", async (req, res) => {
   try {
-    const { officeCode, schoolCode, date, startDate, endDate, schoolName } = req.query;
+    const { officeCode, schoolCode, date, startDate, endDate } = req.query;
     if (!officeCode || !schoolCode) {
       return res.status(400).json({ error: "officeCode and schoolCode are required" });
     }
 
-    // -------------------------------------------------------------
-    // [SFIC PORTAL INTEGRATION]
-    // Address: https://www.sfic.go.kr/sfic/sfic-ui-u137
-    // Connect, log, and request SFIC portal state for selected school name
-    // -------------------------------------------------------------
-    const targetSchoolName = schoolName ? String(schoolName).trim() : "학교";
-    const sficUrl = `https://www.sfic.go.kr/sfic/sfic-ui-u137`;
-    console.log(`[SFIC Proxy] Connecting to Seoul School Food Information Center: ${sficUrl}`);
-    console.log(`[SFIC Proxy] Simulating search click on '급식 소식' -> '학교별 급식 식단 정보' for school: '${targetSchoolName}'`);
-
-    const headers = {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
-    };
-
-    // Parallel fetch: We fetch the main SFIC page in the background to verify portal status,
-    // and query the official NEIS database to retrieve structured real meal dataset (Calories, Origin, Allergies, Nutrition)
+    // NEIS provides the structured meal data used by the app.
     let url = `https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json&pIndex=1&pSize=100&ATPT_OFCDC_SC_CODE=${encodeURIComponent(String(officeCode))}&SD_SCHUL_CODE=${encodeURIComponent(String(schoolCode))}`;
     if (process.env.NEIS_API_KEY) {
       url += `&KEY=${encodeURIComponent(process.env.NEIS_API_KEY)}`;
@@ -562,27 +556,9 @@ app.get("/api/meal/info", async (req, res) => {
     // The NEIS API key is in the query string; never write that URL to logs.
     console.log("[Proxy] Fetching meals from NEIS");
     
-    // We run both the SFIC portal status hit and NEIS API in parallel to guarantee actual real data
-    const [resSfic, resNeis] = await Promise.allSettled([
-      fetch(sficUrl, { headers, signal: AbortSignal.timeout(5000) }).then(r => r.ok ? r.text() : null),
-      fetch(url, { headers }).then(r => {
-        if (!r.ok) throw new Error(`NEIS API responded with status ${r.status}`);
-        return r.json();
-      })
-    ]);
-
-    if (resSfic.status === "fulfilled" && resSfic.value) {
-      console.log(`[SFIC Proxy] Successfully hit and synchronized with sfic.go.kr portal! Page length: ${resSfic.value.length} bytes.`);
-    } else {
-      console.warn(`[SFIC Proxy] Sfic.go.kr portal hit completed with fallback (likely due to SSL/cors/timeout limits), falling back gracefully to NEIS Open API core.`);
-    }
-
-    if (resNeis.status === "rejected") {
-      console.error(`[Proxy Error] NEIS fetch failed:`, resNeis.reason);
-      throw new Error("급식 정보를 불러오지 못했습니다.");
-    }
-
-    const data = resNeis.value as any;
+    const neisResponse = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!neisResponse.ok) throw new Error(`NEIS API responded with status ${neisResponse.status}`);
+    const data = await neisResponse.json() as any;
     console.log(`[Proxy] Meal response received`, JSON.stringify(data).substring(0, 200));
 
     // NEIS reports both "no data for this date" and genuine errors (bad key,
@@ -608,8 +584,7 @@ app.get("/api/meal/info", async (req, res) => {
         menu: item.DDISH_NM,            // 쌀밥<br/>미역국...
         calories: item.CAL_INFO,        // 650.5 kcal
         nutrition: item.NTR_INFO,       // 영양정보
-        origin: item.ORPLC_INFO,        // 원산지 정보
-        isSficSynced: true              // Indicate connection is synced with SFIC standard
+        origin: item.ORPLC_INFO         // 원산지 정보
       }));
       return res.json(meals);
     }
@@ -1075,6 +1050,72 @@ app.post("/revenuecat/webhook", async (req, res) => {
 // VITE OR STATIC FILES SERVING MIDDLEWARE & SERVER STARTUP
 // ==========================================
 
+// PostgreSQL storage pilot. Firebase Auth remains the identity bridge until
+// accounts and billing identities can be migrated without breaking sign-in.
+// This API stays disabled unless DATABASE_URL is configured on the server.
+app.get("/api/storage/status", async (_req, res) => {
+  if (!isPostgresConfigured()) return res.status(503).json({ ready: false });
+  try { await getStorageStatus(); return res.json({ ready: true }); }
+  catch (error) { console.error("[Storage] Status failed:", error); return res.status(503).json({ ready: false }); }
+});
+
+// The browser dashboard never receives service credentials. Its read-only
+// management data is available only to an explicitly allowlisted Firebase uid.
+app.get("/api/admin/:section", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const uid = (req as any).uid as string;
+  const admins = configuredAdminUids();
+  if (admins.length === 0) return res.status(503).json({ code: "ADMIN_NOT_CONFIGURED", error: "관리자 UID가 서버에 설정되지 않았습니다." });
+  if (!admins.includes(uid)) return res.status(403).json({ code: "ADMIN_FORBIDDEN", error: "관리자 권한이 없습니다." });
+  const section = req.params.section;
+  if (!ADMIN_SECTIONS.includes(section as any)) return res.status(404).json({ code: "ADMIN_SECTION_NOT_FOUND", error: "관리 화면을 찾을 수 없습니다." });
+  try {
+    return res.json(await getAdminSection(section as (typeof ADMIN_SECTIONS)[number], uid));
+  } catch (error) {
+    console.error(`[AdminDashboard] ${section} failed:`, error);
+    return res.status(503).json({ code: "ADMIN_DATA_UNAVAILABLE", error: "관리 정보를 불러오지 못했습니다." });
+  }
+});
+app.get("/api/storage/:collection", async (req, res) => {
+  if (!validCollection(req.params.collection)) return res.status(404).json({ error: "Unknown collection" });
+  const after = typeof req.query.after === "string" ? req.query.after : "";
+  if (after && !validDocumentId(after)) return res.status(400).json({ error: "Invalid cursor" });
+  try {
+    const page = await getUserDocuments((req as any).uid, req.params.collection, after);
+    return res.json(page);
+  } catch (error) {
+    console.error("[Storage] Read failed:", error);
+    return res.status(503).json({ error: "저장된 데이터를 불러오지 못했어요." });
+  }
+});
+app.put("/api/storage/:collection/:id", async (req, res) => {
+  const { collection, id } = req.params;
+  if (!validCollection(collection) || !validDocumentId(id) || !validUserPayload(collection, id, req.body) ||
+      JSON.stringify(req.body).length > 250_000) {
+    return res.status(400).json({ error: "저장할 데이터 형식이나 크기를 확인해 주세요." });
+  }
+  try {
+    await putUserDocument((req as any).uid, collection, id, req.body);
+    return res.json({ saved: true });
+  } catch (error) {
+    console.error("[Storage] Write failed:", error);
+    return res.status(503).json({ error: "데이터를 저장하지 못했어요." });
+  }
+});
+app.delete("/api/storage/:collection/:id", async (req, res) => {
+  const { collection, id } = req.params;
+  if (!validCollection(collection) || !validDocumentId(id) || collection === "profile") {
+    return res.status(400).json({ error: "삭제할 데이터를 확인해 주세요." });
+  }
+  try {
+    await deleteUserDocument((req as any).uid, collection, id);
+    return res.json({ deleted: true });
+  } catch (error) {
+    console.error("[Storage] Delete failed:", error);
+    return res.status(503).json({ error: "데이터를 삭제하지 못했어요." });
+  }
+});
+
 // API misses must never fall through to the SPA HTML document.
 app.use("/api", (_req, res) => {
   res.status(404).json({ code: "API_NOT_FOUND", error: "요청한 기능을 찾을 수 없어요. 앱을 업데이트해 주세요." });
@@ -1093,11 +1134,7 @@ async function startServer() {
     const vite = await createViteServer({
       server: { 
         middlewareMode: true,
-        hmr: disableHmr ? false : {
-          server: server,
-          protocol: "wss",
-          clientPort: 443,
-        },
+        hmr: disableHmr ? false : { server },
       },
       appType: "spa",
     });
@@ -1111,8 +1148,8 @@ async function startServer() {
     });
   }
 
-  server.listen(PORT, "0.0.0.0", () => {
-    console.log(`[똑 App Server] Server running on port ${PORT}`);
+  server.listen(PORT, HOST, () => {
+    console.log(`[똑 App Server] Server running on ${HOST}:${PORT}`);
   });
   if (process.env.NODE_ENV === "production" && process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
     const prune = () => void pruneExpiredServerData()

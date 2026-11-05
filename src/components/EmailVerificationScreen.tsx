@@ -1,9 +1,10 @@
 import BackButton from "./BackButton";
 import { useScreenBack } from "../lib/screenBack";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Mail, Loader2, CheckCircle2, LogOut } from "lucide-react";
 import { motion } from "motion/react";
-import { authService } from "../services/authService";
+import { authService, getVerificationEmailStatus, subscribeVerificationEmailStatus } from "../services/authService";
+import { auth } from "../lib/firebase";
 
 interface EmailVerificationScreenProps {
   email: string | null | undefined;
@@ -17,6 +18,11 @@ export default function EmailVerificationScreen({ email, darkMode, onVerified, o
   const [isResending, setIsResending] = useState(false);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
+  const deliveryStatus = useSyncExternalStore(
+    subscribeVerificationEmailStatus,
+    () => getVerificationEmailStatus(auth.currentUser?.uid ?? ""),
+    () => "unknown" as const
+  );
 
   useScreenBack(() => {
     if (isChecking || isResending) return true;
@@ -77,8 +83,11 @@ export default function EmailVerificationScreen({ email, darkMode, onVerified, o
 
         <h1 className="text-fluid-xl font-black tracking-tight mt-6">이메일 인증이 필요해요</h1>
         <p className={`text-fluid-sm leading-relaxed break-keep mt-3 ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
-          <strong className={darkMode ? "text-slate-200" : "text-slate-700"}>{email}</strong> 주소로 인증 메일을 보냈어요.
-          메일함(스팸함 포함)에서 링크를 눌러 인증을 완료해 주세요.
+          <strong className={darkMode ? "text-slate-200" : "text-slate-700"}>{email}</strong>
+          {deliveryStatus === "sent" ? " 주소로 인증 메일을 보냈어요. 메일함(스팸함 포함)에서 링크를 눌러 주세요." :
+            deliveryStatus === "sending" ? " 주소로 인증 메일을 보내는 중이에요." :
+            deliveryStatus === "failed" ? " 주소로 인증 메일을 보내지 못했어요. 아래에서 다시 보내 주세요." :
+            " 주소의 메일함에서 인증 링크를 확인해 주세요. 메일이 없다면 다시 보내 주세요."}
         </p>
 
         {checkError && (

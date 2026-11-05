@@ -416,7 +416,7 @@
     "id": "practice-tab-practice",
     "group": "발표연습",
     "screen": "발표 · 대본 작성",
-    "label": "위쪽 탭: 발표 연습 도와주기",
+    "label": "위쪽 탭: 발표연습",
     "source": "src/components/PracticeScreen.tsx:791"
   },
   {

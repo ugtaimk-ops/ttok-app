@@ -23,6 +23,21 @@ import { UserProfile } from "../types";
 
 const isNative = () => Capacitor.isNativePlatform();
 
+export type VerificationEmailStatus = "unknown" | "sending" | "sent" | "failed";
+let verificationEmailState: { uid: string; status: VerificationEmailStatus } | null = null;
+const verificationEmailListeners = new Set<() => void>();
+export function getVerificationEmailStatus(uid: string): VerificationEmailStatus {
+  return verificationEmailState?.uid === uid ? verificationEmailState.status : "unknown";
+}
+export function subscribeVerificationEmailStatus(listener: () => void): () => void {
+  verificationEmailListeners.add(listener);
+  return () => { verificationEmailListeners.delete(listener); };
+}
+function setVerificationEmailStatus(uid: string, status: VerificationEmailStatus): void {
+  verificationEmailState = { uid, status };
+  verificationEmailListeners.forEach(listener => listener());
+}
+
 /**
  * Sign-in has several sequential async stages (native Google sheet -> Firebase
  * credential exchange -> Firestore profile load). On a device where one of them
@@ -41,6 +56,21 @@ function withTimeout<T>(promise: Promise<T>, ms: number, stage: string): Promise
       (e) => { clearTimeout(timer); reject(e); }
     );
   });
+}
+
+async function sendKoreanVerificationEmail(user: User): Promise<void> {
+  setVerificationEmailStatus(user.uid, "sending");
+  const previousLanguage = auth.languageCode;
+  auth.languageCode = "ko";
+  try {
+    await fbSendEmailVerification(user);
+    setVerificationEmailStatus(user.uid, "sent");
+  } catch (error) {
+    setVerificationEmailStatus(user.uid, "failed");
+    throw error;
+  } finally {
+    auth.languageCode = previousLanguage;
+  }
 }
 
 export enum OperationType {
@@ -146,11 +176,10 @@ export const authService = {
    * address that doesn't really exist will never receive that email.
    */
   async signUpWithEmail(email: string, password: string): Promise<User> {
-    if (password.length < 12) throw new Error("새 계정의 비밀번호는 12자 이상으로 설정해 주세요.");
     try {
       const result = await fbCreateUserWithEmailAndPassword(auth, email, password);
       try {
-        await fbSendEmailVerification(result.user);
+        await sendKoreanVerificationEmail(result.user);
       } catch (verifyErr) {
         console.error("Failed to send verification email:", verifyErr);
       }
@@ -182,21 +211,10 @@ export const authService = {
    * sign-in's own errors ambiguous about whether the account exists).
    */
   async signInOrSignUpWithEmail(email: string, password: string): Promise<User> {
-    // Existing accounts with older, shorter passwords may still sign in.
-    // A new account, however, must use the stronger minimum.
-    if (password.length < 12) {
-      try { return await authService.signInWithEmail(email, password); }
-      catch (error: any) {
-        if (["auth/invalid-credential", "auth/user-not-found", "auth/wrong-password"].includes(error?.code)) {
-          throw new Error("로그인 정보를 확인해 주세요. 새 계정은 12자 이상의 비밀번호가 필요해요.");
-        }
-        throw error;
-      }
-    }
     try {
       const result = await fbCreateUserWithEmailAndPassword(auth, email, password);
       try {
-        await fbSendEmailVerification(result.user);
+        await sendKoreanVerificationEmail(result.user);
       } catch (verifyErr) {
         console.error("Failed to send verification email:", verifyErr);
       }
@@ -215,7 +233,7 @@ export const authService = {
    */
   async resendVerificationEmail(): Promise<void> {
     if (!auth.currentUser) throw new Error("로그인 상태가 아닙니다.");
-    await fbSendEmailVerification(auth.currentUser);
+    await sendKoreanVerificationEmail(auth.currentUser);
   },
 
   /**

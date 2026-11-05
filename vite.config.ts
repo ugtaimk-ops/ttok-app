@@ -29,11 +29,8 @@ export default defineConfig(() => {
       },
     },
     server: {
-      // Dynamic HMR configuration that adapts to proxy environments and prevents WebSocket failures
-      hmr: process.env.DISABLE_HMR === 'true' ? false : {
-        protocol: 'wss',
-        clientPort: 443,
-      },
+      // Let Vite use the local page's protocol and port for HMR.
+      hmr: process.env.DISABLE_HMR === 'true' ? false : undefined,
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },

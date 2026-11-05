@@ -796,7 +796,7 @@ export default function PracticeScreen({
                 : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
             }`}
           >
-            <Video size={16} /> 발표 연습 도와주기
+            <Video size={16} /> 발표연습
           </button>
         </div>
       </div>

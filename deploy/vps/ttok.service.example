@@ -1,0 +1,21 @@
+[Unit]
+Description=TTOK backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ttok
+Group=ttok
+WorkingDirectory=/opt/ttok
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3000
+Environment=TRUST_PROXY_HOPS=1
+ExecStart=/usr/bin/node /opt/ttok/build/server.cjs
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

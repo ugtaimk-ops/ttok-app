@@ -24,3 +24,5 @@ services:
         sync: false
       - key: REVENUECAT_SECRET_API_KEY
         sync: false
+      - key: DASHBOARD_ADMIN_UIDS
+        sync: false

@@ -53,7 +53,7 @@ const RANDOM_GOALS = [
 
 interface ProfileScreenProps {
   user: UserProfile;
-  onUpdateUser: (updated: UserProfile) => void;
+  onUpdateUser: (updated: UserProfile) => void | Promise<boolean>;
   darkMode: boolean;
   isActive: boolean;
   isOnboarding?: boolean;
@@ -71,28 +71,32 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive, 
   const [goal, setGoal] = useState(user.goal);
   const [avatar, setAvatar] = useState(user.avatarUrl);
   const avatarChangedRef = useRef(false);
+  const previousUserRef = useRef(user);
+  const updateUserRef = useRef(onUpdateUser);
+  updateUserRef.current = onUpdateUser;
   const [showSavedToast, setShowSavedToast] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [setupError, setSetupError] = useState(false);
 
-  // The cloud profile can arrive asynchronously after this screen has already
-  // mounted with the pre-sync (often blank) local values - e.g. signing in on
-  // a new device where Firestore's subscribeToProfile snapshot resolves a
-  // moment after this form initialized. Adopt cloud values into any field
-  // still at its blank default so a save right after mount doesn't overwrite
-  // the just-synced cloud data with empty strings. Once a field has any
-  // value (cloud-adopted or user-typed) it's left alone, so in-progress edits
-  // are never clobbered by a later snapshot.
+  // Adopt new cloud values only when the field still matches the previous
+  // prop. This keeps edits in progress but also accepts later remote changes.
   useEffect(() => {
-    if (!name && user.name) setName(user.name);
-    if (!school && user.school) setSchool(user.school);
-    if (!schoolCode && user.schoolCode) setSchoolCode(user.schoolCode);
-    if (!officeCode && user.officeCode) setOfficeCode(user.officeCode);
-    if (!officeName && user.officeName) setOfficeName(user.officeName);
-    if (!schoolKind && user.schoolKind) setSchoolKind(user.schoolKind);
-    if (!grade && user.grade) setGrade(user.grade);
-    if (!classNum && user.classNum) setClassNum(user.classNum);
-    if (!goal && user.goal) setGoal(user.goal);
-    if (!avatarChangedRef.current && !avatar && user.avatarUrl) setAvatar(user.avatarUrl);
+    const previous = previousUserRef.current;
+    if (previous === user) return;
+    setName(current => current === previous.name ? user.name : current);
+    setSchool(current => current === previous.school ? user.school : current);
+    setSchoolCode(current => current === (previous.schoolCode || "") ? (user.schoolCode || "") : current);
+    setOfficeCode(current => current === (previous.officeCode || "") ? (user.officeCode || "") : current);
+    setOfficeName(current => current === (previous.officeName || "") ? (user.officeName || "") : current);
+    setSchoolKind(current => current === (previous.schoolKind || "") ? (user.schoolKind || "") : current);
+    setGrade(current => current === previous.grade ? user.grade : current);
+    setClassNum(current => current === previous.classNum ? user.classNum : current);
+    setGoal(current => current === previous.goal ? user.goal : current);
+    setAvatar(current => {
+      if (current === (user.avatarUrl || "")) avatarChangedRef.current = false;
+      return !avatarChangedRef.current && current === (previous.avatarUrl || "") ? (user.avatarUrl || "") : current;
+    });
+    previousUserRef.current = user;
   }, [user]);
 
   // Grade options depend on school level: elementary goes to 6th grade, middle/high to 3rd
@@ -245,7 +249,6 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive, 
         const dataUrl = canvas.toDataURL("image/jpeg");
         avatarChangedRef.current = true;
         setAvatar(dataUrl);
-        onUpdateUser({ ...user, avatarUrl: dataUrl });
         stopCamera();
       }
     }
@@ -280,7 +283,6 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive, 
       const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
       avatarChangedRef.current = true;
       setAvatar(dataUrl);
-      onUpdateUser({ ...user, avatarUrl: dataUrl });
     } catch (error) {
       setPhotoError("사진을 불러오지 못했어요. 다른 사진을 선택해 주세요.");
     } finally {
@@ -292,7 +294,6 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive, 
     stopCamera();
     avatarChangedRef.current = true;
     setAvatar("");
-    onUpdateUser({ ...user, avatarUrl: "" });
   };
 
   const buildProfileUpdate = (overrides: Partial<UserProfile> = {}): UserProfile => ({
@@ -310,17 +311,56 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive, 
     ...overrides
   });
 
+  const saveAndToast = async (updated: UserProfile) => {
+    setSaveError(false);
+    setShowSavedToast(false);
+    try {
+      const saved = await onUpdateUser(updated);
+      if (saved === false) {
+        setSaveError(true);
+        return;
+      }
+      setShowSavedToast(true);
+      setTimeout(() => setShowSavedToast(false), 2000);
+    } catch (error) {
+      console.error("Profile save failed:", error);
+      setSaveError(true);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isOnboarding && (!name.trim() || !school.trim() || !grade || !classNum)) {
+    if (!isOnboarding) return;
+    if (!name.trim() || !school.trim() || !grade || !classNum) {
       setSetupError(true);
       return;
     }
     setSetupError(false);
-    onUpdateUser(buildProfileUpdate());
-    setShowSavedToast(true);
-    setTimeout(() => setShowSavedToast(false), 2000);
+    void saveAndToast(buildProfileUpdate());
   };
+
+  // Keep onboarding explicit, but persist later profile edits without a save button.
+  // A short debounce batches typing and the several fields set by school selection.
+  useEffect(() => {
+    if (isOnboarding || !name.trim() || !school.trim() || !grade || !classNum) return;
+    const changed = name !== user.name || school !== user.school ||
+      schoolCode !== (user.schoolCode || "") || officeCode !== (user.officeCode || "") ||
+      officeName !== (user.officeName || "") || schoolKind !== (user.schoolKind || "") ||
+      grade !== user.grade || classNum !== user.classNum || goal !== user.goal ||
+      avatar !== (user.avatarUrl || "");
+    if (!changed) return;
+    const timer = window.setTimeout(() => {
+      const updated = buildProfileUpdate();
+      setSaveError(false);
+      void Promise.resolve(updateUserRef.current(updated)).then(saved => {
+        if (saved === false) setSaveError(true);
+      }).catch(error => {
+        console.error("Profile auto-save failed:", error);
+        setSaveError(true);
+      });
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [isOnboarding, user, name, school, schoolCode, officeCode, officeName, schoolKind, grade, classNum, goal, avatar]);
 
   const setRandomGoal = () => {
     const possibleGoals = RANDOM_GOALS.filter(g => g !== goal);
@@ -329,30 +369,18 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive, 
     const newGoal = listToUse[randomIndex];
 
     setGoal(newGoal);
-    onUpdateUser(buildProfileUpdate({ goal: newGoal }));
-
-    setShowSavedToast(true);
-    setTimeout(() => setShowSavedToast(false), 2000);
   };
 
   const saveDirectGoal = () => {
     const trimmed = directGoalInput.trim();
     setGoal(trimmed);
     setIsEditingGoal(false);
-    onUpdateUser(buildProfileUpdate({ goal: trimmed }));
-
-    setShowSavedToast(true);
-    setTimeout(() => setShowSavedToast(false), 2000);
   };
 
   const deleteGoal = () => {
     setGoal("");
     setDirectGoalInput("");
     setIsEditingGoal(false);
-    onUpdateUser(buildProfileUpdate({ goal: "" }));
-
-    setShowSavedToast(true);
-    setTimeout(() => setShowSavedToast(false), 2000);
   };
 
   useScreenBack(() => {
@@ -368,6 +396,7 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive, 
       <div>
         <h1 className="text-fluid-3xl font-extrabold tracking-tight-sf">{isOnboarding ? "처음 프로필 설정" : "학생 프로필 관리"}</h1>
         {isOnboarding && <p className="mt-2 text-fluid-sm text-slate-500">이용약관 동의를 마쳤어요. 이름, 학교, 학년, 반을 입력하면 똑을 시작할 수 있어요.</p>}
+        {saveError && <p role="alert" className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">클라우드에 저장하지 못했어요. 연결을 확인한 뒤 다시 수정해 주세요.</p>}
       </div>
 
       <form onSubmit={handleSubmit} className={`p-6 sm:p-8 rounded-[32px] border ${
@@ -732,14 +761,14 @@ export default function ProfileScreen({ user, onUpdateUser, darkMode, isActive, 
 
         {/* Buttons */}
         {setupError && <p role="alert" className="text-sm font-bold text-rose-500">이름, 학교, 학년, 반을 모두 입력해 주세요.</p>}
-        <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+        {isOnboarding && <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
           <button data-ui="profile-save"
             type="submit"
             className="px-6 py-4 bg-brand hover:bg-brand-dark text-white font-black rounded-2xl text-fluid-base flex items-center gap-1.5 shadow-md shadow-brand/10 transition-colors cursor-pointer"
           >
-            <Sparkles size={16} /> {isOnboarding ? "프로필 저장하고 시작하기" : "똑 부러지게 프로필 수정 완료"}
+            <Sparkles size={16} /> 프로필 저장하고 시작하기
           </button>
-        </div>
+        </div>}
 
       </form>
 

@@ -290,6 +290,41 @@ export default function App() {
   const [profileRetry, setProfileRetry] = useState(0);
   const schedulesOwnerRef = useRef<string | null>(null);
   const todosOwnerRef = useRef<string | null>(null);
+  const failedWrites = useRef(new Map<string, { uid: string; write: () => Promise<void> }>());
+  const writeChains = useRef(new Map<string, Promise<void>>());
+  const [syncError, setSyncError] = useState(false);
+  const persistWrite = (uid: string, key: string, write: () => Promise<void>): Promise<boolean> => {
+    const pending = { uid, write };
+    failedWrites.current.set(key, pending);
+    const chainKey = `${uid}/${key}`;
+    const previous = writeChains.current.get(chainKey) ?? Promise.resolve();
+    const attempt = previous.catch(() => {}).then(write);
+    writeChains.current.set(chainKey, attempt);
+    void attempt.finally(() => {
+      if (writeChains.current.get(chainKey) === attempt) writeChains.current.delete(chainKey);
+    }).catch(() => {});
+    return attempt.then(() => {
+      if (failedWrites.current.get(key) === pending) {
+        failedWrites.current.delete(key);
+        if (failedWrites.current.size === 0) setSyncError(false);
+      }
+      return true;
+    }).catch(error => {
+      console.error(`[Sync] ${key} could not be saved:`, error);
+      if (failedWrites.current.get(key) === pending) setSyncError(true);
+      return false;
+    });
+  };
+  const retrySync = async () => {
+    if (failedWrites.current.size === 0) {
+      setSyncError(false);
+      setProfileRetry(value => value + 1);
+      return;
+    }
+    await Promise.all([...failedWrites.current.entries()]
+      .filter(([, pending]) => pending.uid === authUser?.uid)
+      .map(([key, pending]) => persistWrite(pending.uid, key, pending.write)));
+  };
   useEffect(() => { schedulesRef.current = schedules; }, [schedules]);
   useEffect(() => { todosRef.current = todos; }, [todos]);
   useEffect(() => { scriptsRef.current = scripts; }, [scripts]);
@@ -353,6 +388,10 @@ export default function App() {
     const uid = authUser.uid;
     let cancelled = false;
     const unsubscribers: Array<() => void> = [];
+    for (const [key, pending] of failedWrites.current) {
+      if (pending.uid !== uid) failedWrites.current.delete(key);
+    }
+    setSyncError(failedWrites.current.size > 0);
     setProfileLoadedUid(null);
     setProfileLoadError(null);
     schedulesOwnerRef.current = null;
@@ -383,6 +422,7 @@ export default function App() {
     setActiveDataOwner(uid);
 
     (async () => {
+      try {
       await Promise.all([
         dataSyncService.migrateSchedulesIfEmpty(uid, schedulesRef.current),
         dataSyncService.migrateTodosIfEmpty(uid, todosRef.current),
@@ -401,15 +441,19 @@ export default function App() {
           if (cancelled) return;
           schedulesOwnerRef.current = uid;
           setSchedules(items);
-        }),
+        }, () => { if (!cancelled) setSyncError(true); }),
         dataSyncService.subscribeToTodos(uid, items => {
           if (cancelled) return;
           todosOwnerRef.current = uid;
           setTodos(items);
-        }),
-        dataSyncService.subscribeToScripts(uid, items => { if (!cancelled) setScripts(items); }),
-        dataSyncService.subscribeToPracticeLogs(uid, items => { if (!cancelled) setPracticeLogs(items); })
+        }, () => { if (!cancelled) setSyncError(true); }),
+        dataSyncService.subscribeToScripts(uid, items => { if (!cancelled) setScripts(items); }, () => { if (!cancelled) setSyncError(true); }),
+        dataSyncService.subscribeToPracticeLogs(uid, items => { if (!cancelled) setPracticeLogs(items); }, () => { if (!cancelled) setSyncError(true); })
       );
+      } catch (error) {
+        console.error("[Sync] Could not initialize cloud data:", error);
+        if (!cancelled) setProfileLoadError(uid);
+      }
     })();
 
     return () => {
@@ -477,11 +521,11 @@ export default function App() {
         ? todos.filter(t => t.dueDate && t.dueDate < today) : [];
       if (expiredSchedules.length) {
         setSchedules(prev => prev.filter(s => !s.date || s.date >= today));
-        expiredSchedules.forEach(s => { void dataSyncService.deleteSchedule(authUser.uid, s.id); });
+        expiredSchedules.forEach(s => { void persistWrite(authUser.uid, `schedules/${s.id}`, () => dataSyncService.deleteSchedule(authUser.uid, s.id)); });
       }
       if (expiredTodos.length) {
         setTodos(prev => prev.filter(t => !t.dueDate || t.dueDate >= today));
-        expiredTodos.forEach(t => { void dataSyncService.deleteTodo(authUser.uid, t.id); });
+        expiredTodos.forEach(t => { void persistWrite(authUser.uid, `todos/${t.id}`, () => dataSyncService.deleteTodo(authUser.uid, t.id)); });
       }
     }
   }, [autoDeleteExpired, schedules, todos, authUser?.uid, consentAccepted, today]);
@@ -513,6 +557,9 @@ export default function App() {
     practiceLogsRef.current = [];
     schedulesOwnerRef.current = null;
     todosOwnerRef.current = null;
+    failedWrites.current.clear();
+    writeChains.current.clear();
+    setSyncError(false);
     // onAuthStateChanged will flip authUser to null and return to LoginScreen
   };
 
@@ -539,7 +586,9 @@ export default function App() {
 
   const handleUpdateUser = (updated: UserProfile) => {
     setUser(updated);
-    if (authUser) dataSyncService.saveProfile(authUser.uid, updated);
+    return authUser
+      ? persistWrite(authUser.uid, "profile", () => dataSyncService.saveProfile(authUser.uid, updated))
+      : Promise.resolve(false);
   };
 
   const handleResetData = () => {
@@ -559,8 +608,9 @@ export default function App() {
     setServiceMode("tok");
 
     if (authUser) {
-      dataSyncService.saveProfile(authUser.uid, INITIAL_USER);
-      dataSyncService.clearAllUserData(authUser.uid);
+      failedWrites.current.clear();
+      void persistWrite(authUser.uid, "profile", () => dataSyncService.saveProfile(authUser.uid, INITIAL_USER));
+      void persistWrite(authUser.uid, "reset", () => dataSyncService.clearAllUserData(authUser.uid));
     }
   };
 
@@ -568,17 +618,17 @@ export default function App() {
     const id = "sc_" + Date.now();
     const item = { ...newSchedule, id };
     setSchedules(prev => [...prev, item]);
-    if (authUser) dataSyncService.saveSchedule(authUser.uid, item);
+    if (authUser) void persistWrite(authUser.uid, `schedules/${id}`, () => dataSyncService.saveSchedule(authUser.uid, item));
   };
 
   const handleDeleteSchedule = (id: string) => {
     setSchedules(prev => prev.filter(s => s.id !== id));
-    if (authUser) dataSyncService.deleteSchedule(authUser.uid, id);
+    if (authUser) void persistWrite(authUser.uid, `schedules/${id}`, () => dataSyncService.deleteSchedule(authUser.uid, id));
   };
 
   const handleUpdateSchedule = (updated: ScheduleItem) => {
     setSchedules(prev => prev.map(s => s.id === updated.id ? updated : s));
-    if (authUser) dataSyncService.saveSchedule(authUser.uid, updated);
+    if (authUser) void persistWrite(authUser.uid, `schedules/${updated.id}`, () => dataSyncService.saveSchedule(authUser.uid, updated));
   };
 
   const handleToggleTodo = (id: string) => {
@@ -586,7 +636,7 @@ export default function App() {
     if (!target) return;
     const updated = { ...target, completed: !target.completed };
     setTodos(prev => prev.map(t => t.id === id ? updated : t));
-    if (authUser) dataSyncService.saveTodo(authUser.uid, updated);
+    if (authUser) void persistWrite(authUser.uid, `todos/${updated.id}`, () => dataSyncService.saveTodo(authUser.uid, updated));
   };
 
   const handleAddTodo = (text: string, category: "homework" | "general" | "exam" | "assessment", dueDate?: string) => {
@@ -600,34 +650,34 @@ export default function App() {
       category: safeCategory
     };
     setTodos(prev => [...prev, item]);
-    if (authUser) dataSyncService.saveTodo(authUser.uid, item);
+    if (authUser) void persistWrite(authUser.uid, `todos/${id}`, () => dataSyncService.saveTodo(authUser.uid, item));
   };
 
   const handleDeleteTodo = (id: string) => {
     setTodos(prev => prev.filter(t => t.id !== id));
-    if (authUser) dataSyncService.deleteTodo(authUser.uid, id);
+    if (authUser) void persistWrite(authUser.uid, `todos/${id}`, () => dataSyncService.deleteTodo(authUser.uid, id));
   };
 
   const handleAddScript = (script: ScriptItem) => {
     setScripts(prev => [...prev, script]);
-    if (authUser) dataSyncService.saveScript(authUser.uid, script);
+    if (authUser) void persistWrite(authUser.uid, `scripts/${script.id}`, () => dataSyncService.saveScript(authUser.uid, script));
   };
 
   const handleDeleteScript = (id: string) => {
     setScripts(prev => prev.filter(s => s.id !== id));
-    if (authUser) dataSyncService.deleteScript(authUser.uid, id);
+    if (authUser) void persistWrite(authUser.uid, `scripts/${id}`, () => dataSyncService.deleteScript(authUser.uid, id));
   };
 
   const handleUpdateScript = (updated: ScriptItem) => {
     setScripts(prev => prev.map(s => s.id === updated.id ? updated : s));
-    if (authUser) dataSyncService.saveScript(authUser.uid, updated);
+    if (authUser) void persistWrite(authUser.uid, `scripts/${updated.id}`, () => dataSyncService.saveScript(authUser.uid, updated));
   };
 
   const handleAddPracticeLog = (newLog: Omit<PracticeLog, "id" | "date">) => {
     const id = "pr_" + Date.now();
     const item = { ...newLog, id, date: getTodayDateString() };
     setPracticeLogs(prev => [...prev, item]);
-    if (authUser) dataSyncService.savePracticeLog(authUser.uid, item);
+    if (authUser) void persistWrite(authUser.uid, `practiceLogs/${id}`, () => dataSyncService.savePracticeLog(authUser.uid, item));
   };
 
   const currentActiveTab = serviceMode === "tok" ? tokTab : kkorureukTab;
@@ -645,7 +695,7 @@ export default function App() {
     tabTransitionTimer.current = window.setTimeout(() => {
       setTabTransition(null);
       tabTransitionTimer.current = null;
-    }, 240);
+    }, 340);
   };
   const setCurrentActiveTab = (tab: string, params?: {
     assessmentMode?: "list" | "direct" | "photo" | "planner";
@@ -672,15 +722,14 @@ export default function App() {
   };
   const tabPanelProps = (tab: string) => {
     const active = tokTab === tab;
-    const leaving = tabTransition?.from === tab;
     const entering = tabTransition?.to === tab;
     const direction = tabTransition?.direction === 1 ? "right" : "left";
     return {
       active,
-      visible: active || leaving,
-      className: leaving
-        ? `tab-panel-leave-${direction} absolute inset-x-0 top-0 pointer-events-none`
-        : entering ? `tab-panel-enter-${direction}` : "",
+      // Hidden tabs stay mounted, but only the destination is painted. Keeping
+      // the outgoing panel visible made its text overlap the incoming screen.
+      visible: active,
+      className: entering ? `tab-panel-enter-${direction}` : "",
     };
   };
 
@@ -750,6 +799,13 @@ export default function App() {
     <div className={`min-h-screen transition-colors duration-300 ${
       darkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50/50 text-slate-800"
     }`}>
+
+      {syncError && (
+        <div role="alert" className="fixed left-3 right-3 top-20 z-[100] mx-auto flex max-w-xl items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800 shadow-lg">
+          <span>일부 변경사항을 클라우드에 저장하지 못했어요. 연결을 확인해 주세요.</span>
+          <button type="button" onClick={() => { void retrySync(); }} className="shrink-0 rounded-xl bg-rose-700 px-3 py-2 text-white">다시 시도</button>
+        </div>
+      )}
 
       {/* Header Bar with Service Switcher enclosed in a beautiful Blue Box */}
       <header className={`sticky top-0 z-30 border-b backdrop-blur-md safe-top ${

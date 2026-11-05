@@ -32,6 +32,7 @@ test("private APIs reject callers without a verified Firebase token", async () =
       NODE_ENV: "production",
       PORT: String(port),
       APP_SHARED_SECRET: "legacy-test-secret",
+      DASHBOARD_ADMIN_UIDS: "",
       TTOK_TEST_CERT_BASE64: Buffer.from(publicKey).toString("base64"),
       NODE_OPTIONS: `${process.env.NODE_OPTIONS || ""} --require=${certPreload}`.trim(),
     },
@@ -56,6 +57,7 @@ test("private APIs reject callers without a verified Firebase token", async () =
       "/api/meal/info?officeCode=ABC&schoolCode=1234567&date=20261026",
       "/api/usage/status",
       "/api/problem/solve",
+      "/api/admin/overview",
     ]) {
       const response = await fetch(`${origin}${route}`, {
         headers: { "X-App-Secret": "legacy-test-secret" },
@@ -81,6 +83,11 @@ test("private APIs reject callers without a verified Firebase token", async () =
       firebase: { sign_in_provider: "password" },
     };
     const validToken = jwt.sign(claims, privateKey, { algorithm: "RS256", keyid: "test-key" });
+    const adminWithoutAllowlist = await fetch(`${origin}/api/admin/overview`, {
+      headers: { Authorization: `Bearer ${validToken}` },
+    });
+    assert.equal(adminWithoutAllowlist.status, 503, "admin API must stay disabled without an allowlist");
+    assert.equal((await adminWithoutAllowlist.json()).code, "ADMIN_NOT_CONFIGURED");
     for (const headers of [
       { Authorization: `Bearer ${validToken}` },
       { Authorization: `Bearer ${validToken}`, "X-App-Secret": "legacy-test-secret" },

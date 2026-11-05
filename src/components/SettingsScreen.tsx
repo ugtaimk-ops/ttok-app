@@ -142,30 +142,19 @@ export default function SettingsScreen({
           
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-fluid-base font-bold text-slate-800 dark:text-slate-100">화면 모드 변경</p>
+              <p className="flex items-center gap-2 text-fluid-base font-bold text-slate-800 dark:text-slate-100">{darkMode ? <Moon size={17} /> : <Sun size={17} />} 화면 모드 변경</p>
               <p className="text-fluid-sm text-slate-500 mt-1 break-keep">라이트 모드와 다크 모드를 자유롭게 변환하세요.</p>
             </div>
 
             <button data-ui="settings-dark-mode"
+              type="button"
               onClick={onToggleDarkMode}
-              className={`px-4 py-2.5 rounded-2xl border transition-all duration-300 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
-                darkMode 
-                  ? "bg-slate-800 border-slate-700 text-brand" 
-                  : "bg-slate-50 border-slate-100 text-amber-500"
-              }`}
+              className="settings-glass-toggle"
               id="theme-toggle"
+              role="switch"
+              aria-checked={darkMode}
+              aria-label="다크 모드"
             >
-              {darkMode ? (
-                <>
-                  <Moon size={16} className="shrink-0" />
-                  <span className="text-fluid-xs font-bold whitespace-nowrap">다크 모드</span>
-                </>
-              ) : (
-                <>
-                  <Sun size={16} className="shrink-0" />
-                  <span className="text-fluid-xs font-bold whitespace-nowrap">라이트 모드</span>
-                </>
-              )}
             </button>
           </div>
         </div>
@@ -185,9 +174,10 @@ export default function SettingsScreen({
               </div>
               <input 
                 type="checkbox"
+                aria-label="지필평가 및 시험 일정 알림"
                 checked={examNotif}
                 onChange={(e) => setExamNotif(e.target.checked)}
-                className="w-10 h-6 bg-slate-200 checked:bg-brand rounded-full cursor-pointer appearance-none relative before:content-[''] before:absolute before:h-5 before:w-5 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform duration-200 shrink-0"
+                className="settings-glass-toggle"
               />
             </div>
 
@@ -198,9 +188,10 @@ export default function SettingsScreen({
               </div>
               <input 
                 type="checkbox"
+                aria-label="수행평가 제출일 알림"
                 checked={assessNotif}
                 onChange={(e) => setAssessNotif(e.target.checked)}
-                className="w-10 h-6 bg-slate-200 checked:bg-brand rounded-full cursor-pointer appearance-none relative before:content-[''] before:absolute before:h-5 before:w-5 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform duration-200 shrink-0"
+                className="settings-glass-toggle"
               />
             </div>
 
@@ -211,9 +202,10 @@ export default function SettingsScreen({
               </div>
               <input 
                 type="checkbox"
+                aria-label="AI 데일리 학습 추천 알림"
                 checked={dailyNotif}
                 onChange={(e) => setDailyNotif(e.target.checked)}
-                className="w-10 h-6 bg-slate-200 checked:bg-brand rounded-full cursor-pointer appearance-none relative before:content-[''] before:absolute before:h-5 before:w-5 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform duration-200 shrink-0"
+                className="settings-glass-toggle"
               />
             </div>
 
@@ -224,9 +216,10 @@ export default function SettingsScreen({
               </div>
               <input 
                 type="checkbox"
+                aria-label="급식 알림"
                 checked={mealNotifEnabled}
                 onChange={(e) => setMealNotifEnabled(e.target.checked)}
-                className="w-10 h-6 bg-slate-200 checked:bg-brand rounded-full cursor-pointer appearance-none relative before:content-[''] before:absolute before:h-5 before:w-5 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform duration-200 shrink-0"
+                className="settings-glass-toggle"
               />
             </div>
 
@@ -270,9 +263,10 @@ export default function SettingsScreen({
               </div>
               <input 
                 type="checkbox"
+                aria-label="지난 일정 자동 삭제"
                 checked={autoDeleteExpired}
                 onChange={onToggleAutoDeleteExpired}
-                className="w-10 h-6 bg-slate-200 checked:bg-brand rounded-full cursor-pointer appearance-none relative before:content-[''] before:absolute before:h-5 before:w-5 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform duration-200 shrink-0"
+                className="settings-glass-toggle"
               />
             </div>
 

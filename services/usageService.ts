@@ -44,6 +44,14 @@ function getAdminApp(): any | null {
   }
 }
 
+/** Server-only Firestore access for authenticated administrative reads. */
+export function getAdminFirestore(): any {
+  const app = getAdminApp();
+  if (!app) throw new Error("Firebase service account is not configured");
+  const { getFirestore } = require("firebase-admin/firestore");
+  return getFirestore(app, FIRESTORE_DATABASE_ID);
+}
+
 export function currentMonthKey(now = new Date()): string {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Seoul",

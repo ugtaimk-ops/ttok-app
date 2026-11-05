@@ -246,8 +246,7 @@ export default function KkorureukScreen({ user, onUpdateUser, darkMode, activeTa
           menu: item.DDISH_NM,
           calories: item.CAL_INFO,
           nutrition: item.NTR_INFO,
-          origin: item.ORPLC_INFO,
-          isSficSynced: true
+          origin: item.ORPLC_INFO
         }));
         console.log(`[NEIS Debug] Successfully mapped ${meals.length} meals from direct NEIS response.`);
         return meals;

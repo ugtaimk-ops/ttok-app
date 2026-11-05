@@ -1,5 +1,5 @@
 /* 개발용 화면 선택기: 앱의 동작을 누르지 않고 버튼 모양을 직접 미리 봅니다. */
-const showTool = import.meta.env.DEV || new URLSearchParams(location.search).get("ui") === "1";
+const showTool = import.meta.env.DEV;
 const draftKey = "ttok-ui-design-draft-v1";
 type Appearance = { background?: string; color?: string; fontSize?: number; radius?: number; hidden?: boolean };
 type Draft = Record<string, Appearance>;

@@ -1,0 +1,4 @@
+# Replace the hostname with a DNS name pointed at the VM's public IP.
+ttok-example.duckdns.org {
+    reverse_proxy 127.0.0.1:3000
+}

@@ -34,6 +34,7 @@ export const englishText: Record<string, string> = {
   "선택하기": "Choose",
   "변경하기": "Change",
   "이메일": "Email",
+  "비밀번호": "Password",
   "비밀번호 (6자 이상)": "Password (at least 6 characters)",
   "비밀번호를 잊으셨나요?": "Forgot your password?",
   "이메일로 계속하기": "Continue with email",
@@ -262,7 +263,6 @@ export const englishText: Record<string, string> = {
   // Presentation practice
   "발표 연습 및 피드백": "Presentation practice and feedback",
   "발표 대본 작성": "Write a presentation script",
-  "발표 연습 도와주기": "Practice your presentation",
   "나의 말하기 자세와 시선 처리를 똑똑하게 AI 교정 및 분석받으세요": "Get AI feedback on your speaking, posture and eye contact.",
   "발표 연습 시작하기": "Start practice",
   "발표 연습 중": "Practicing",

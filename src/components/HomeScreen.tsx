@@ -370,11 +370,6 @@ export default function HomeScreen({
     return diffDays > 0 ? `D-${diffDays}` : `D+${Math.abs(diffDays)}`;
   };
 
-  // Check achievement rate
-  const completedCount = todos.filter(t => t.completed).length;
-  const totalCount = todos.length;
-  const achievementRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-
   // Handle direct todo submit
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -508,11 +503,10 @@ export default function HomeScreen({
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${getShortcutIconBg(item.iconType)}`}>
                     {renderShortcutIcon(item.iconType)}
                   </div>
-                  <div className="space-y-1 min-w-0">
+                  <div className="min-w-0">
                     <h4 className="text-fluid-base font-black text-slate-800 dark:text-slate-100 group-hover:text-brand dark:group-hover:text-brand-light transition-colors truncate">
                       {item.title}
                     </h4>
-                    <p className="text-fluid-sm text-slate-400 dark:text-slate-500 font-semibold truncate">{item.description}</p>
                   </div>
                 </div>
                 
@@ -673,74 +667,8 @@ export default function HomeScreen({
             </div>
           </div>
 
-          {/* FIGMA CHEEKY PROGRESS & TASK SPLIT */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            
-            {/* Learning Status Circle Panel */}
-            <div className="p-5 rounded-[24px] sm:rounded-[28px] border-[1.5px] border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-fluid-xs font-black text-slate-500 uppercase tracking-widest">오늘의 학습 성취</span>
-                  <span className="text-fluid-xs font-extrabold text-brand bg-brand-light dark:bg-brand/10 px-2.5 py-1 rounded-full">실시간 계산</span>
-                </div>
-                
-                <div className="flex flex-row items-center gap-4 py-2 text-left">
-                  {/* Circle Progress Bar */}
-                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center shrink-0">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle 
-                        cx="32" 
-                        cy="32" 
-                        r="26" 
-                        className="stroke-slate-100 dark:stroke-slate-800 fill-transparent sm:hidden" 
-                        strokeWidth="6" 
-                      />
-                      <circle 
-                        cx="32" 
-                        cy="32" 
-                        r="26" 
-                        className="stroke-brand fill-transparent transition-all duration-500 sm:hidden" 
-                        strokeWidth="6" 
-                        strokeDasharray={163.3}
-                        strokeDashoffset={163.3 - (163.3 * achievementRate) / 100}
-                        strokeLinecap="round"
-                      />
-                      <circle 
-                        cx="40" 
-                        cy="40" 
-                        r="34" 
-                        className="stroke-slate-100 dark:stroke-slate-800 fill-transparent hidden sm:block" 
-                        strokeWidth="7" 
-                      />
-                      <circle 
-                        cx="40" 
-                        cy="40" 
-                        r="34" 
-                        className="stroke-brand fill-transparent transition-all duration-500 hidden sm:block" 
-                        strokeWidth="7" 
-                        strokeDasharray={213.6}
-                        strokeDashoffset={213.6 - (213.6 * achievementRate) / 100}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <span className="absolute text-fluid-base font-black text-slate-800 dark:text-slate-100">{achievementRate}%</span>
-                  </div>
-
-                  <div className="space-y-1.5 min-w-0">
-                    <p className="text-fluid-lg font-black text-slate-700 dark:text-slate-200">학업 달성 게이지</p>
-                    <p className="text-fluid-sm text-slate-500 dark:text-slate-400 leading-relaxed break-keep">
-                      오늘 등록한 할 일 {totalCount}개 중 {completedCount}개를 성공적으로 수행 완료했습니다!
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800/80 flex justify-between text-fluid-sm text-slate-500 font-bold">
-                <span className="text-brand">성공: {completedCount}개</span>
-                <span className="text-slate-500 dark:text-slate-400">미완료: {totalCount - completedCount}개</span>
-              </div>
-            </div>
-
+          {/* Today's schedule keeps the full row after removing the achievement card. */}
+          <div className="grid grid-cols-1 gap-4 sm:gap-6">
             {/* Today's Schedules timeline widget */}
             <div className="p-5 rounded-[24px] sm:rounded-[28px] border-[1.5px] border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between">
               <div>
