@@ -40,7 +40,13 @@ export async function fetchApiResponse(url: string, options: RequestInit = {}, f
     if (error instanceof ApiError) throw error;
     if (options.signal?.aborted) throw new DOMException("요청을 취소했어요.", "AbortError");
     if (controller.signal.aborted) throw new ApiError("서버 응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.", undefined, "TIMEOUT");
-    throw new ApiError("인터넷 연결을 확인한 뒤 다시 시도해 주세요.", undefined, "NETWORK_ERROR");
+    // A fetch failure also covers a server outage or a blocked CORS preflight;
+    // it does not prove that the device itself has no internet connection.
+    const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+    throw new ApiError(offline
+      ? "기기가 오프라인이에요. 인터넷 연결을 확인해 주세요."
+      : "똑 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+    undefined, "NETWORK_ERROR");
   } finally {
     clearTimeout(timeout);
     options.signal?.removeEventListener("abort", abort);

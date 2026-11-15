@@ -26,3 +26,5 @@ services:
         sync: false
       - key: DASHBOARD_ADMIN_UIDS
         sync: false
+      - key: MONETIZATION_V6_ENABLED
+        sync: false
