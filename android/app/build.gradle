@@ -51,6 +51,11 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
+            // Include available native symbols from bundled libraries in the AAB
+            // so Play Console can decode native crashes and ANRs.
+            ndk {
+                debugSymbolLevel 'SYMBOL_TABLE'
+            }
             // Capacitor inspects plugin annotations and permission methods at runtime.
             // Keep those members via proguard-rules.pro while shrinking the rest.
             minifyEnabled true
