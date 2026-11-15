@@ -7,9 +7,9 @@ import { useScreenBack } from "../lib/screenBack";
 type Plan = "basic" | "pro" | "plus";
 type Products = Partial<Record<Plan, PurchasesStoreProduct>>;
 const PLANS: Array<{ id: Plan; title: string; quota: number; targetPrice: string; detail: string }> = [
-  { id: "basic", title: "AI Basic", quota: 30, targetPrice: "₩1,900", detail: "일반 광고 표시" },
-  { id: "pro", title: "똑 Pro", quota: 50, targetPrice: "₩3,900", detail: "일반 광고 제거 · Pro 학습 기능" },
-  { id: "plus", title: "AI Plus", quota: 70, targetPrice: "₩3,900", detail: "일반 광고 표시" },
+  { id: "basic", title: "AI Basic", quota: 30, targetPrice: "₩1,900", detail: "AI 이용권" },
+  { id: "pro", title: "똑 Pro", quota: 50, targetPrice: "₩3,900", detail: "AI 추천 기능 이용" },
+  { id: "plus", title: "AI Plus", quota: 70, targetPrice: "₩3,900", detail: "AI 이용권" },
 ];
 
 export default function V6PaywallModal({ products, activePlans, previewOnly = false, purchaseReady = false, onClose, onPurchased }: {
@@ -61,7 +61,7 @@ export default function V6PaywallModal({ products, activePlans, previewOnly = fa
                   <h3 className="font-black">{plan.title}</h3>
                   <p className="text-sm text-slate-600">결제 주기당 AI {plan.quota}회 · {plan.detail}</p>
                 </div>
-                <span className="font-black whitespace-nowrap">{product?.priceString || plan.targetPrice}</span>
+                <span className="font-black whitespace-nowrap">{product?.priceString || (previewOnly ? plan.targetPrice : "Play에서 가격 확인")}</span>
               </div>
               <button type="button" disabled={previewOnly || !purchaseReady || !product || !!busy || alreadyActive || incompatible} onClick={() => void buy(plan.id)}
                 className="mt-3 w-full min-h-12 rounded-xl bg-blue-600 text-white font-bold disabled:opacity-50">
