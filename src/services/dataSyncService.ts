@@ -88,13 +88,10 @@ export const dataSyncService = {
     );
   },
   saveProfile(uid: string, profile: UserProfile): Promise<void> {
-    const clientProfile = { ...profile };
-    delete clientProfile.isPremium;
-    delete clientProfile.aiUsageCount;
-    delete clientProfile.aiUsageMonth;
-    delete clientProfile.aiProblemSolveCalls;
-    delete clientProfile.aiEstimatedCostMonth;
-    delete clientProfile.aiEstimatedCostUsd;
+    // Only editable profile fields leave the client. Shared aggregates, timestamps,
+    // account-deletion state and linked-app metadata are server-owned.
+    const keys: (keyof UserProfile)[] = ['name','school','schoolCode','officeCode','officeName','schoolKind','grade','classNum','goal','avatarUrl','displayName','email','photoURL','uid'];
+    const clientProfile = Object.fromEntries(keys.filter(key => profile[key] !== undefined).map(key => [key, profile[key]]));
     return setDoc(userDocRef(uid), clientProfile, { merge: true });
   },
 

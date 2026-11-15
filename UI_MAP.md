@@ -6,36 +6,37 @@
 
 | 이름(data-ui) | 무엇인가 | 코드 위치 |
 |---|---|---|
-| `header-mode-tok` | 상단 서비스 전환: 똑 | src/App.tsx:726 |
-| `header-mode-kkorureuk` | 상단 서비스 전환: 꼬르륵 | src/App.tsx:736 |
-| `header-profile` | 우측 상단 프로필 열기 | src/App.tsx:754 |
-| `nav-bar` | 하단 탭 바 전체(떠 있는 유리 막대) | src/components/BottomNavigationBar.tsx:137 |
-| `nav-home` | 하단 탭: 홈 | src/components/BottomNavigationBar.tsx:189 |
-| `nav-assessment` | 하단 탭: 수행평가 | src/components/BottomNavigationBar.tsx:189 |
-| `nav-practice` | 하단 탭: 발표연습 | src/components/BottomNavigationBar.tsx:189 |
-| `nav-study` | 하단 탭: 공부 | src/components/BottomNavigationBar.tsx:189 |
-| `nav-settings` | 하단 탭: 메뉴(설정) | src/components/BottomNavigationBar.tsx:189 |
-| `nav-meal-today` | 하단 탭(꼬르륵): 오늘 급식 | src/components/BottomNavigationBar.tsx:189 |
-| `nav-meal-weekly` | 하단 탭(꼬르륵): 이번 주 급식 | src/components/BottomNavigationBar.tsx:189 |
-| `nav-meal-school` | 하단 탭(꼬르륵): 학교 설정 | src/components/BottomNavigationBar.tsx:189 |
+| `header-mode-tok` | 상단 서비스 전환: 똑 | src/App.tsx:849 |
+| `header-mode-kkorureuk` | 상단 서비스 전환: 꼬르륵 | src/App.tsx:859 |
+| `header-timer` | 상단 똑 타이머 열기 | src/App.tsx:872 |
+| `header-profile` | 우측 상단 프로필 열기 | src/App.tsx:887 |
+| `nav-bar` | 하단 탭 바 전체(떠 있는 유리 막대) | src/components/BottomNavigationBar.tsx:191 |
+| `nav-home` | 하단 탭: 홈 | src/components/BottomNavigationBar.tsx:234 |
+| `nav-assessment` | 하단 탭: 수행평가 | src/components/BottomNavigationBar.tsx:234 |
+| `nav-practice` | 하단 탭: 발표연습 | src/components/BottomNavigationBar.tsx:234 |
+| `nav-study` | 하단 탭: 공부 | src/components/BottomNavigationBar.tsx:234 |
+| `nav-settings` | 하단 탭: 메뉴(설정) | src/components/BottomNavigationBar.tsx:234 |
+| `nav-meal-today` | 하단 탭(꼬르륵): 오늘 급식 | src/components/BottomNavigationBar.tsx:234 |
+| `nav-meal-weekly` | 하단 탭(꼬르륵): 이번 주 급식 | src/components/BottomNavigationBar.tsx:234 |
+| `nav-meal-school` | 하단 탭(꼬르륵): 학교 설정 | src/components/BottomNavigationBar.tsx:234 |
 | `back-button` | 뒤로가기/취소 버튼(여러 화면 공통) | src/components/BackButton.tsx:9 |
-| `select-trigger` | 드롭다운 선택 상자(열기 버튼) | src/components/GlassSelect.tsx:86 |
-| `select-option` | 드롭다운 선택 항목 하나하나 | src/components/GlassSelect.tsx:123 |
+| `select-trigger` | 드롭다운 선택 상자(열기 버튼) | src/components/GlassSelect.tsx:88 |
+| `select-option` | 드롭다운 선택 항목 하나하나 | src/components/GlassSelect.tsx:127 |
 | `error-reload` | 오류 화면의 다시 시작하기 | src/components/ErrorBoundary.tsx:37 |
-| `gate-terms-retry` | 약관 확인 실패 화면: 다시 시도 | src/App.tsx:701 |
-| `gate-logout` | 약관 확인 실패 화면: 로그아웃 | src/App.tsx:702 |
+| `gate-terms-retry` | 약관 확인 실패 화면: 다시 시도 | src/App.tsx:805 |
+| `gate-logout` | 약관 확인 실패 화면: 로그아웃 | src/App.tsx:806 |
 
 ## 로그인  (스타일 파일: src/ui-design/login.css)
 
 | 이름(data-ui) | 무엇인가 | 코드 위치 |
 |---|---|---|
-| `login-google` | Google 로그인 버튼 | src/components/LoginScreen.tsx:222 |
-| `login-password-toggle` | 비밀번호 보이기/숨기기 눈 아이콘 | src/components/LoginScreen.tsx:295 |
-| `login-password-reset` | 비밀번호를 잊으셨나요? | src/components/LoginScreen.tsx:306 |
-| `login-email-submit` | 이메일로 계속하기 | src/components/LoginScreen.tsx:316 |
-| `email-verify-check` | 이메일 인증 확인하고 계속하기 | src/components/EmailVerificationScreen.tsx:92 |
-| `email-verify-resend` | 인증 메일 다시 보내기 | src/components/EmailVerificationScreen.tsx:103 |
-| `email-verify-logout` | 다른 계정으로 로그인 | src/components/EmailVerificationScreen.tsx:113 |
+| `login-google` | Google 로그인 버튼 | src/components/LoginScreen.tsx:216 |
+| `login-password-toggle` | 비밀번호 보이기/숨기기 눈 아이콘 | src/components/LoginScreen.tsx:289 |
+| `login-password-reset` | 비밀번호를 잊으셨나요? | src/components/LoginScreen.tsx:300 |
+| `login-email-submit` | 이메일로 계속하기 | src/components/LoginScreen.tsx:310 |
+| `email-verify-check` | 이메일 인증 확인하고 계속하기 | src/components/EmailVerificationScreen.tsx:101 |
+| `email-verify-resend` | 인증 메일 다시 보내기 | src/components/EmailVerificationScreen.tsx:112 |
+| `email-verify-logout` | 다른 계정으로 로그인 | src/components/EmailVerificationScreen.tsx:122 |
 | `terms-agree` | 이용약관 동의하고 시작 | src/components/TermsConsentScreen.tsx:46 |
 | `terms-decline-logout` | 동의하지 않고 로그아웃 | src/components/TermsConsentScreen.tsx:50 |
 
@@ -43,18 +44,18 @@
 
 | 이름(data-ui) | 무엇인가 | 코드 위치 |
 |---|---|---|
-| `home-shortcut-edit-toggle` | 자주 쓰는 기능: 단축키 수정/편집 완료 | src/components/HomeScreen.tsx:476 |
-| `home-shortcut-item` | 자주 쓰는 기능 카드 하나하나 | src/components/HomeScreen.tsx:491 |
-| `home-shortcut-feature-option` | 단축키 변경 팝업: 연결할 기능 선택 항목 | src/components/HomeScreen.tsx:547 |
-| `home-shortcut-cancel` | 단축키 변경 팝업: 취소 | src/components/HomeScreen.tsx:578 |
-| `home-shortcut-save` | 단축키 변경 팝업: 변경하기 | src/components/HomeScreen.tsx:584 |
-| `home-schedule-add` | 스케줄 추가(열기/닫기) 버튼 | src/components/HomeScreen.tsx:749 |
-| `home-schedule-add-close` | 스케줄 추가 폼: 닫기(X) | src/components/HomeScreen.tsx:773 |
-| `home-schedule-add-submit` | 스케줄 추가 폼: 등록 | src/components/HomeScreen.tsx:819 |
-| `home-schedule-edit-close` | 스케줄 수정 폼: 닫기(X) | src/components/HomeScreen.tsx:842 |
-| `home-schedule-edit-save` | 스케줄 수정 폼: 저장 | src/components/HomeScreen.tsx:888 |
-| `home-schedule-edit` | 스케줄 카드의 수정 아이콘 | src/components/HomeScreen.tsx:930 |
-| `home-schedule-delete` | 스케줄 카드의 삭제 아이콘 | src/components/HomeScreen.tsx:940 |
+| `home-shortcut-edit-toggle` | 자주 쓰는 기능: 단축키 수정/편집 완료 | src/components/HomeScreen.tsx:473 |
+| `home-shortcut-item` | 자주 쓰는 기능 카드 하나하나 | src/components/HomeScreen.tsx:488 |
+| `home-shortcut-feature-option` | 단축키 변경 팝업: 연결할 기능 선택 항목 | src/components/HomeScreen.tsx:543 |
+| `home-shortcut-cancel` | 단축키 변경 팝업: 취소 | src/components/HomeScreen.tsx:574 |
+| `home-shortcut-save` | 단축키 변경 팝업: 변경하기 | src/components/HomeScreen.tsx:580 |
+| `home-schedule-add` | 스케줄 추가(열기/닫기) 버튼 | src/components/HomeScreen.tsx:691 |
+| `home-schedule-add-close` | 스케줄 추가 폼: 닫기(X) | src/components/HomeScreen.tsx:715 |
+| `home-schedule-add-submit` | 스케줄 추가 폼: 등록 | src/components/HomeScreen.tsx:762 |
+| `home-schedule-edit-close` | 스케줄 수정 폼: 닫기(X) | src/components/HomeScreen.tsx:785 |
+| `home-schedule-edit-save` | 스케줄 수정 폼: 저장 | src/components/HomeScreen.tsx:832 |
+| `home-schedule-edit` | 스케줄 카드의 수정 아이콘 | src/components/HomeScreen.tsx:874 |
+| `home-schedule-delete` | 스케줄 카드의 삭제 아이콘 | src/components/HomeScreen.tsx:884 |
 | `ai-report-refresh` | AI 리포트 새로고침 아이콘 | src/components/AiReportCard.tsx:76 |
 | `ai-report-generate` | AI 리포트: 지금 뭘 하면 좋을지 물어보기 | src/components/AiReportCard.tsx:96 |
 
@@ -62,31 +63,31 @@
 
 | 이름(data-ui) | 무엇인가 | 코드 위치 |
 |---|---|---|
-| `assessment-add-direct` | 목록 상단: 직접 입력 | src/components/AssessmentScreen.tsx:399 |
-| `assessment-add-photo` | 목록 상단: 사진 등록 | src/components/AssessmentScreen.tsx:403 |
-| `assessment-empty-add-direct` | 일정이 없을 때: 직접 입력 | src/components/AssessmentScreen.tsx:417 |
-| `assessment-empty-add-photo` | 일정이 없을 때: 이미지/계획서 등록 | src/components/AssessmentScreen.tsx:423 |
-| `assessment-item-edit` | 일정 카드의 수정 | src/components/AssessmentScreen.tsx:341 |
-| `assessment-item-delete` | 일정 카드의 삭제 | src/components/AssessmentScreen.tsx:351 |
-| `assessment-direct-cancel` | 직접 입력 화면: 취소 | src/components/AssessmentScreen.tsx:534 |
-| `assessment-direct-save` | 직접 입력 화면: 완료 및 저장 | src/components/AssessmentScreen.tsx:541 |
-| `assessment-photo-back` | 사진 등록 화면: 돌아가기 | src/components/AssessmentScreen.tsx:616 |
-| `assessment-scan-retry` | 사진 스캔 결과: 다시 스캔 | src/components/AssessmentScreen.tsx:721 |
-| `assessment-scan-save` | 사진 스캔 결과: 캘린더 및 알림 자동 등록 | src/components/AssessmentScreen.tsx:728 |
-| `assessment-menu-edit` | 길게 누름 메뉴: 일정 수정 | src/components/AssessmentScreen.tsx:750 |
-| `assessment-menu-delete` | 길게 누름 메뉴: 일정 삭제 | src/components/AssessmentScreen.tsx:757 |
-| `assessment-edit-cancel` | 수정 팝업: 취소 | src/components/AssessmentScreen.tsx:853 |
-| `assessment-edit-save` | 수정 팝업: 저장하기 | src/components/AssessmentScreen.tsx:859 |
-| `assessment-delete-cancel` | 삭제 확인 팝업: 취소 | src/components/AssessmentScreen.tsx:888 |
-| `assessment-delete-confirm` | 삭제 확인 팝업: 삭제하기 | src/components/AssessmentScreen.tsx:894 |
-| `assessment-tab-list` | 수행평가 일정 탭 | src/components/AssessmentScreen.tsx:286 |
-| `assessment-tab-planner` | 지필·수행 계획 탭 | src/components/AssessmentScreen.tsx:291 |
-| `study-exam-add` | 지필평가 일정 등록 | src/components/ExamPlanner.tsx:107 |
-| `study-exam-edit` | 지필평가 일정 수정 | src/components/ExamPlanner.tsx:122 |
-| `study-exam-delete` | 지필평가 일정 삭제 | src/components/ExamPlanner.tsx:123 |
-| `study-plan-generate` | 학습 계획 보기 | src/components/ExamPlanner.tsx:124 |
-| `study-edit-save` | 지필평가 수정 저장 | src/components/ExamPlanner.tsx:151 |
-| `study-delete-confirm` | 지필평가 삭제 확인 | src/components/ExamPlanner.tsx:161 |
+| `assessment-add-direct` | 목록 상단: 직접 입력 | src/components/AssessmentScreen.tsx:400 |
+| `assessment-add-photo` | 목록 상단: 사진 등록 | src/components/AssessmentScreen.tsx:404 |
+| `assessment-empty-add-direct` | 일정이 없을 때: 직접 입력 | src/components/AssessmentScreen.tsx:418 |
+| `assessment-empty-add-photo` | 일정이 없을 때: 이미지/계획서 등록 | src/components/AssessmentScreen.tsx:424 |
+| `assessment-item-edit` | 일정 카드의 수정 | src/components/AssessmentScreen.tsx:342 |
+| `assessment-item-delete` | 일정 카드의 삭제 | src/components/AssessmentScreen.tsx:352 |
+| `assessment-direct-cancel` | 직접 입력 화면: 취소 | src/components/AssessmentScreen.tsx:535 |
+| `assessment-direct-save` | 직접 입력 화면: 완료 및 저장 | src/components/AssessmentScreen.tsx:542 |
+| `assessment-photo-back` | 사진 등록 화면: 돌아가기 | src/components/AssessmentScreen.tsx:617 |
+| `assessment-scan-retry` | 사진 스캔 결과: 다시 스캔 | src/components/AssessmentScreen.tsx:723 |
+| `assessment-scan-save` | 사진 스캔 결과: 캘린더 및 알림 자동 등록 | src/components/AssessmentScreen.tsx:730 |
+| `assessment-menu-edit` | 길게 누름 메뉴: 일정 수정 | src/components/AssessmentScreen.tsx:752 |
+| `assessment-menu-delete` | 길게 누름 메뉴: 일정 삭제 | src/components/AssessmentScreen.tsx:759 |
+| `assessment-edit-cancel` | 수정 팝업: 취소 | src/components/AssessmentScreen.tsx:856 |
+| `assessment-edit-save` | 수정 팝업: 저장하기 | src/components/AssessmentScreen.tsx:862 |
+| `assessment-delete-cancel` | 삭제 확인 팝업: 취소 | src/components/AssessmentScreen.tsx:891 |
+| `assessment-delete-confirm` | 삭제 확인 팝업: 삭제하기 | src/components/AssessmentScreen.tsx:897 |
+| `assessment-tab-list` | 수행평가 일정 탭 | src/components/AssessmentScreen.tsx:287 |
+| `assessment-tab-planner` | 지필·수행 계획 탭 | src/components/AssessmentScreen.tsx:292 |
+| `study-exam-add` | 지필평가 일정 등록 | src/components/ExamPlanner.tsx:108 |
+| `study-exam-edit` | 지필평가 일정 수정 | src/components/ExamPlanner.tsx:123 |
+| `study-exam-delete` | 지필평가 일정 삭제 | src/components/ExamPlanner.tsx:124 |
+| `study-plan-generate` | 학습 계획 보기 | src/components/ExamPlanner.tsx:125 |
+| `study-edit-save` | 지필평가 수정 저장 | src/components/ExamPlanner.tsx:152 |
+| `study-delete-confirm` | 지필평가 삭제 확인 | src/components/ExamPlanner.tsx:162 |
 
 ## 발표연습  (스타일 파일: src/ui-design/practice.css)
 
@@ -142,38 +143,38 @@
 
 | 이름(data-ui) | 무엇인가 | 코드 위치 |
 |---|---|---|
-| `profile-avatar-camera-tab` | 프로필 사진: 사진 촬영 탭 | src/components/ProfileScreen.tsx:400 |
-| `profile-avatar-gallery-tab` | 프로필 사진: 사진 선택 탭 | src/components/ProfileScreen.tsx:414 |
-| `profile-gallery-choose` | 내 사진 고르기 | src/components/ProfileScreen.tsx:491 |
-| `profile-avatar-default` | 기본 프로필로 설정 | src/components/ProfileScreen.tsx:500 |
-| `profile-camera-start` | 카메라 켜기 | src/components/ProfileScreen.tsx:476 |
-| `profile-camera-capture` | 촬영 버튼 | src/components/ProfileScreen.tsx:467 |
-| `profile-camera-retry` | 카메라 다시 시도 | src/components/ProfileScreen.tsx:440 |
-| `profile-camera-open-settings` | 카메라 권한: 앱 설정 열기 | src/components/ProfileScreen.tsx:449 |
-| `profile-school-search-open` | 학교 검색 열기 | src/components/ProfileScreen.tsx:577 |
-| `profile-school-search-close` | 학교 검색 닫기 | src/components/ProfileScreen.tsx:537 |
-| `profile-school-pick` | 검색된 학교 한 줄(선택) | src/components/ProfileScreen.tsx:562 |
-| `profile-goal-clear-input` | 학기 목표 입력 지우기(X) | src/components/ProfileScreen.tsx:636 |
-| `profile-goal-cancel` | 학기 목표 편집: 취소 | src/components/ProfileScreen.tsx:647 |
-| `profile-goal-save` | 학기 목표 저장 | src/components/ProfileScreen.tsx:657 |
-| `profile-goal-random` | 학기 목표 랜덤 선택(주사위) | src/components/ProfileScreen.tsx:687 |
-| `profile-goal-edit` | 학기 목표 수정(연필) | src/components/ProfileScreen.tsx:696 |
-| `profile-goal-delete` | 학기 목표 삭제 | src/components/ProfileScreen.tsx:709 |
-| `profile-save` | 똑 부러지게 프로필 수정 완료(저장) | src/components/ProfileScreen.tsx:727 |
+| `profile-avatar-camera-tab` | 프로필 사진: 사진 촬영 탭 | src/components/ProfileScreen.tsx:437 |
+| `profile-avatar-gallery-tab` | 프로필 사진: 사진 선택 탭 | src/components/ProfileScreen.tsx:451 |
+| `profile-gallery-choose` | 내 사진 고르기 | src/components/ProfileScreen.tsx:528 |
+| `profile-avatar-default` | 기본 프로필로 설정 | src/components/ProfileScreen.tsx:537 |
+| `profile-camera-start` | 카메라 켜기 | src/components/ProfileScreen.tsx:513 |
+| `profile-camera-capture` | 촬영 버튼 | src/components/ProfileScreen.tsx:504 |
+| `profile-camera-retry` | 카메라 다시 시도 | src/components/ProfileScreen.tsx:477 |
+| `profile-camera-open-settings` | 카메라 권한: 앱 설정 열기 | src/components/ProfileScreen.tsx:486 |
+| `profile-school-search-open` | 학교 검색 열기 | src/components/ProfileScreen.tsx:614 |
+| `profile-school-search-close` | 학교 검색 닫기 | src/components/ProfileScreen.tsx:574 |
+| `profile-school-pick` | 검색된 학교 한 줄(선택) | src/components/ProfileScreen.tsx:599 |
+| `profile-goal-clear-input` | 학기 목표 입력 지우기(X) | src/components/ProfileScreen.tsx:673 |
+| `profile-goal-cancel` | 학기 목표 편집: 취소 | src/components/ProfileScreen.tsx:684 |
+| `profile-goal-save` | 학기 목표 저장 | src/components/ProfileScreen.tsx:694 |
+| `profile-goal-random` | 학기 목표 랜덤 선택(주사위) | src/components/ProfileScreen.tsx:724 |
+| `profile-goal-edit` | 학기 목표 수정(연필) | src/components/ProfileScreen.tsx:733 |
+| `profile-goal-delete` | 학기 목표 삭제 | src/components/ProfileScreen.tsx:746 |
+| `profile-save` | 똑 부러지게 프로필 수정 완료(저장) | src/components/ProfileScreen.tsx:765 |
 
 ## 설정·구독  (스타일 파일: src/ui-design/settings.css)
 
 | 이름(data-ui) | 무엇인가 | 코드 위치 |
 |---|---|---|
-| `settings-dark-mode` | 다크 모드 스위치 | src/components/SettingsScreen.tsx:142 |
-| `settings-logout` | 로그아웃 | src/components/SettingsScreen.tsx:293 |
-| `settings-terms-open` | 약관 내용 보기 | src/components/SettingsScreen.tsx:315 |
-| `settings-reset-open` | 데이터 전체 초기화(위험 구역) | src/components/SettingsScreen.tsx:333 |
-| `settings-reset-cancel` | 초기화 팝업: 취소 | src/components/SettingsScreen.tsx:366 |
-| `settings-reset-countdown` | 초기화 팝업: 카운트다운 중(비활성) | src/components/SettingsScreen.tsx:373 |
-| `settings-reset-run` | 초기화 팝업: 초기화 실행 | src/components/SettingsScreen.tsx:380 |
-| `settings-terms-close-x` | 약관 팝업: 닫기(X) | src/components/SettingsScreen.tsx:420 |
-| `settings-terms-close` | 약관 팝업: 닫기 | src/components/SettingsScreen.tsx:432 |
+| `settings-dark-mode` | 다크 모드 스위치 | src/components/SettingsScreen.tsx:149 |
+| `settings-logout` | 로그아웃 | src/components/SettingsScreen.tsx:294 |
+| `settings-terms-open` | 약관 내용 보기 | src/components/SettingsScreen.tsx:320 |
+| `settings-reset-open` | 데이터 전체 초기화(위험 구역) | src/components/SettingsScreen.tsx:338 |
+| `settings-reset-cancel` | 초기화 팝업: 취소 | src/components/SettingsScreen.tsx:400 |
+| `settings-reset-countdown` | 초기화 팝업: 카운트다운 중(비활성) | src/components/SettingsScreen.tsx:407 |
+| `settings-reset-run` | 초기화 팝업: 초기화 실행 | src/components/SettingsScreen.tsx:414 |
+| `settings-terms-close-x` | 약관 팝업: 닫기(X) | src/components/SettingsScreen.tsx:454 |
+| `settings-terms-close` | 약관 팝업: 닫기 | src/components/SettingsScreen.tsx:466 |
 | `premium-subscribe` | 똑 PRO 구독하기 | src/components/PremiumSection.tsx:119 |
 | `premium-manage` | 구독 관리·해지 | src/components/PremiumSection.tsx:130 |
 | `premium-restore` | 구매 내역 복원 | src/components/PremiumSection.tsx:142 |
@@ -185,10 +186,10 @@
 
 | 이름(data-ui) | 무엇인가 | 코드 위치 |
 |---|---|---|
-| `meal-month-prev` | 이전 달 | src/components/KkorureukScreen.tsx:524 |
-| `meal-month-next` | 다음 달 | src/components/KkorureukScreen.tsx:534 |
-| `meal-date-select` | 날짜 하나하나(선택) | src/components/KkorureukScreen.tsx:577 |
-| `meal-week-prev` | 이전 주 | src/components/KkorureukScreen.tsx:740 |
-| `meal-week-this` | 이번 주 | src/components/KkorureukScreen.tsx:746 |
-| `meal-week-next` | 다음 주 | src/components/KkorureukScreen.tsx:752 |
-| `meal-alarm-toggle` | 급식 알림 켜기/끄기 | src/components/KkorureukScreen.tsx:896 |
+| `meal-month-prev` | 이전 달 | src/components/KkorureukScreen.tsx:523 |
+| `meal-month-next` | 다음 달 | src/components/KkorureukScreen.tsx:533 |
+| `meal-date-select` | 날짜 하나하나(선택) | src/components/KkorureukScreen.tsx:576 |
+| `meal-week-prev` | 이전 주 | src/components/KkorureukScreen.tsx:739 |
+| `meal-week-this` | 이번 주 | src/components/KkorureukScreen.tsx:745 |
+| `meal-week-next` | 다음 주 | src/components/KkorureukScreen.tsx:751 |
+| `meal-alarm-toggle` | 급식 알림 켜기/끄기 | src/components/KkorureukScreen.tsx:895 |

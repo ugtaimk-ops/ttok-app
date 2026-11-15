@@ -1,3 +1,6 @@
+import {createSchoolSearch} from './services/schoolSearch';
+import {verifySchoolAccount} from './services/schoolIdentity';
+import {timerTickets} from './services/timerAccountLink';
 import express from "express";
 import http from "http";
 import path from "path";
@@ -6,10 +9,14 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import { getAIService, parseJSONResponse } from "./services/ai";
-import { verifyRequestIdentity, isAccountDeleted, deleteAccountData, pruneExpiredServerData, checkAndConsumeUsage, getCurrentUsage, refundUsage, getCachedProblem, saveProblemResult, getCachedAiResult, saveCachedAiResult } from "./services/usageService";
+import { verifyRequestIdentity, isAccountDeleted, deleteAccountData, pruneExpiredServerData, checkAndConsumeUsage, getCurrentUsage, refundUsage, getCachedProblem, saveProblemResult, getCachedAiResult, saveCachedAiResult, getAdminFirestore, currentMonthKey } from "./services/usageService";
+import { quotaV6Enabled, getQuotaStatus, reserveQuota, finishQuota, requestIdFromHeader, fallbackRequestId } from "./services/aiQuotaStore";
+import { createAdRewardSession, acceptAdMobCallback } from "./services/adRewardService";
 import { verifyWebhookAuth, handleWebhookEvent } from "./services/revenueCatService";
 import { isPostgresConfigured, validCollection, validDocumentId, validUserPayload, getUserDocuments, putUserDocument, deleteUserDocument, getStorageStatus } from "./services/postgresStore";
 import { ADMIN_SECTIONS, configuredAdminUids, getAdminSection } from "./services/adminDashboardService";
+import { assertSharedStudyAccount, parseAction, sharedStudyPersonal, StudyError } from "./services/sharedStudyPersonal";
+import { dispatchRoomAction, ROOM_ACTIONS, RoomActionError } from "./services/sharedRoomsService";
 
 dotenv.config();
 
@@ -30,7 +37,7 @@ app.use((req, res, next) => {
   res.header("Referrer-Policy", "strict-origin-when-cross-origin");
   res.header("X-Frame-Options", "SAMEORIGIN");
   res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-App-Secret");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-App-Secret, X-AI-Request-ID");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
@@ -58,7 +65,19 @@ const aiLimiter = rateLimit({
   message: { error: "AI 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." }
 });
 
-app.use("/api/", apiLimiter);
+// Both apps can poll shared records from the same home network. Keep a
+// separate IP limit so two signed-in devices do not exhaust the AI/school
+// limit while browsing their study history.
+const sharedStudyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." },
+});
+app.use("/api/shared-study", sharedStudyLimiter);
+app.use("/api/", (req, res, next) =>
+  /^\/api\/shared-study(?:\/|\?)/.test(req.originalUrl) ? next() : apiLimiter(req, res, next));
 
 // A value bundled into an APK is extractable, so authenticate every API caller
 // with their Firebase ID token. Older app versions may still send X-App-Secret;
@@ -73,6 +92,15 @@ app.use("/api/", async (req, res, next) => {
     if (!admins.includes(identity.uid)) return res.status(403).json({ code: "ADMIN_FORBIDDEN", error: "관리자 권한이 없습니다." });
   }
   try {
+    // A dev laptop need not contain production Admin credentials for public
+    // school names. Signature/email checks above AND live account validation
+    // remain mandatory. No private reads, writes or AI routes use this path.
+    if (process.env.NODE_ENV !== 'production' && req.path === '/school/search' && !process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      const token = (req.header('authorization') || '').replace(/^Bearer\s+/i, '');
+      if (!await verifySchoolAccount(token, identity.uid)) return res.status(401).json({error:'다시 로그인한 뒤 학교를 검색해 주세요.'});
+      (req as any).uid = identity.uid;
+      return next();
+    }
     if (req.path !== "/account/delete" && await isAccountDeleted(identity.uid)) {
       return res.status(401).json({ error: "삭제된 계정이에요.", code: "ACCOUNT_DELETED" });
     }
@@ -96,6 +124,17 @@ for (const route of ["/api/problem/solve", "/api/assessment/extract", "/api/stud
 }
 app.use("/revenuecat/webhook", express.json({ limit: "128kb" }));
 app.use(express.json({ limit: "1mb" }));
+
+// Authorization codes are one-use, PKCE-bound, and expire after 60 seconds.
+app.post('/api/timer-auth/issue', (req,res)=>{
+  try { const code=timerTickets.issue((req as any).uid,req.body?.challenge);res.setHeader('Cache-Control','no-store');res.json({code}); }
+  catch {res.status(400).json({error:'올바르지 않은 연결 요청이에요.'});}
+});
+const timerExchangeLimit=rateLimit({windowMs:60000,limit:15,standardHeaders:true,legacyHeaders:false});
+app.post('/timer-auth/exchange',timerExchangeLimit,(req,res)=>{
+  try {const token=timerTickets.exchange(req.body?.code,req.body?.verifier);res.setHeader('Cache-Control','no-store');res.json({token});}
+  catch(error) {res.status(error instanceof Error&&error.message==='NOT_CONFIGURED'?503:400).json({error:'연결 요청이 만료되었거나 서버 설정을 확인해야 해요.'});}
+});
 
 const AI_ROUTES = ["/api/script/generate", "/api/practice/analyze", "/api/assessment/extract", "/api/study/action", "/api/home/ai-report"];
 const CACHEABLE_AI_ROUTES = new Set(["/api/assessment/extract", "/api/study/action"]);
@@ -173,6 +212,30 @@ app.use(AI_ROUTES, async (req, res, next) => {
         console.warn("[AI] Cache lookup unavailable:", cacheError);
       }
     }
+    if (quotaV6Enabled()) {
+      if (route === "/api/home/ai-report" && !(await getQuotaStatus(uid)).adFree) {
+        return res.status(403).json({ error: "AI 리포트는 똑 PRO 전용 기능이에요.", code: "PREMIUM_REQUIRED" });
+      }
+      const requestId = requestIdFromHeader(req.header("x-ai-request-id")) || fallbackRequestId(uid, route, req.body);
+      const quota = await reserveQuota(uid, requestId);
+      const isPremium = quota.summary.plans.some((p) => p.planId === "pro");
+      (req as any).isPremium = isPremium;
+      if (route === "/api/home/ai-report" && !isPremium) {
+        if (quota.allowed && !quota.duplicate) await finishQuota(uid, requestId, false);
+        return res.status(403).json({ error: "AI 리포트는 똑 PRO 전용 기능이에요.", code: "PREMIUM_REQUIRED" });
+      }
+      if (!quota.allowed) return res.status(403).json({ error: "AI 이용 횟수를 모두 사용했어요.", code: "AI_QUOTA_EXCEEDED", quota: quota.summary });
+      if (quota.duplicate) return res.status(409).json({ error: "이미 처리한 요청이에요.", code: "DUPLICATE_AI_REQUEST" });
+      res.once("finish", () => {
+        void finishQuota(uid, requestId, res.statusCode < 400)
+          .catch((error) => console.error("[AIQuota] Finalization failed:", error));
+      });
+      res.once("close", () => {
+        if (!res.writableFinished) void finishQuota(uid, requestId, false)
+          .catch((error) => console.error("[AIQuota] Connection-close refund failed:", error));
+      });
+      return next();
+    }
     const result = await checkAndConsumeUsage(uid, route === "/api/home/ai-report");
     (req as any).uid = uid;
     (req as any).isPremium = result.isPremium;
@@ -207,6 +270,35 @@ app.use(AI_ROUTES, async (req, res, next) => {
 // API ENDPOINTS
 // ==========================================
 
+const sharedStudyFailure = (res: express.Response, error: unknown) => {
+  if (error instanceof StudyError) return res.status(error.status).json({ code: error.code, error: error.message });
+  if (error instanceof RoomActionError) {
+    const status = { 'invalid-argument': 400, 'permission-denied': 403, 'resource-exhausted': 429, 'failed-precondition': 412 }[error.code];
+    return res.status(status).json({ code: error.code, error: error.message });
+  }
+  console.error('[SharedStudy] Request failed:', error);
+  return res.status(503).json({ code: 'SHARED_STUDY_UNAVAILABLE', error: '학습 데이터를 처리하지 못했어요.' });
+};
+app.post('/api/shared-study/action', async (req, res) => {
+  try {
+    const uid = (req as any).uid as string;
+    const { action, payload } = parseAction(req.body, uid);
+    await assertSharedStudyAccount(uid, req.header('authorization'));
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json(ROOM_ACTIONS.has(action)
+      ? await dispatchRoomAction(getAdminFirestore(), uid, action, payload)
+      : await sharedStudyPersonal().action(uid, action, payload));
+  } catch (error) { return sharedStudyFailure(res, error); }
+});
+app.get('/api/shared-study/collection/:name', async (req, res) => {
+  try {
+    const uid = (req as any).uid as string;
+    await assertSharedStudyAccount(uid, req.header('authorization'));
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json(await sharedStudyPersonal().read(uid, req.params.name));
+  } catch (error) { return sharedStudyFailure(res, error); }
+});
+
 // Health Check Endpoint
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", version: "1.0.26", message: "TTOK Backend Server is running!", timestamp: new Date().toISOString() });
@@ -218,6 +310,13 @@ app.get("/api/health", (req, res) => {
 app.get("/api/usage/status", async (req, res) => {
   const uid = (req as any).uid as string;
   try {
+    if (quotaV6Enabled()) {
+      res.setHeader("Cache-Control", "no-store");
+      const quota = await getQuotaStatus(uid, req.query.refresh === "1");
+      const limit = quota.mode === "paid" ? quota.plans.reduce((n, p) => n + p.total, 0) : 1;
+      return res.json({ version: 6, quota, month: currentMonthKey(), used: limit - quota.subscriptionRemaining,
+        limit, isPremium: quota.adFree });
+    }
     const { month, used, limit, isPremium } = await getCurrentUsage(uid);
     return res.json({ month, used, limit, isPremium });
   } catch (err) {
@@ -227,6 +326,9 @@ app.get("/api/usage/status", async (req, res) => {
 });
 
 app.post("/api/account/delete", async (req, res) => {
+  if (req.body?.expectedUid !== undefined && req.body.expectedUid !== (req as any).uid) {
+    return res.status(403).json({error:'계정이 변경되어 삭제를 중단했어요.'});
+  }
   const authTime = (req as any).authTime as number;
   if (req.body?.confirmation !== "DELETE") {
     return res.status(400).json({ error: "계정 삭제 확인이 필요해요." });
@@ -263,10 +365,16 @@ app.post("/api/problem/solve", async (req, res) => {
     let pending = problemRequests.get(key);
     if (!pending) {
       pending = (async () => {
-        const usage = await checkAndConsumeUsage(uid);
+        const quotaRequestId = requestIdFromHeader(req.header("x-ai-request-id")) || fallbackRequestId(uid, "/api/problem/solve", { hash });
+        const usage = quotaV6Enabled() ? await reserveQuota(uid, quotaRequestId, true) : await checkAndConsumeUsage(uid);
         if (!usage.allowed) {
-          const error: any = new Error("이번 달 AI 이용 횟수를 모두 사용했어요.");
+          const error: any = new Error("AI 이용 횟수를 모두 사용했어요.");
           error.status = 403;
+          throw error;
+        }
+        if ("duplicate" in usage && usage.duplicate) {
+          const error: any = new Error("이미 처리한 요청이에요.");
+          error.status = 409;
           throw error;
         }
         try {
@@ -296,9 +404,11 @@ app.post("/api/problem/solve", async (req, res) => {
         const result = { source: "gemini", model: "gemini-2.5-flash-lite", ...parsed };
         try { await saveProblemResult(uid, hash, result); }
         catch (error) { console.error("[ProblemSolve] Cache record failed:", error); }
+        if (quotaV6Enabled()) await finishQuota(uid, quotaRequestId, true);
         return result;
         } catch (error) {
-          try { await refundUsage(uid, usage.month); }
+          try { if (quotaV6Enabled()) await finishQuota(uid, quotaRequestId, false);
+            else if ("month" in usage) await refundUsage(uid, usage.month); }
           catch (refundError) { console.error("[ProblemSolve] Refund failed:", refundError); }
           throw error;
         }
@@ -309,229 +419,19 @@ app.post("/api/problem/solve", async (req, res) => {
     return res.json(await pending);
   } catch (error: any) {
     console.error("[ProblemSolve] Failed:", error);
-    return res.status(error.status === 403 ? 403 : error.status === 429 ? 429 : 503)
+    return res.status(error.status === 403 ? 403 : error.status === 409 ? 409 : error.status === 429 ? 429 : 503)
       .json({ error: error.status === 403 ? error.message : "문제 풀이를 완료하지 못했어요. 잠시 후 다시 시도해 주세요." });
   }
 });
 
-// School Search Endpoint (SchoolInfo.go.kr Integration & Fallback)
-app.get("/api/school/search", async (req, res) => {
-  try {
-    const { keyword } = req.query;
-    if (typeof keyword !== "string" || keyword.length > 80) {
-      return res.status(400).json({ error: "학교 이름은 80자 이내로 입력해 주세요." });
-    }
-    if (!keyword || String(keyword).trim().length < 2) {
-      console.log(`[SERVER_DEBUG] Search rejected: keyword is empty or less than 2 characters.`);
-      return res.json([]);
-    }
-    
-    const searchWord = String(keyword).trim();
-    
-    // -------------------------------------------------------------
-    // Helper to clean and extract region + school name keyword
-    // -------------------------------------------------------------
-    const cleanAndExtract = (query: string) => {
-      const original = query.trim();
-      const regions = [
-        "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", 
-        "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주",
-        "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시", "대전광역시", "울산광역시", "세종특별자치시",
-        "경기도", "강원특별자치도", "충청북도", "충청남도", "전라북도", "전라남도", "경상북도", "경상남도", "제주특별자치도",
-        "강원도", "전북특별자치도"
-      ];
-      
-      const parts = original.split(/\s+/).filter(Boolean);
-      let detectedRegion: string | null = null;
-      let schoolKeyword = original;
-
-      if (parts.length > 1) {
-        // e.g. "경기 한빛고"
-        const firstWord = parts[0];
-        const isFirstRegion = regions.some(r => firstWord === r || firstWord.startsWith(r) || r.startsWith(firstWord));
-        if (isFirstRegion) {
-          detectedRegion = firstWord;
-          schoolKeyword = parts.slice(1).join(" ");
-        } else {
-          schoolKeyword = parts.find(p => !regions.includes(p)) || parts[0];
-        }
-      } else if (parts.length === 1) {
-        // e.g. "경기과학고"
-        for (const r of regions) {
-          if (original.startsWith(r) && original.length > r.length) {
-            detectedRegion = r;
-            schoolKeyword = original.substring(r.length);
-            break;
-          }
-        }
-      }
-
-      return {
-        original,
-        detectedRegion,
-        schoolKeyword: schoolKeyword.trim()
-      };
-    };
-
-    const parsed = cleanAndExtract(searchWord);
-    console.log("[School Search Parsing]", parsed);
-
-    // -------------------------------------------------------------
-    // [CRITICAL MANDATE] Integrate SchoolInfo.go.kr Official URL directly
-    // Address: https://www.schoolinfo.go.kr/ei/ss/pneiss_a03_s0.do
-    // -------------------------------------------------------------
-    const schoolInfoUrl = `https://www.schoolinfo.go.kr/ei/ss/pneiss_a03_s0.do?searchWord=${encodeURIComponent(searchWord)}`;
-    console.log(`[SchoolInfo Proxy] Requesting direct SchoolInfo URL: ${schoolInfoUrl}`);
-    
-    const headers = {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
-    };
-
-    // Parallel requests targeting both the full word and separated school-name keyword
-    const urlByName = `https://open.neis.go.kr/hub/schoolInfo?Type=json&pIndex=1&pSize=150&SCHUL_NM=${encodeURIComponent(searchWord)}`;
-    const urlByLocation = `https://open.neis.go.kr/hub/schoolInfo?Type=json&pIndex=1&pSize=150&LCTN_SC_NM=${encodeURIComponent(searchWord)}`;
-    
-    const SEARCH_TIMEOUT_MS = 8000;
-
-    const fetchPromises = [
-      fetch(schoolInfoUrl, { headers, signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS) }).then(r => r.ok ? r.text() : null),
-      fetch(urlByName, { headers, signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS) }).then(r => r.ok ? r.json() : null),
-      fetch(urlByLocation, { headers, signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS) }).then(r => r.ok ? r.json() : null)
-    ];
-
-    // If we have a separate schoolKeyword (e.g. "한빛고" from "경기 한빛고"), query that too in parallel
-    if (parsed.schoolKeyword && parsed.schoolKeyword !== searchWord && parsed.schoolKeyword.length >= 2) {
-      const urlBySubName = `https://open.neis.go.kr/hub/schoolInfo?Type=json&pIndex=1&pSize=150&SCHUL_NM=${encodeURIComponent(parsed.schoolKeyword)}`;
-      fetchPromises.push(fetch(urlBySubName, { headers, signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS) }).then(r => r.ok ? r.json() : null));
-    }
-
-    console.log(`[Proxy] Fetching SchoolInfo.go.kr & standard/sub-keyword NEIS databases in parallel`);
-    const results = await Promise.allSettled(fetchPromises);
-    
-    const resSchoolInfo = results[0];
-    const resName = results[1];
-    const resLoc = results[2];
-    const resSubName = results[3]; // might be undefined if not requested
-
-    const collectedSchoolsMap = new Map<string, any>();
-
-    // Process structured data with correct codes to make sure meal lookup succeeds flawlessly
-    const parseAndCollect = (result: any) => {
-      if (result && result.status === "fulfilled" && result.value) {
-        const data = result.value;
-        if (data && data.schoolInfo && data.schoolInfo[1] && data.schoolInfo[1].row) {
-          data.schoolInfo[1].row.forEach((item: any) => {
-            if (item.SD_SCHUL_CODE) {
-              collectedSchoolsMap.set(item.SD_SCHUL_CODE, {
-                schoolName: item.SCHUL_NM || "",
-                schoolCode: item.SD_SCHUL_CODE,
-                officeCode: item.ATPT_OFCDC_SC_CODE || "",
-                officeName: item.ATPT_OFCDC_SC_NM || "",
-                schoolKind: item.SCHUL_KND_SC_NM || "",
-                location: item.LCTN_SC_NM || ""
-              });
-            }
-          });
-        }
-      }
-    };
-
-    parseAndCollect(resName);
-    parseAndCollect(resLoc);
-    if (resSubName) {
-      parseAndCollect(resSubName);
-    }
-
-    // If SchoolInfo returned a valid HTML response, log success
-    if (resSchoolInfo.status === "fulfilled" && resSchoolInfo.value) {
-      console.log(`[SchoolInfo Proxy] Successfully hit and retrieved SchoolInfo.go.kr page content. (Size: ${resSchoolInfo.value.length} bytes)`);
-    }
-
-    // Common abbreviations have a deterministic NEIS lookup. School search
-    // must never spend unmetered Gemini quota on an arbitrary query.
-    if (collectedSchoolsMap.size === 0) {
-      const aliases: Record<string, string> = {
-        "외대부고": "용인한국외국어대학교부설고등학교",
-        "용인외대부고": "용인한국외국어대학교부설고등학교",
-        "민사고": "민족사관고등학교",
-        "대구과고": "대구과학고등학교",
-        "과천외고": "과천외국어고등학교",
-      };
-      const officialName = aliases[searchWord];
-      if (officialName) {
-      try {
-          const aiUrlByName = `https://open.neis.go.kr/hub/schoolInfo?Type=json&pIndex=1&pSize=100&SCHUL_NM=${encodeURIComponent(officialName)}`;
-          const response = await fetch(aiUrlByName, { headers, signal: AbortSignal.timeout(8000) });
-          if (response.ok) {
-            const data = await response.json();
-            if (data && data.schoolInfo && data.schoolInfo[1] && data.schoolInfo[1].row) {
-              data.schoolInfo[1].row.forEach((item: any) => {
-                if (item.SD_SCHUL_CODE) {
-                  collectedSchoolsMap.set(item.SD_SCHUL_CODE, {
-                    schoolName: item.SCHUL_NM || "",
-                    schoolCode: item.SD_SCHUL_CODE,
-                    officeCode: item.ATPT_OFCDC_SC_CODE || "",
-                    officeName: item.ATPT_OFCDC_SC_NM || "",
-                    schoolKind: item.SCHUL_KND_SC_NM || "",
-                    location: item.LCTN_SC_NM || ""
-                  });
-                }
-              });
-            }
-          }
-      } catch (lookupError) {
-        console.error("[School Search] Alias lookup failed:", lookupError);
-      }
-      }
-    }
-
-    const mergedSchools = Array.from(collectedSchoolsMap.values());
-    
-    // Intelligent ranking and sorting algorithm
-    mergedSchools.sort((a, b) => {
-      const aName = a.schoolName;
-      const bName = b.schoolName;
-      
-      // 1. Exact match with original search word
-      if (aName === searchWord && bName !== searchWord) return -1;
-      if (bName === searchWord && aName !== searchWord) return 1;
-      
-      // 2. Region filter match if a region was detected
-      if (parsed.detectedRegion) {
-        const aRegionMatch = a.location.includes(parsed.detectedRegion) || a.officeName.includes(parsed.detectedRegion);
-        const bRegionMatch = b.location.includes(parsed.detectedRegion) || b.officeName.includes(parsed.detectedRegion);
-        if (aRegionMatch && !bRegionMatch) return -1;
-        if (!aRegionMatch && bRegionMatch) return 1;
-      }
-      
-      // 3. Starts with searchWord
-      const aStarts = aName.startsWith(searchWord);
-      const bStarts = bName.startsWith(searchWord);
-      if (aStarts && !bStarts) return -1;
-      if (!aStarts && bStarts) return 1;
-      
-      // 4. Starts with parsed schoolKeyword
-      if (parsed.schoolKeyword) {
-        const aSubStarts = aName.startsWith(parsed.schoolKeyword);
-        const bSubStarts = bName.startsWith(parsed.schoolKeyword);
-        if (aSubStarts && !bSubStarts) return -1;
-        if (!aSubStarts && bSubStarts) return 1;
-      }
-
-      // 5. Korean alphabetical order
-      return aName.localeCompare(bName, "ko");
-    });
-
-    console.log(`[SERVER_DEBUG] [SUCCESS] Merged and ranked ${mergedSchools.length} schools.`);
-    console.log(`[SERVER_DEBUG] First 2 schools: ${JSON.stringify(mergedSchools.slice(0, 2))}`);
-    return res.json(mergedSchools);
-  } catch (error: any) {
-    console.error(`[SERVER_DEBUG] [ERROR] School search error:`, error);
-    res.status(500).json({ error: "학교 조회 도중 오류가 발생했어요." });
-  }
+// Both apps use the same authenticated, deterministic NEIS lookup. Never use AI here.
+const searchSchools = createSchoolSearch();
+app.get('/api/school/search', async (req, res) => {
+  const keyword = req.query.keyword;
+  if (typeof keyword !== 'string' || keyword.length > 80) return res.status(400).json({error:'학교 이름은 80자 이내로 입력해 주세요.'});
+  try { return res.json(await searchSchools(keyword)); }
+  catch { return res.status(503).json({code:'SCHOOL_LOOKUP_UNAVAILABLE',error:'학교 검색 서버에 연결하지 못했어요. 잠시 후 다시 검색해 주세요.'}); }
 });
-
 // Meal Info Endpoint (official NEIS API)
 app.get("/api/meal/info", async (req, res) => {
   try {
@@ -1043,6 +943,33 @@ app.post("/revenuecat/webhook", async (req, res) => {
     console.error("[RevenueCat] Webhook handling failed:", err);
     // A failed subscription update must not be acknowledged as completed.
     res.status(503).json({ received: false, error: "Subscription update unavailable" });
+  }
+});
+
+// AdMob rewarded callback: only a signed Google SSV request with an issued
+// short-lived nonce can create a credit. No client-reported ad completion is trusted.
+app.post("/api/ad/reward-session", async (req, res) => {
+  if (!quotaV6Enabled() || !process.env.ADMOB_REWARDED_AD_UNIT_ID) {
+    return res.status(503).json({ error: "광고 보상을 아직 사용할 수 없어요." });
+  }
+  try {
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({ customData: await createAdRewardSession((req as any).uid) });
+  } catch (error) {
+    console.error("[AdReward] Session failed:", error);
+    return res.status(503).json({ error: "광고 연결을 준비하지 못했어요." });
+  }
+});
+
+app.get("/admob/ssv", async (req, res) => {
+  if (!quotaV6Enabled()) return res.sendStatus(503);
+  try {
+    const raw = req.originalUrl.split("?")[1] || "";
+    await acceptAdMobCallback(raw);
+    return res.sendStatus(200);
+  } catch (error) {
+    console.error("[AdReward] SSV rejected:", error);
+    return res.sendStatus(error instanceof Error && /unavailable|not configured/.test(error.message) ? 503 : 401);
   }
 });
 

@@ -1,5 +1,6 @@
 import { currentMonthKey, getAdminFirestore, getCurrentUsage, FREE_MONTHLY_LIMIT, PREMIUM_MONTHLY_LIMIT } from "./usageService";
 import { getStorageStatus, isPostgresConfigured } from "./postgresStore";
+import { getQuotaStatus, quotaV6Enabled } from "./aiQuotaStore";
 
 export const ADMIN_SECTIONS = ["overview", "accounts", "database", "ai", "billing", "school", "api", "security"] as const;
 export type AdminSection = typeof ADMIN_SECTIONS[number];
@@ -86,10 +87,15 @@ export async function getAdminSection(section: AdminSection, uid: string): Promi
         collections: ["users", "problemSolutions", "deletedAccounts"], note: "앱의 사용자 데이터는 현재 Firestore에 저장됩니다." };
     }
     case "ai": {
+      if (quotaV6Enabled()) {
+        const quota = await getQuotaStatus(uid);
+        return { section, checkedAt: new Date().toISOString(), mode: "v6", quota,
+          geminiConfigured: configured.gemini, provider: process.env.AI_PROVIDER || "gemini" };
+      }
       const [usage, activeUsers] = await Promise.all([
         getCurrentUsage(uid), countUsers(ref => ref.where("aiUsageMonth", "==", currentMonthKey())),
       ]);
-      return { section, checkedAt: new Date().toISOString(), geminiConfigured: configured.gemini, activeUsers, month: currentMonthKey(),
+      return { section, checkedAt: new Date().toISOString(), mode: "legacy", geminiConfigured: configured.gemini, activeUsers, month: currentMonthKey(),
         freeLimit: FREE_MONTHLY_LIMIT, premiumLimit: PREMIUM_MONTHLY_LIMIT, adminUsage: usage,
         provider: process.env.AI_PROVIDER || "gemini" };
     }
@@ -99,7 +105,8 @@ export async function getAdminSection(section: AdminSection, uid: string): Promi
       try { subscriber = await currentSubscriber(uid); }
       catch { subscriberError = "RevenueCat 응답을 확인하지 못했습니다."; }
       return { section, checkedAt: new Date().toISOString(), revenueCatConfigured: configured.revenueCat,
-        webhookConfigured: configured.revenueCatWebhook, entitlementId: "똑 Pro", subscriber, subscriberError,
+        webhookConfigured: configured.revenueCatWebhook, monetizationV6Enabled: quotaV6Enabled(),
+        offeringId: "ddok_v6", entitlementId: "똑 Pro", subscriber, subscriberError,
         note: "구독 상품과 가격 변경은 Google Play와 RevenueCat 콘솔에서 관리합니다." };
     }
     case "school": {

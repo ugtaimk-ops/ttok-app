@@ -4,6 +4,7 @@ module.exports = {
   // ── 공통 ──
   "header-mode-tok": ["공통", "상단 서비스 전환: 똑"],
   "header-mode-kkorureuk": ["공통", "상단 서비스 전환: 꼬르륵"],
+  "header-timer": ["공통", "상단 똑 타이머 열기"],
   "header-profile": ["공통", "우측 상단 프로필 열기"],
   "nav-bar": ["공통", "하단 탭 바 전체(떠 있는 유리 막대)"],
   "nav-home": ["공통", "하단 탭: 홈"],

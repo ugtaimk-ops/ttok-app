@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { Capacitor } from "@capacitor/core";
 import {
   initializeAuth,
+  connectAuthEmulator,
   browserLocalPersistence,
   indexedDBLocalPersistence,
   browserPopupRedirectResolver,
@@ -18,7 +19,8 @@ import {
   User
 } from "firebase/auth";
 import { 
-  initializeFirestore, 
+  initializeFirestore,
+  connectFirestoreEmulator,
   doc, 
   setDoc, 
   getDoc, 
@@ -35,7 +37,11 @@ const firebaseConfig = {
   appId: "1:725925538766:web:239579d8522e514ea8d99f"
 };
 
-const app = initializeApp(firebaseConfig);
+const emulatorMode=(import.meta as any).env.DEV&&(import.meta as any).env.VITE_USE_FIREBASE_EMULATORS==='true';
+// Local four-phone preview shares Firebase persistence only within each pair.
+const previewDevice=(import.meta as any).env.DEV ? new URLSearchParams(location.search).get('previewDevice') : null;
+const previewName=previewDevice==='left'||previewDevice==='right' ? 'ddok-timer-'+previewDevice : undefined;
+const app = initializeApp(emulatorMode?{...firebaseConfig,projectId:'demo-ddok-shared',apiKey:'demo-api-key',authDomain:'localhost'}:firebaseConfig, previewName);
 
 // Explicit persistence list (rather than the default auto-detection) avoids a hang some
 // WKWebView/Capacitor setups hit while Firebase Auth probes for IndexedDB support on launch.
@@ -56,6 +62,11 @@ export const db = initializeFirestore(app, {
   // iOS WKWebView; this lets the SDK detect that and fall back to long polling.
   experimentalAutoDetectLongPolling: true
 }, "ai-studio-22fbd27c-5516-4028-bd17-a6d4ba99710b");
+
+if ((import.meta as any).env.DEV && (import.meta as any).env.VITE_USE_FIREBASE_EMULATORS === 'true') {
+  connectAuthEmulator(auth,'http://127.0.0.1:9099',{disableWarnings:true});
+  connectFirestoreEmulator(db,'127.0.0.1',8080);
+}
 
 export {
   signInWithEmailAndPassword,

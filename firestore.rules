@@ -17,6 +17,57 @@ service cloud.firestore {
         && !exists(/databases/$(database)/documents/deletedAccounts/$(userId));
     }
 
+
+    // Shared-study authorization is deliberately stricter than legacy profile access.
+    function sharedAuth() {
+      return isSignedIn()
+        && !exists(/databases/$(database)/documents/deletedAccounts/$(request.auth.uid))
+        && (request.auth.token.firebase.sign_in_provider != 'custom' || request.auth.token.get('ddokTimer', false) == true)
+        && (request.auth.token.get('email_verified', false) == true
+          || request.auth.token.get('ddokTimer', false) == true
+          || request.auth.token.firebase.sign_in_provider in ['google.com', 'apple.com']);
+    }
+    function sharedOwner(uid) { return sharedAuth() && request.auth.uid == uid; }
+    function unblocked(uid) {
+      return !exists(/databases/$(database)/documents/users/$(uid)/blocks/$(request.auth.uid))
+        && !exists(/databases/$(database)/documents/users/$(request.auth.uid)/blocks/$(uid));
+    }
+    function roomMember(roomId) {
+      let room = get(/databases/$(database)/documents/studyRooms/$(roomId)).data;
+      let member = get(/databases/$(database)/documents/studyRooms/$(roomId)/members/$(request.auth.uid)).data;
+      return sharedAuth() && room.state == 'active'
+        && room.capacity is int && room.capacity >= 2 && room.capacity <= 6
+        && !exists(/databases/$(database)/documents/deletedAccounts/$(room.ownerUid))
+        && unblocked(room.ownerUid)
+        && member.ownerUid == room.ownerUid && member.uid == request.auth.uid
+        && member.role in ['owner', 'member'] && member.approval == 'approved'
+        && member.status in ['focus', 'break', 'offline']
+        && member.get('blocked', false) == false && member.expiresAt > request.time;
+    }
+    match /studyRooms/{roomId} {
+      allow read: if roomMember(roomId);
+      allow write: if false;
+      match /members/{uid} { allow read: if roomMember(roomId); allow write: if false; }
+      match /sessions/{id} { allow read: if roomMember(roomId); allow write: if false; }
+      match /joinRequests/{id} {
+        allow list: if sharedAuth()
+          && get(/databases/$(database)/documents/studyRooms/$(roomId)).data.ownerUid == request.auth.uid;
+        allow get: if sharedAuth()
+          && (get(/databases/$(database)/documents/studyRooms/$(roomId)).data.ownerUid == request.auth.uid || resource.data.requesterUid == request.auth.uid)
+          && unblocked(resource.data.ownerUid)
+          && !exists(/databases/$(database)/documents/deletedAccounts/$(resource.data.ownerUid));
+        allow write: if false;
+      }
+      match /invites/{id} { allow read, write: if false; }
+    }
+    match /invites/{id} { allow read, write: if false; }
+    match /usernames/{normalized} {
+      allow read: if sharedAuth() && resource.data.publicSearch == true
+        && unblocked(resource.data.ownerUid)
+        && !exists(/databases/$(database)/documents/deletedAccounts/$(resource.data.ownerUid));
+      allow write: if false;
+    }
+
     // Rules for Users collection and subcollections
     match /users/{userId} {
       // isPremium/aiUsageCount/aiUsageMonth are server-managed (services/usageService.ts,
@@ -24,13 +75,37 @@ service cloud.firestore {
       // set them itself, or anyone could grant themselves premium for free.
       function touchesServerManagedFields() {
         return request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['isPremium', 'aiUsageCount', 'aiUsageMonth', 'aiProblemSolveCalls', 'aiEstimatedCostMonth', 'aiEstimatedCostUsd']);
+          .hasAny(['isPremium', 'aiUsageCount', 'aiUsageMonth', 'aiProblemSolveCalls', 'aiEstimatedCostMonth', 'aiEstimatedCostUsd', 'connectedApps', 'linkedApps', 'registerApp', 'ownerUid', 'schemaVersion', 'createdAt', 'deletedAt', 'accountDeleted', 'username', 'usernameNormalized', 'studyDeleting', 'studyUsername', 'studyDisplayName', 'studyPhotoURL', 'studySettings', 'studySessionRevision']);
       }
 
+      // Validate only newly introduced shared-profile fields; legacy name/school remain writable.
+      function validTimerSettings(settings) {
+        return settings is map
+          && settings.keys().hasOnly(['notifications', 'vibration'])
+          && (!('notifications' in settings) || settings.notifications is bool)
+          && (!('vibration' in settings) || settings.vibration is bool);
+      }
+      function validNewProfileFields() {
+        let d = request.resource.data;
+        let changed = request.method == 'create' ? d.keys() : d.diff(resource.data).affectedKeys();
+        return (!changed.hasAny(['displayName']) || !('displayName' in d) || (d.displayName is string && d.displayName.size() <= 80))
+          && (!changed.hasAny(['photoURL']) || !('photoURL' in d) || (d.photoURL is string && d.photoURL.size() <= 2048))
+          && (!changed.hasAny(['publicSearch']) || !('publicSearch' in d) || d.publicSearch is bool)
+          && (!changed.hasAny(['timerSettings']) || !('timerSettings' in d) || validTimerSettings(d.timerSettings))
+          && (!changed.hasAny(['schoolCode']) || !('schoolCode' in d) || (d.schoolCode is string && d.schoolCode.size() <= 32))
+          && (!changed.hasAny(['officeCode']) || !('officeCode' in d) || (d.officeCode is string && d.officeCode.size() <= 32))
+          && (!changed.hasAny(['updatedAt']) || !('updatedAt' in d) || d.updatedAt is timestamp);
+      }
+      match /{collection}/{id} {
+        allow read: if collection in ['goals', 'studySessions', 'exams', 'studyJournal', 'studyInsights', 'friends', 'friendRequests', 'dailyStats', 'roomMemberships', 'blocks']
+          && sharedOwner(userId);
+        allow write: if false;
+      }
       allow read: if isOwner(userId);
       allow create: if isOwner(userId)
-        && !request.resource.data.keys().hasAny(['isPremium', 'aiUsageCount', 'aiUsageMonth', 'aiProblemSolveCalls', 'aiEstimatedCostMonth', 'aiEstimatedCostUsd']);
-      allow update: if isOwner(userId) && !touchesServerManagedFields();
+        && validNewProfileFields()
+        && !request.resource.data.keys().hasAny(['isPremium', 'aiUsageCount', 'aiUsageMonth', 'aiProblemSolveCalls', 'aiEstimatedCostMonth', 'aiEstimatedCostUsd', 'connectedApps', 'linkedApps', 'registerApp', 'ownerUid', 'schemaVersion', 'createdAt', 'deletedAt', 'accountDeleted', 'username', 'usernameNormalized', 'studyDeleting', 'studyUsername', 'studyDisplayName', 'studyPhotoURL', 'studySettings', 'studySessionRevision']);
+      allow update: if isOwner(userId) && !touchesServerManagedFields() && validNewProfileFields();
       // Deleting this document would reset server-managed monthly quota.
       allow delete: if false;
 
@@ -48,6 +123,12 @@ service cloud.firestore {
 
       match /practiceLogs/{logId} {
         allow read, write: if isOwner(userId);
+      }
+
+      // v6 balances, purchase-derived entitlements and ad credits are Admin SDK only.
+      match /monetization/{documentId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
       }
     }
   }

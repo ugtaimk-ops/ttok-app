@@ -204,7 +204,6 @@ export default function StudyScreen({
       }
       const result = await response.json() as ProblemResult;
       setProblemResult(result);
-      if (!result.cached) window.dispatchEvent(new Event("ttok:usage-updated"));
     } catch (error) {
       setProblemError(error instanceof Error ? error.message : "문제 풀이 중 오류가 발생했어요.");
     } finally {

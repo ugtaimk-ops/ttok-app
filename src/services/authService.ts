@@ -302,7 +302,6 @@ export const authService = {
           displayName: fbUser.displayName || "",
           photoURL: fbUser.photoURL || "",
           provider: providerId,
-          createdAt: now,
           lastLogin: now,
         };
 

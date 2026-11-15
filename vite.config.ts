@@ -24,6 +24,7 @@ export default defineConfig(() => {
       'import.meta.env.VITE_REVENUECAT_API_KEY_IOS': JSON.stringify(process.env.REVENUECAT_API_KEY_IOS || ''),
     },
     resolve: {
+      dedupe: ['react', 'react-dom', 'firebase', '@firebase/app', '@firebase/auth', '@firebase/firestore', '@firebase/functions'],
       alias: {
         '@': path.resolve(__dirname, '.'),
       },

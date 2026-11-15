@@ -1,0 +1,1 @@
+const os=require('node:os');const original=os.userInfo;os.userInfo=(...args)=>{try{return original(...args)}catch{return {username:process.env.USERNAME||'user',homedir:process.env.USERPROFILE||process.cwd(),shell:process.env.ComSpec||'cmd.exe'}}};

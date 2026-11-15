@@ -4,6 +4,7 @@
 // type alone, which is easy to get subtly wrong across renewals/
 // cancellations/grace periods/refunds) and writes isPremium accordingly.
 import { timingSafeEqual } from "crypto";
+import { quotaV6Enabled, syncVerifiedSubscriptions, verifiedSubscriptions } from "./aiQuotaStore";
 
 const ENTITLEMENT_ID = "똑 Pro";
 const FIRESTORE_DATABASE_ID = "ai-studio-22fbd27c-5516-4028-bd17-a6d4ba99710b";
@@ -33,7 +34,7 @@ export async function deleteRevenueCatCustomer(uid: string): Promise<void> {
   }
 }
 
-async function fetchIsEntitlementActive(appUserId: string): Promise<boolean> {
+async function fetchSubscriber(appUserId: string): Promise<any> {
   const secretKey = process.env.REVENUECAT_SECRET_API_KEY;
   if (!secretKey) {
     throw new Error("REVENUECAT_SECRET_API_KEY is not set");
@@ -49,7 +50,11 @@ async function fetchIsEntitlementActive(appUserId: string): Promise<boolean> {
   }
 
   const data = await res.json();
-  const allEntitlements = data?.subscriber?.entitlements ?? {};
+  return data?.subscriber || {};
+}
+
+function isEntitlementActive(subscriber: any, appUserId: string): boolean {
+  const allEntitlements = subscriber?.entitlements ?? {};
   const entitlement = allEntitlements[ENTITLEMENT_ID];
   if (!entitlement) {
     console.warn(
@@ -59,6 +64,12 @@ async function fetchIsEntitlementActive(appUserId: string): Promise<boolean> {
       `the RevenueCat dashboard's Entitlement isn't set up/attached to the product yet, ` +
       `or ENTITLEMENT_ID here doesn't match its identifier.`
     );
+    return false;
+  }
+
+  const linkedProduct = String(entitlement.product_identifier || "").split(":")[0];
+  if (linkedProduct === "ttok_ai_basic_monthly" || linkedProduct === "ttok_ai_plus_monthly") {
+    console.warn("[RevenueCat] AI add-on product is attached to the Pro entitlement; refusing Pro access.");
     return false;
   }
 
@@ -107,7 +118,12 @@ export async function handleWebhookEvent(body: any): Promise<void> {
     const users = [...(Array.isArray(body.event.transferred_from) ? body.event.transferred_from : []),
       ...(Array.isArray(body.event.transferred_to) ? body.event.transferred_to : [])];
     await Promise.all([...new Set(users.filter(validUid))].map(async (uid) =>
-      setIsPremium(uid, await fetchIsEntitlementActive(uid))));
+      (async () => {
+        const subscriber = await fetchSubscriber(uid);
+        if (quotaV6Enabled()) await syncVerifiedSubscriptions(uid, subscriber);
+        await setIsPremium(uid, isEntitlementActive(subscriber, uid) ||
+          (quotaV6Enabled() && verifiedSubscriptions(subscriber).some((sub) => sub.planId === "pro")));
+      })()));
     return;
   }
   if (!validUid(appUserId)) {
@@ -115,6 +131,8 @@ export async function handleWebhookEvent(body: any): Promise<void> {
     throw new Error("RevenueCat webhook is missing a Firebase user id");
   }
 
-  const isActive = await fetchIsEntitlementActive(appUserId);
-  await setIsPremium(appUserId, isActive);
+  const subscriber = await fetchSubscriber(appUserId);
+  if (quotaV6Enabled()) await syncVerifiedSubscriptions(appUserId, subscriber);
+  await setIsPremium(appUserId, isEntitlementActive(subscriber, appUserId) ||
+    (quotaV6Enabled() && verifiedSubscriptions(subscriber).some((sub) => sub.planId === "pro")));
 }

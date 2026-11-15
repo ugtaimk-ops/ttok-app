@@ -87,6 +87,10 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string fb000000000000000" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:1 string ttok" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :LSApplicationQueriesSchemes" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :LSApplicationQueriesSchemes array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :LSApplicationQueriesSchemes:0 string ddoktimer" "$PLIST"
 
       - name: Inject GoogleService-Info.plist and URL scheme (for Google Sign-In)
         if: ${{ vars.GOOGLE_SERVICE_INFO_PLIST != '' }}

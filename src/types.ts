@@ -18,6 +18,14 @@ export interface UserProfile {
   isPremium?: boolean;
   aiUsageCount?: number;
   aiUsageMonth?: string;
+  aiQuota?: {
+    mode: "paid" | "free";
+    adFree: boolean;
+    plans: Array<{ planId: "basic" | "pro" | "plus"; total: number; remaining: number; periodEnd: number }>;
+    subscriptionRemaining: number;
+    rewardRemaining: number;
+    freeRemaining: number;
+  };
   aiProblemSolveCalls?: number;
   aiEstimatedCostMonth?: string;
   aiEstimatedCostUsd?: number;

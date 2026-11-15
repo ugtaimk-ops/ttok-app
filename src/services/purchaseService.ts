@@ -1,8 +1,9 @@
 import { Purchases } from "@revenuecat/purchases-capacitor";
-import type { PurchasesOffering, CustomerInfo, PurchasesStoreProduct } from "@revenuecat/purchases-capacitor";
+import type { CustomerInfo, PurchasesStoreProduct } from "@revenuecat/purchases-capacitor";
 import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 import { auth } from "../lib/firebase";
+import { robustFetch } from "../lib/api";
 
 const ENTITLEMENT_ID = "똑 Pro";
 // Fallback if RevenueCat doesn't hand back a subscription-specific
@@ -12,17 +13,11 @@ const PLAY_STORE_SUBSCRIPTIONS_URL = "https://play.google.com/store/account/subs
 
 let configuredForUid: string | null = null;
 let pendingConfiguration: Promise<void> | null = null;
-const PLAY_SUBSCRIPTIONS = [
-  { id: "ttok_pro_monthly:ttok-pro-monthly", type: "MONTHLY", packageId: "$rc_monthly" },
-  { id: "ttok_pro_yearly:ttok-pro-yearly", type: "ANNUAL", packageId: "$rc_annual" },
-] as const;
-
-type DirectProductPackage = {
-  identifier: string;
-  packageType: "MONTHLY" | "ANNUAL";
-  product: PurchasesStoreProduct;
-  directProduct: true;
-};
+export const V6_PRODUCT_IDS = {
+  basic: "ttok_ai_basic_monthly",
+  pro: "ttok_pro_v2_monthly",
+  plus: "ttok_ai_plus_monthly",
+} as const;
 
 function describePurchaseError(error: unknown): string {
   if (error && typeof error === "object") {
@@ -34,6 +29,44 @@ function describePurchaseError(error: unknown): string {
 }
 
 export const purchaseService = {
+  async getV6Products(): Promise<Partial<Record<keyof typeof V6_PRODUCT_IDS, PurchasesStoreProduct>>> {
+    const uid = auth.currentUser?.uid;
+    if (!uid) throw new Error("먼저 로그인해 주세요.");
+    await this.configure(uid);
+    if (configuredForUid !== uid) throw new Error("결제 서비스를 연결하지 못했어요.");
+    let products: PurchasesStoreProduct[] = [];
+    try {
+      const offerings = await Purchases.getOfferings();
+      // Keep the existing default Offering for older app versions while the
+      // new plans are tested. The v6 paywall reads its dedicated Offering.
+      const v6Offering = offerings.all?.["ddok_v6"];
+      products = v6Offering?.availablePackages?.map((pkg) => pkg.product) || [];
+    } catch (error) {
+      console.warn("[purchaseService] v6 offering lookup failed:", describePurchaseError(error));
+    }
+    if (Object.values(V6_PRODUCT_IDS).some((id) => !products.some((p) => p.identifier === id || p.identifier.startsWith(`${id}:`)))) {
+      try {
+        const direct = await Purchases.getProducts({ productIdentifiers: Object.values(V6_PRODUCT_IDS) });
+        products = [...products, ...direct.products];
+      } catch (error) {
+        console.warn("[purchaseService] v6 direct lookup failed:", describePurchaseError(error));
+      }
+    }
+    return Object.fromEntries(Object.entries(V6_PRODUCT_IDS).flatMap(([plan, id]) => {
+      const product = products.find((p) => p.identifier === id || p.identifier.startsWith(`${id}:`));
+      return product ? [[plan, product]] : [];
+    })) as Partial<Record<keyof typeof V6_PRODUCT_IDS, PurchasesStoreProduct>>;
+  },
+
+  async purchaseV6Product(product: PurchasesStoreProduct): Promise<CustomerInfo> {
+    const uid = auth.currentUser?.uid;
+    if (!uid || configuredForUid !== uid) throw new Error("결제 계정을 확인해 주세요.");
+    const info = (await Purchases.purchaseStoreProduct({ product })).customerInfo;
+    // Force a server-side RevenueCat lookup so the new quota appears promptly.
+    // The purchase itself is successful even if this follow-up check is delayed.
+    await robustFetch("/api/usage/status?refresh=1").catch(() => {});
+    return info;
+  },
   /**
    * Must be called once the user is signed in, with their Firebase uid as
    * RevenueCat's app_user_id - that's what ties a purchase back to the right
@@ -67,50 +100,6 @@ export const purchaseService = {
     await pendingConfiguration;
   },
 
-  async getCurrentOffering(): Promise<PurchasesOffering> {
-    try {
-      const uid = auth.currentUser?.uid;
-      if (!uid) throw new Error("RevenueCat requested before Firebase sign-in completed");
-      await this.configure(uid);
-      if (configuredForUid !== uid) throw new Error("RevenueCat is not configured for this account");
-      try {
-        const offerings = await Purchases.getOfferings();
-        if (offerings.current?.availablePackages?.length) return offerings.current;
-        console.warn("[purchaseService] Current offering has no Google Play packages; checking products directly.");
-      } catch (error) {
-        console.warn("[purchaseService] Offering lookup failed; checking Play products directly:", describePurchaseError(error));
-      }
-
-      // A valid RevenueCat offering can still have no resolved packages on a
-      // particular Play account. Ask Play for the two configured base plans
-      // directly before treating the subscriptions as unavailable.
-      const { products } = await Purchases.getProducts({
-        productIdentifiers: [...new Set(PLAY_SUBSCRIPTIONS.flatMap(({ id }) => [id, id.split(":")[0]]))],
-      });
-      const directPackages: DirectProductPackage[] = PLAY_SUBSCRIPTIONS.flatMap(({ id, type, packageId }) => {
-        const product = products.find((item) => item.identifier === id || item.identifier === id.split(":")[0]);
-        return product ? [{ identifier: packageId, packageType: type, product, directProduct: true }] : [];
-      });
-      if (directPackages.length === 0) {
-        throw new Error("Google Play에서 월간·연간 구독 상품을 찾지 못했어요. Play 스토어 테스트 계정, 설치 경로, 국가 설정을 확인해 주세요.");
-      }
-      console.info(`[purchaseService] Loaded ${directPackages.length} Google Play products directly.`);
-      return { availablePackages: directPackages } as unknown as PurchasesOffering;
-    } catch (err) {
-      console.error("[purchaseService] Failed to fetch Play products:", describePurchaseError(err));
-      throw err;
-    }
-  },
-
-  async purchasePackage(pkg: any): Promise<CustomerInfo> {
-    if (pkg.directProduct === true) {
-      const result = await Purchases.purchaseStoreProduct({ product: pkg.product });
-      return result.customerInfo;
-    }
-    const result = await Purchases.purchasePackage({ aPackage: pkg });
-    return result.customerInfo;
-  },
-
   async restorePurchases(): Promise<CustomerInfo> {
     const result = await Purchases.restorePurchases();
     return result.customerInfo;
@@ -125,6 +114,13 @@ export const purchaseService = {
    */
   isEntitlementActive(customerInfo: CustomerInfo): boolean {
     return !!customerInfo.entitlements.active[ENTITLEMENT_ID];
+  },
+
+  hasActiveV6Entitlement(customerInfo: CustomerInfo): boolean {
+    return !!customerInfo.entitlements.active[ENTITLEMENT_ID] ||
+      customerInfo.activeSubscriptions.some((subscriptionId) =>
+        Object.values(V6_PRODUCT_IDS).some((productId) =>
+          subscriptionId === productId || subscriptionId.startsWith(`${productId}:`)));
   },
 
   /**

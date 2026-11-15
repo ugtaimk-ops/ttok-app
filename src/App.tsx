@@ -1,10 +1,11 @@
+import {openTimerApp} from './services/timerLinkService';
+import {useTimerAccountLink} from './services/timerAccountLink';
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "motion/react";
-import BackButton from "./components/BackButton";
 import { ScreenScope, handleScreenBack } from "./lib/screenBack";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
-import { Loader2 } from "lucide-react";
+import { Loader2, Timer } from "lucide-react";
 import type { User } from "firebase/auth";
 import {
   UserProfile,
@@ -71,6 +72,7 @@ function getStoredDataOwner(): string | null {
 }
 
 export default function App() {
+  useTimerAccountLink();
   // The local UI editor may display both plans without changing Firebase or
   // RevenueCat state. Vite removes this branch from production builds.
   const planPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get("ui") === "1"
@@ -161,8 +163,8 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // The native system Back button and the visible Back control share the same
-  // navigation logic. The ref keeps the native listener current across renders.
+  // Keep Android's system Back navigation even though the header has no Back button.
+  // The ref keeps the native listener current across renders.
   const nativeBack = useRef<() => void>(() => {});
   nativeBack.current = () => {
     if (authUser === undefined) return;
@@ -187,6 +189,28 @@ export default function App() {
       disposed = true;
       if (removeListener) void removeListener();
     };
+  }, []);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let disposed = false;
+    let removeListener: (() => Promise<void>) | undefined;
+    const openHome = (url: string) => {
+      if (url !== "ttok://home") return;
+      setServiceMode("tok");
+      setTokTab("home");
+      setTabTransition(null);
+    };
+    void CapacitorApp.getLaunchUrl().then(result => {
+      if (!disposed && result?.url) openHome(result.url);
+    }).catch(error => console.warn("Launch URL check failed:", error));
+    void CapacitorApp.addListener("appUrlOpen", ({ url }) => openHome(url))
+      .then(handle => {
+        if (disposed) void handle.remove();
+        else removeListener = () => handle.remove();
+      })
+      .catch(error => console.warn("App link listener failed:", error));
+    return () => { disposed = true; if (removeListener) void removeListener(); };
   }, []);
 
 
@@ -349,12 +373,12 @@ export default function App() {
         const response = await robustFetch("/api/usage/status");
         if (!response.ok) throw new Error(`Usage status ${response.status}`);
         const status = await response.json() as {
-          month: string; used: number; isPremium: boolean;
+          month: string; used: number; isPremium: boolean; quota?: UserProfile["aiQuota"];
         };
         if (active) {
           shownMonth = status.month;
           setUser(prev => ({ ...prev, uid, aiUsageMonth: status.month,
-            aiUsageCount: status.used, isPremium: status.isPremium }));
+            aiUsageCount: status.used, isPremium: status.isPremium, aiQuota: status.quota }));
         }
       } catch (error) {
         console.warn("[Usage] Could not refresh account status:", error);
@@ -421,40 +445,41 @@ export default function App() {
     localStorage.setItem("ttok_data_owner_uid", uid);
     setActiveDataOwner(uid);
 
-    (async () => {
-      try {
-      await Promise.all([
-        dataSyncService.migrateSchedulesIfEmpty(uid, schedulesRef.current),
-        dataSyncService.migrateTodosIfEmpty(uid, todosRef.current),
-        dataSyncService.migrateScriptsIfEmpty(uid, scriptsRef.current),
-        dataSyncService.migratePracticeLogsIfEmpty(uid, practiceLogsRef.current)
-      ]);
+    // A failed migration of one collection must not block every other
+    // listener. In particular, exam schedules must still sync when a script
+    // or practice-log migration encounters a transient Firestore error.
+    unsubscribers.push(dataSyncService.subscribeToProfile(uid, (data) => {
       if (cancelled) return;
+      if (data) setUser(prev => ({ ...prev, ...data, uid }));
+      setProfileLoadedUid(uid);
+    }, () => { if (!cancelled) setProfileLoadError(uid); }));
 
-      unsubscribers.push(
-        dataSyncService.subscribeToProfile(uid, (data) => {
-          if (cancelled) return;
-          if (data) setUser(prev => ({ ...prev, ...data, uid }));
-          setProfileLoadedUid(uid);
-        }, () => { if (!cancelled) setProfileLoadError(uid); }),
-        dataSyncService.subscribeToSchedules(uid, items => {
-          if (cancelled) return;
-          schedulesOwnerRef.current = uid;
-          setSchedules(items);
-        }, () => { if (!cancelled) setSyncError(true); }),
-        dataSyncService.subscribeToTodos(uid, items => {
-          if (cancelled) return;
-          todosOwnerRef.current = uid;
-          setTodos(items);
-        }, () => { if (!cancelled) setSyncError(true); }),
-        dataSyncService.subscribeToScripts(uid, items => { if (!cancelled) setScripts(items); }, () => { if (!cancelled) setSyncError(true); }),
-        dataSyncService.subscribeToPracticeLogs(uid, items => { if (!cancelled) setPracticeLogs(items); }, () => { if (!cancelled) setSyncError(true); })
-      );
-      } catch (error) {
-        console.error("[Sync] Could not initialize cloud data:", error);
-        if (!cancelled) setProfileLoadError(uid);
-      }
-    })();
+    const startCollectionSync = (name: string, migrate: () => Promise<void>, subscribe: () => () => void) => {
+      void migrate().then(() => {
+        if (!cancelled) unsubscribers.push(subscribe());
+      }).catch(error => {
+        console.error(`[Sync] ${name} migration failed:`, error);
+        if (!cancelled) setSyncError(true);
+      });
+    };
+    startCollectionSync("schedules", () => dataSyncService.migrateSchedulesIfEmpty(uid, schedulesRef.current),
+      () => dataSyncService.subscribeToSchedules(uid, items => {
+        if (cancelled) return;
+        schedulesOwnerRef.current = uid;
+        setSchedules(items);
+      }, () => { if (!cancelled) setSyncError(true); }));
+    startCollectionSync("todos", () => dataSyncService.migrateTodosIfEmpty(uid, todosRef.current),
+      () => dataSyncService.subscribeToTodos(uid, items => {
+        if (cancelled) return;
+        todosOwnerRef.current = uid;
+        setTodos(items);
+      }, () => { if (!cancelled) setSyncError(true); }));
+    startCollectionSync("scripts", () => dataSyncService.migrateScriptsIfEmpty(uid, scriptsRef.current),
+      () => dataSyncService.subscribeToScripts(uid, items => { if (!cancelled) setScripts(items); },
+        () => { if (!cancelled) setSyncError(true); }));
+    startCollectionSync("practiceLogs", () => dataSyncService.migratePracticeLogsIfEmpty(uid, practiceLogsRef.current),
+      () => dataSyncService.subscribeToPracticeLogs(uid, items => { if (!cancelled) setPracticeLogs(items); },
+        () => { if (!cancelled) setSyncError(true); }));
 
     return () => {
       cancelled = true;
@@ -813,7 +838,6 @@ export default function App() {
       }`}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-3 flex justify-between items-center">
           <div className="flex min-w-0 items-center gap-2">
-            <BackButton onClick={handleBack} />
             {/* 파란색 네모로 둘러싸인 '똑 | 꼬르륵' 큰 글씨 서비스 전환 메뉴 */}
             <div className="border-2 border-brand/80 dark:border-blue-500/80 rounded-2xl p-0.5 bg-brand/5 dark:bg-blue-500/5 flex items-center gap-0.5 select-none shadow-sm">
               <button data-ui="header-mode-tok"
@@ -837,6 +861,16 @@ export default function App() {
                 꼬르륵
               </button>
             </div>
+            <button
+              type="button"
+              data-ui="header-timer"
+              aria-label="똑타임 열기"
+              title="똑타임"
+              onClick={() => { void openTimerApp().then(opened => { if (!opened) window.alert("똑타임을 열지 못했어요."); }); }}
+              className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center rounded-2xl border border-brand/20 bg-white/65 text-brand shadow-sm backdrop-blur-xl transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:bg-slate-800/65 dark:border-blue-400/25 dark:text-blue-400"
+            >
+              <Timer size={21} aria-hidden="true" />
+            </button>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">

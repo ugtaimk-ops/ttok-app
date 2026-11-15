@@ -4,84 +4,91 @@
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "상단 서비스 전환: 똑",
-    "source": "src/App.tsx:726"
+    "source": "src/App.tsx:849"
   },
   {
     "id": "header-mode-kkorureuk",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "상단 서비스 전환: 꼬르륵",
-    "source": "src/App.tsx:736"
+    "source": "src/App.tsx:859"
+  },
+  {
+    "id": "header-timer",
+    "group": "공통",
+    "screen": "공통 메뉴",
+    "label": "상단 똑 타이머 열기",
+    "source": "src/App.tsx:872"
   },
   {
     "id": "header-profile",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "우측 상단 프로필 열기",
-    "source": "src/App.tsx:754"
+    "source": "src/App.tsx:887"
   },
   {
     "id": "nav-bar",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭 바 전체(떠 있는 유리 막대)",
-    "source": "src/components/BottomNavigationBar.tsx:137"
+    "source": "src/components/BottomNavigationBar.tsx:191"
   },
   {
     "id": "nav-home",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭: 홈",
-    "source": "src/components/BottomNavigationBar.tsx:189"
+    "source": "src/components/BottomNavigationBar.tsx:234"
   },
   {
     "id": "nav-assessment",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭: 수행평가",
-    "source": "src/components/BottomNavigationBar.tsx:189"
+    "source": "src/components/BottomNavigationBar.tsx:234"
   },
   {
     "id": "nav-practice",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭: 발표연습",
-    "source": "src/components/BottomNavigationBar.tsx:189"
+    "source": "src/components/BottomNavigationBar.tsx:234"
   },
   {
     "id": "nav-study",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭: 공부",
-    "source": "src/components/BottomNavigationBar.tsx:189"
+    "source": "src/components/BottomNavigationBar.tsx:234"
   },
   {
     "id": "nav-settings",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭: 메뉴(설정)",
-    "source": "src/components/BottomNavigationBar.tsx:189"
+    "source": "src/components/BottomNavigationBar.tsx:234"
   },
   {
     "id": "nav-meal-today",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭(꼬르륵): 오늘 급식",
-    "source": "src/components/BottomNavigationBar.tsx:189"
+    "source": "src/components/BottomNavigationBar.tsx:234"
   },
   {
     "id": "nav-meal-weekly",
     "group": "공통",
     "screen": "공통 메뉴",
     "label": "하단 탭(꼬르륵): 이번 주 급식",
-    "source": "src/components/BottomNavigationBar.tsx:189"
+    "source": "src/components/BottomNavigationBar.tsx:234"
   },
   {
     "id": "nav-meal-school",
     "group": "공통",
     "screen": "꼬르륵 · 학교 설정",
     "label": "하단 탭(꼬르륵): 학교 설정",
-    "source": "src/components/BottomNavigationBar.tsx:189"
+    "source": "src/components/BottomNavigationBar.tsx:234"
   },
   {
     "id": "back-button",
@@ -95,14 +102,14 @@
     "group": "공통",
     "screen": "공통 메뉴 · 선택 목록",
     "label": "드롭다운 선택 상자(열기 버튼)",
-    "source": "src/components/GlassSelect.tsx:86"
+    "source": "src/components/GlassSelect.tsx:88"
   },
   {
     "id": "select-option",
     "group": "공통",
     "screen": "공통 메뉴 · 선택 목록",
     "label": "드롭다운 선택 항목 하나하나",
-    "source": "src/components/GlassSelect.tsx:123"
+    "source": "src/components/GlassSelect.tsx:127"
   },
   {
     "id": "error-reload",
@@ -116,63 +123,63 @@
     "group": "공통",
     "screen": "첫 이용 약관",
     "label": "약관 확인 실패 화면: 다시 시도",
-    "source": "src/App.tsx:701"
+    "source": "src/App.tsx:805"
   },
   {
     "id": "gate-logout",
     "group": "공통",
     "screen": "첫 이용 약관",
     "label": "약관 확인 실패 화면: 로그아웃",
-    "source": "src/App.tsx:702"
+    "source": "src/App.tsx:806"
   },
   {
     "id": "login-google",
     "group": "로그인",
     "screen": "로그인",
     "label": "Google 로그인 버튼",
-    "source": "src/components/LoginScreen.tsx:222"
+    "source": "src/components/LoginScreen.tsx:216"
   },
   {
     "id": "login-password-toggle",
     "group": "로그인",
     "screen": "로그인",
     "label": "비밀번호 보이기/숨기기 눈 아이콘",
-    "source": "src/components/LoginScreen.tsx:295"
+    "source": "src/components/LoginScreen.tsx:289"
   },
   {
     "id": "login-password-reset",
     "group": "로그인",
     "screen": "로그인",
     "label": "비밀번호를 잊으셨나요?",
-    "source": "src/components/LoginScreen.tsx:306"
+    "source": "src/components/LoginScreen.tsx:300"
   },
   {
     "id": "login-email-submit",
     "group": "로그인",
     "screen": "로그인",
     "label": "이메일로 계속하기",
-    "source": "src/components/LoginScreen.tsx:316"
+    "source": "src/components/LoginScreen.tsx:310"
   },
   {
     "id": "email-verify-check",
     "group": "로그인",
     "screen": "이메일 인증",
     "label": "이메일 인증 확인하고 계속하기",
-    "source": "src/components/EmailVerificationScreen.tsx:92"
+    "source": "src/components/EmailVerificationScreen.tsx:101"
   },
   {
     "id": "email-verify-resend",
     "group": "로그인",
     "screen": "이메일 인증",
     "label": "인증 메일 다시 보내기",
-    "source": "src/components/EmailVerificationScreen.tsx:103"
+    "source": "src/components/EmailVerificationScreen.tsx:112"
   },
   {
     "id": "email-verify-logout",
     "group": "로그인",
     "screen": "이메일 인증",
     "label": "다른 계정으로 로그인",
-    "source": "src/components/EmailVerificationScreen.tsx:113"
+    "source": "src/components/EmailVerificationScreen.tsx:122"
   },
   {
     "id": "terms-agree",
@@ -193,84 +200,84 @@
     "group": "홈",
     "screen": "홈 · 바로가기 편집",
     "label": "자주 쓰는 기능: 단축키 수정/편집 완료",
-    "source": "src/components/HomeScreen.tsx:476"
+    "source": "src/components/HomeScreen.tsx:473"
   },
   {
     "id": "home-shortcut-item",
     "group": "홈",
     "screen": "홈 · 바로가기 편집",
     "label": "자주 쓰는 기능 카드 하나하나",
-    "source": "src/components/HomeScreen.tsx:491"
+    "source": "src/components/HomeScreen.tsx:488"
   },
   {
     "id": "home-shortcut-feature-option",
     "group": "홈",
     "screen": "홈 · 바로가기 편집",
     "label": "단축키 변경 팝업: 연결할 기능 선택 항목",
-    "source": "src/components/HomeScreen.tsx:547"
+    "source": "src/components/HomeScreen.tsx:543"
   },
   {
     "id": "home-shortcut-cancel",
     "group": "홈",
     "screen": "홈 · 바로가기 편집",
     "label": "단축키 변경 팝업: 취소",
-    "source": "src/components/HomeScreen.tsx:578"
+    "source": "src/components/HomeScreen.tsx:574"
   },
   {
     "id": "home-shortcut-save",
     "group": "홈",
     "screen": "홈 · 바로가기 편집",
     "label": "단축키 변경 팝업: 변경하기",
-    "source": "src/components/HomeScreen.tsx:584"
+    "source": "src/components/HomeScreen.tsx:580"
   },
   {
     "id": "home-schedule-add",
     "group": "홈",
     "screen": "홈 · 일정 추가·수정",
     "label": "스케줄 추가(열기/닫기) 버튼",
-    "source": "src/components/HomeScreen.tsx:749"
+    "source": "src/components/HomeScreen.tsx:691"
   },
   {
     "id": "home-schedule-add-close",
     "group": "홈",
     "screen": "홈 · 일정 추가·수정",
     "label": "스케줄 추가 폼: 닫기(X)",
-    "source": "src/components/HomeScreen.tsx:773"
+    "source": "src/components/HomeScreen.tsx:715"
   },
   {
     "id": "home-schedule-add-submit",
     "group": "홈",
     "screen": "홈 · 일정 추가·수정",
     "label": "스케줄 추가 폼: 등록",
-    "source": "src/components/HomeScreen.tsx:819"
+    "source": "src/components/HomeScreen.tsx:762"
   },
   {
     "id": "home-schedule-edit-close",
     "group": "홈",
     "screen": "홈 · 일정 추가·수정",
     "label": "스케줄 수정 폼: 닫기(X)",
-    "source": "src/components/HomeScreen.tsx:842"
+    "source": "src/components/HomeScreen.tsx:785"
   },
   {
     "id": "home-schedule-edit-save",
     "group": "홈",
     "screen": "홈 · 일정 추가·수정",
     "label": "스케줄 수정 폼: 저장",
-    "source": "src/components/HomeScreen.tsx:888"
+    "source": "src/components/HomeScreen.tsx:832"
   },
   {
     "id": "home-schedule-edit",
     "group": "홈",
     "screen": "홈 · 일정 추가·수정",
     "label": "스케줄 카드의 수정 아이콘",
-    "source": "src/components/HomeScreen.tsx:930"
+    "source": "src/components/HomeScreen.tsx:874"
   },
   {
     "id": "home-schedule-delete",
     "group": "홈",
     "screen": "홈 · 일정 카드",
     "label": "스케줄 카드의 삭제 아이콘",
-    "source": "src/components/HomeScreen.tsx:940"
+    "source": "src/components/HomeScreen.tsx:884"
   },
   {
     "id": "ai-report-refresh",
@@ -291,119 +298,119 @@
     "group": "수행평가",
     "screen": "수행평가 · 일정 목록",
     "label": "목록 상단: 직접 입력",
-    "source": "src/components/AssessmentScreen.tsx:399"
+    "source": "src/components/AssessmentScreen.tsx:400"
   },
   {
     "id": "assessment-add-photo",
     "group": "수행평가",
     "screen": "수행평가 · 일정 목록",
     "label": "목록 상단: 사진 등록",
-    "source": "src/components/AssessmentScreen.tsx:403"
+    "source": "src/components/AssessmentScreen.tsx:404"
   },
   {
     "id": "assessment-empty-add-direct",
     "group": "수행평가",
     "screen": "수행평가 · 일정 목록",
     "label": "일정이 없을 때: 직접 입력",
-    "source": "src/components/AssessmentScreen.tsx:417"
+    "source": "src/components/AssessmentScreen.tsx:418"
   },
   {
     "id": "assessment-empty-add-photo",
     "group": "수행평가",
     "screen": "수행평가 · 일정 목록",
     "label": "일정이 없을 때: 이미지/계획서 등록",
-    "source": "src/components/AssessmentScreen.tsx:423"
+    "source": "src/components/AssessmentScreen.tsx:424"
   },
   {
     "id": "assessment-item-edit",
     "group": "수행평가",
     "screen": "수행평가 · 일정 목록",
     "label": "일정 카드의 수정",
-    "source": "src/components/AssessmentScreen.tsx:341"
+    "source": "src/components/AssessmentScreen.tsx:342"
   },
   {
     "id": "assessment-item-delete",
     "group": "수행평가",
     "screen": "수행평가 · 일정 목록",
     "label": "일정 카드의 삭제",
-    "source": "src/components/AssessmentScreen.tsx:351"
+    "source": "src/components/AssessmentScreen.tsx:352"
   },
   {
     "id": "assessment-direct-cancel",
     "group": "수행평가",
     "screen": "수행평가 · 직접 입력",
     "label": "직접 입력 화면: 취소",
-    "source": "src/components/AssessmentScreen.tsx:534"
+    "source": "src/components/AssessmentScreen.tsx:535"
   },
   {
     "id": "assessment-direct-save",
     "group": "수행평가",
     "screen": "수행평가 · 직접 입력",
     "label": "직접 입력 화면: 완료 및 저장",
-    "source": "src/components/AssessmentScreen.tsx:541"
+    "source": "src/components/AssessmentScreen.tsx:542"
   },
   {
     "id": "assessment-photo-back",
     "group": "수행평가",
     "screen": "수행평가 · 사진 등록·결과",
     "label": "사진 등록 화면: 돌아가기",
-    "source": "src/components/AssessmentScreen.tsx:616"
+    "source": "src/components/AssessmentScreen.tsx:617"
   },
   {
     "id": "assessment-scan-retry",
     "group": "수행평가",
     "screen": "수행평가 · 사진 등록·결과",
     "label": "사진 스캔 결과: 다시 스캔",
-    "source": "src/components/AssessmentScreen.tsx:721"
+    "source": "src/components/AssessmentScreen.tsx:723"
   },
   {
     "id": "assessment-scan-save",
     "group": "수행평가",
     "screen": "수행평가 · 사진 등록·결과",
     "label": "사진 스캔 결과: 캘린더 및 알림 자동 등록",
-    "source": "src/components/AssessmentScreen.tsx:728"
+    "source": "src/components/AssessmentScreen.tsx:730"
   },
   {
     "id": "assessment-menu-edit",
     "group": "수행평가",
     "screen": "수행평가 · 수정·삭제 팝업",
     "label": "길게 누름 메뉴: 일정 수정",
-    "source": "src/components/AssessmentScreen.tsx:750"
+    "source": "src/components/AssessmentScreen.tsx:752"
   },
   {
     "id": "assessment-menu-delete",
     "group": "수행평가",
     "screen": "수행평가 · 수정·삭제 팝업",
     "label": "길게 누름 메뉴: 일정 삭제",
-    "source": "src/components/AssessmentScreen.tsx:757"
+    "source": "src/components/AssessmentScreen.tsx:759"
   },
   {
     "id": "assessment-edit-cancel",
     "group": "수행평가",
     "screen": "수행평가 · 수정·삭제 팝업",
     "label": "수정 팝업: 취소",
-    "source": "src/components/AssessmentScreen.tsx:853"
+    "source": "src/components/AssessmentScreen.tsx:856"
   },
   {
     "id": "assessment-edit-save",
     "group": "수행평가",
     "screen": "수행평가 · 수정·삭제 팝업",
     "label": "수정 팝업: 저장하기",
-    "source": "src/components/AssessmentScreen.tsx:859"
+    "source": "src/components/AssessmentScreen.tsx:862"
   },
   {
     "id": "assessment-delete-cancel",
     "group": "수행평가",
     "screen": "수행평가 · 수정·삭제 팝업",
     "label": "삭제 확인 팝업: 취소",
-    "source": "src/components/AssessmentScreen.tsx:888"
+    "source": "src/components/AssessmentScreen.tsx:891"
   },
   {
     "id": "assessment-delete-confirm",
     "group": "수행평가",
     "screen": "수행평가 · 수정·삭제 팝업",
     "label": "삭제 확인 팝업: 삭제하기",
-    "source": "src/components/AssessmentScreen.tsx:894"
+    "source": "src/components/AssessmentScreen.tsx:897"
   },
   {
     "id": "practice-tab-script",
@@ -416,7 +423,7 @@
     "id": "practice-tab-practice",
     "group": "발표연습",
     "screen": "발표 · 대본 작성",
-    "label": "위쪽 탭: 발표연습",
+    "label": "위쪽 탭: 발표 연습 도와주기",
     "source": "src/components/PracticeScreen.tsx:791"
   },
   {
@@ -613,14 +620,14 @@
     "group": "수행평가",
     "screen": "수행평가 · 일정 목록",
     "label": "수행평가 일정 탭",
-    "source": "src/components/AssessmentScreen.tsx:286"
+    "source": "src/components/AssessmentScreen.tsx:287"
   },
   {
     "id": "assessment-tab-planner",
     "group": "수행평가",
     "screen": "수행평가 · 지필·수행 계획",
     "label": "지필·수행 계획 탭",
-    "source": "src/components/AssessmentScreen.tsx:291"
+    "source": "src/components/AssessmentScreen.tsx:292"
   },
   {
     "id": "study-photo-camera",
@@ -704,231 +711,231 @@
     "group": "수행평가",
     "screen": "수행평가 · 지필·수행 계획",
     "label": "지필평가 일정 등록",
-    "source": "src/components/ExamPlanner.tsx:107"
+    "source": "src/components/ExamPlanner.tsx:108"
   },
   {
     "id": "study-exam-edit",
     "group": "수행평가",
     "screen": "수행평가 · 지필·수행 계획",
     "label": "지필평가 일정 수정",
-    "source": "src/components/ExamPlanner.tsx:122"
+    "source": "src/components/ExamPlanner.tsx:123"
   },
   {
     "id": "study-exam-delete",
     "group": "수행평가",
     "screen": "수행평가 · 지필·수행 계획",
     "label": "지필평가 일정 삭제",
-    "source": "src/components/ExamPlanner.tsx:123"
+    "source": "src/components/ExamPlanner.tsx:124"
   },
   {
     "id": "study-plan-generate",
     "group": "수행평가",
     "screen": "수행평가 · 지필·수행 계획",
     "label": "학습 계획 보기",
-    "source": "src/components/ExamPlanner.tsx:124"
+    "source": "src/components/ExamPlanner.tsx:125"
   },
   {
     "id": "study-edit-save",
     "group": "수행평가",
     "screen": "수행평가 · 지필·수행 계획",
     "label": "지필평가 수정 저장",
-    "source": "src/components/ExamPlanner.tsx:151"
+    "source": "src/components/ExamPlanner.tsx:152"
   },
   {
     "id": "study-delete-confirm",
     "group": "수행평가",
     "screen": "수행평가 · 지필·수행 계획",
     "label": "지필평가 삭제 확인",
-    "source": "src/components/ExamPlanner.tsx:161"
+    "source": "src/components/ExamPlanner.tsx:162"
   },
   {
     "id": "profile-avatar-camera-tab",
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "프로필 사진: 사진 촬영 탭",
-    "source": "src/components/ProfileScreen.tsx:400"
+    "source": "src/components/ProfileScreen.tsx:437"
   },
   {
     "id": "profile-avatar-gallery-tab",
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "프로필 사진: 사진 선택 탭",
-    "source": "src/components/ProfileScreen.tsx:414"
+    "source": "src/components/ProfileScreen.tsx:451"
   },
   {
     "id": "profile-gallery-choose",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "내 사진 고르기",
-    "source": "src/components/ProfileScreen.tsx:491"
+    "source": "src/components/ProfileScreen.tsx:528"
   },
   {
     "id": "profile-avatar-default",
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "기본 프로필로 설정",
-    "source": "src/components/ProfileScreen.tsx:500"
+    "source": "src/components/ProfileScreen.tsx:537"
   },
   {
     "id": "profile-camera-start",
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "카메라 켜기",
-    "source": "src/components/ProfileScreen.tsx:476"
+    "source": "src/components/ProfileScreen.tsx:513"
   },
   {
     "id": "profile-camera-capture",
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "촬영 버튼",
-    "source": "src/components/ProfileScreen.tsx:467"
+    "source": "src/components/ProfileScreen.tsx:504"
   },
   {
     "id": "profile-camera-retry",
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "카메라 다시 시도",
-    "source": "src/components/ProfileScreen.tsx:440"
+    "source": "src/components/ProfileScreen.tsx:477"
   },
   {
     "id": "profile-camera-open-settings",
     "group": "프로필",
     "screen": "프로필 · 사진 설정",
     "label": "카메라 권한: 앱 설정 열기",
-    "source": "src/components/ProfileScreen.tsx:449"
+    "source": "src/components/ProfileScreen.tsx:486"
   },
   {
     "id": "profile-school-search-open",
     "group": "프로필",
     "screen": "프로필 · 학교 검색",
     "label": "학교 검색 열기",
-    "source": "src/components/ProfileScreen.tsx:577"
+    "source": "src/components/ProfileScreen.tsx:614"
   },
   {
     "id": "profile-school-search-close",
     "group": "프로필",
     "screen": "프로필 · 학교 검색",
     "label": "학교 검색 닫기",
-    "source": "src/components/ProfileScreen.tsx:537"
+    "source": "src/components/ProfileScreen.tsx:574"
   },
   {
     "id": "profile-school-pick",
     "group": "프로필",
     "screen": "프로필 · 학교 검색",
     "label": "검색된 학교 한 줄(선택)",
-    "source": "src/components/ProfileScreen.tsx:562"
+    "source": "src/components/ProfileScreen.tsx:599"
   },
   {
     "id": "profile-goal-clear-input",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "학기 목표 입력 지우기(X)",
-    "source": "src/components/ProfileScreen.tsx:636"
+    "source": "src/components/ProfileScreen.tsx:673"
   },
   {
     "id": "profile-goal-cancel",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "학기 목표 편집: 취소",
-    "source": "src/components/ProfileScreen.tsx:647"
+    "source": "src/components/ProfileScreen.tsx:684"
   },
   {
     "id": "profile-goal-save",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "학기 목표 저장",
-    "source": "src/components/ProfileScreen.tsx:657"
+    "source": "src/components/ProfileScreen.tsx:694"
   },
   {
     "id": "profile-goal-random",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "학기 목표 랜덤 선택(주사위)",
-    "source": "src/components/ProfileScreen.tsx:687"
+    "source": "src/components/ProfileScreen.tsx:724"
   },
   {
     "id": "profile-goal-edit",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "학기 목표 수정(연필)",
-    "source": "src/components/ProfileScreen.tsx:696"
+    "source": "src/components/ProfileScreen.tsx:733"
   },
   {
     "id": "profile-goal-delete",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "학기 목표 삭제",
-    "source": "src/components/ProfileScreen.tsx:709"
+    "source": "src/components/ProfileScreen.tsx:746"
   },
   {
     "id": "profile-save",
     "group": "프로필",
     "screen": "프로필 · 정보 수정",
     "label": "똑 부러지게 프로필 수정 완료(저장)",
-    "source": "src/components/ProfileScreen.tsx:727"
+    "source": "src/components/ProfileScreen.tsx:765"
   },
   {
     "id": "settings-dark-mode",
     "group": "설정·구독",
     "screen": "설정 · 앱·계정 관리",
     "label": "다크 모드 스위치",
-    "source": "src/components/SettingsScreen.tsx:142"
+    "source": "src/components/SettingsScreen.tsx:149"
   },
   {
     "id": "settings-logout",
     "group": "설정·구독",
     "screen": "설정 · 앱·계정 관리",
     "label": "로그아웃",
-    "source": "src/components/SettingsScreen.tsx:293"
+    "source": "src/components/SettingsScreen.tsx:294"
   },
   {
     "id": "settings-terms-open",
     "group": "설정·구독",
     "screen": "설정 · 이용약관",
     "label": "약관 내용 보기",
-    "source": "src/components/SettingsScreen.tsx:315"
+    "source": "src/components/SettingsScreen.tsx:320"
   },
   {
     "id": "settings-reset-open",
     "group": "설정·구독",
     "screen": "설정 · 데이터 초기화",
     "label": "데이터 전체 초기화(위험 구역)",
-    "source": "src/components/SettingsScreen.tsx:333"
+    "source": "src/components/SettingsScreen.tsx:338"
   },
   {
     "id": "settings-reset-cancel",
     "group": "설정·구독",
     "screen": "설정 · 데이터 초기화",
     "label": "초기화 팝업: 취소",
-    "source": "src/components/SettingsScreen.tsx:366"
+    "source": "src/components/SettingsScreen.tsx:400"
   },
   {
     "id": "settings-reset-countdown",
     "group": "설정·구독",
     "screen": "설정 · 데이터 초기화",
     "label": "초기화 팝업: 카운트다운 중(비활성)",
-    "source": "src/components/SettingsScreen.tsx:373"
+    "source": "src/components/SettingsScreen.tsx:407"
   },
   {
     "id": "settings-reset-run",
     "group": "설정·구독",
     "screen": "설정 · 데이터 초기화",
     "label": "초기화 팝업: 초기화 실행",
-    "source": "src/components/SettingsScreen.tsx:380"
+    "source": "src/components/SettingsScreen.tsx:414"
   },
   {
     "id": "settings-terms-close-x",
     "group": "설정·구독",
     "screen": "설정 · 이용약관",
     "label": "약관 팝업: 닫기(X)",
-    "source": "src/components/SettingsScreen.tsx:420"
+    "source": "src/components/SettingsScreen.tsx:454"
   },
   {
     "id": "settings-terms-close",
     "group": "설정·구독",
     "screen": "설정 · 이용약관",
     "label": "약관 팝업: 닫기",
-    "source": "src/components/SettingsScreen.tsx:432"
+    "source": "src/components/SettingsScreen.tsx:466"
   },
   {
     "id": "premium-subscribe",
@@ -977,48 +984,48 @@
     "group": "꼬르륵 급식",
     "screen": "꼬르륵 · 날짜별 급식",
     "label": "이전 달",
-    "source": "src/components/KkorureukScreen.tsx:524"
+    "source": "src/components/KkorureukScreen.tsx:523"
   },
   {
     "id": "meal-month-next",
     "group": "꼬르륵 급식",
     "screen": "꼬르륵 · 날짜별 급식",
     "label": "다음 달",
-    "source": "src/components/KkorureukScreen.tsx:534"
+    "source": "src/components/KkorureukScreen.tsx:533"
   },
   {
     "id": "meal-date-select",
     "group": "꼬르륵 급식",
     "screen": "꼬르륵 · 날짜별 급식",
     "label": "날짜 하나하나(선택)",
-    "source": "src/components/KkorureukScreen.tsx:577"
+    "source": "src/components/KkorureukScreen.tsx:576"
   },
   {
     "id": "meal-week-prev",
     "group": "꼬르륵 급식",
     "screen": "꼬르륵 · 주간 급식",
     "label": "이전 주",
-    "source": "src/components/KkorureukScreen.tsx:740"
+    "source": "src/components/KkorureukScreen.tsx:739"
   },
   {
     "id": "meal-week-this",
     "group": "꼬르륵 급식",
     "screen": "꼬르륵 · 주간 급식",
     "label": "이번 주",
-    "source": "src/components/KkorureukScreen.tsx:746"
+    "source": "src/components/KkorureukScreen.tsx:745"
   },
   {
     "id": "meal-week-next",
     "group": "꼬르륵 급식",
     "screen": "꼬르륵 · 주간 급식",
     "label": "다음 주",
-    "source": "src/components/KkorureukScreen.tsx:752"
+    "source": "src/components/KkorureukScreen.tsx:751"
   },
   {
     "id": "meal-alarm-toggle",
     "group": "꼬르륵 급식",
     "screen": "꼬르륵 · 급식 알림",
     "label": "급식 알림 켜기/끄기",
-    "source": "src/components/KkorureukScreen.tsx:896"
+    "source": "src/components/KkorureukScreen.tsx:895"
   }
 ]

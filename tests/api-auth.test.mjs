@@ -56,6 +56,8 @@ test("private APIs reject callers without a verified Firebase token", async () =
       "/api/school/search?keyword=test",
       "/api/meal/info?officeCode=ABC&schoolCode=1234567&date=20261026",
       "/api/usage/status",
+      "/api/shared-study/collection/exams",
+      "/api/shared-study/action",
       "/api/problem/solve",
       "/api/admin/overview",
     ]) {

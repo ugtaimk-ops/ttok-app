@@ -25,9 +25,12 @@ import {
   Check,
   Pencil
 } from "lucide-react";
+import { Timer } from "lucide-react";
+import { openTimerApp } from "../services/timerLinkService";
 import { motion, AnimatePresence } from "motion/react";
 import GlassSelect from "./GlassSelect";
 import AiReportCard from "./AiReportCard";
+import ProStudyReport from "./ProStudyReport";
 import DefaultAvatar, { hasPhotoAvatar } from "./DefaultAvatar";
 
 const SCHEDULE_TYPE_OPTIONS = [
@@ -461,6 +464,7 @@ export default function HomeScreen({
       ) : planPreview === "free" ? null : user.isPremium && user.uid && (
         <AiReportCard key={user.uid} uid={user.uid} todos={todos} schedules={schedules} darkMode={darkMode} />
       )}
+      {!planPreview && user.isPremium && user.uid && <ProStudyReport uid={user.uid} darkMode={darkMode} />}
 
       {/* 스마트 단축키 데스크 */}
       <div className="p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border-[1.5px] border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm space-y-4">
@@ -586,6 +590,18 @@ export default function HomeScreen({
           </div>
         )}
       </div>
+
+      <button
+        type="button"
+        onClick={async () => {
+          if (!(await openTimerApp())) window.alert("똑타임 앱이 설치되어 있지 않아요.");
+        }}
+        className="w-full p-4 rounded-[24px] border border-blue-100 dark:border-blue-900/60 bg-gradient-to-r from-blue-50 to-white dark:from-blue-950/40 dark:to-slate-900 shadow-sm flex items-center gap-4 text-left hover:border-brand/40 transition-colors"
+      >
+        <span className="w-12 h-12 rounded-2xl bg-brand text-white flex items-center justify-center shrink-0 shadow-md shadow-brand/20"><Timer size={23} /></span>
+        <span className="min-w-0 flex-1"><strong className="block text-fluid-base font-black text-slate-800 dark:text-slate-100">똑타임</strong><small className="block text-fluid-xs text-slate-500 dark:text-slate-400 mt-0.5">집중 시간을 기록하고 공부 흐름을 이어가요</small></span>
+        <ChevronRight size={19} className="text-brand shrink-0" />
+      </button>
 
       {/* 3. FIGMA LAYOUT: Full-Width Dashboard Layout */}
       <div className="space-y-6 md:space-y-8 animate-fade-in">

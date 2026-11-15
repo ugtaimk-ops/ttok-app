@@ -133,7 +133,7 @@ export async function verifyRequestIdentity(req: Request): Promise<{ uid: string
       throw new Error("Token has invalid Firebase claims");
     }
     const provider = payload.firebase?.sign_in_provider;
-    if (!["password", "google.com", "apple.com"].includes(provider)) {
+    if (!["password", "google.com", "apple.com"].includes(provider) && !(provider === "custom" && payload.ddokTimer === true)) {
       throw new Error("Unsupported sign-in provider");
     }
     if (provider === "password" && payload.email_verified !== true) {
@@ -172,6 +172,15 @@ export async function deleteAccountData(uid: string): Promise<void> {
   await db.collection("deletedAccounts").doc(uid).set({ expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
   await db.recursiveDelete(db.collection("problemSolutions").doc(uid));
   await db.recursiveDelete(db.collection("users").doc(uid));
+  for (const name of ["adRewardSessions", "adRewardTransactions"]) {
+    while (true) {
+      const page = await db.collection(name).where("uid", "==", uid).limit(250).get();
+      if (page.empty) break;
+      const batch = db.batch();
+      page.docs.forEach((doc: any) => batch.delete(doc.ref));
+      await batch.commit();
+    }
+  }
   try { await getAuth(app).deleteUser(uid); }
   catch (error: any) { if (error?.code !== "auth/user-not-found") throw error; }
 }
@@ -185,6 +194,7 @@ export async function pruneExpiredServerData(): Promise<void> {
   const now = Date.now();
   for (const [query, field, deadline] of [
     [db.collection("deletedAccounts"), "expiresAt", now],
+    [db.collection("adRewardSessions"), "expiresAt", now],
     [db.collectionGroup("aiResultCache"), "expiresAt", now],
     [db.collectionGroup("items"), "createdAt", now - 30 * 24 * 60 * 60 * 1000],
   ] as const) {
