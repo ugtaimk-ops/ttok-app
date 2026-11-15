@@ -25,7 +25,7 @@ app.use((req, res, next) => {
   res.header("Referrer-Policy", "strict-origin-when-cross-origin");
   res.header("X-Frame-Options", "SAMEORIGIN");
   res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-App-Secret");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-App-Secret, X-AI-Request-ID");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
@@ -947,10 +947,22 @@ app.post("/api/study/action", async (req, res) => {
       instruction = "제공된 콘텐츠를 분석하여 친절하게 답변해 주세요.";
     }
 
+    // A short student input such as "광합성" is a topic, not a complete
+    // instruction. State the requested action after the supplied material.
+    const actionTask: Record<string, string> = {
+      summary: "학생이 입력한 내용 또는 사진의 내용을 핵심 개념 중심으로 요약해 주세요. 입력이 주제뿐이라면 그 주제의 정확한 핵심 개념을 설명해 주세요.",
+      quiz: "학생이 입력한 내용 또는 사진의 내용을 주제로 학습 문제 3개를 생성해 주세요. 각 문제의 정답과 풀이를 함께 제공해 주세요.",
+      note: "학생이 입력한 문제 또는 사진의 내용을 바탕으로 오답노트를 작성해 주세요. 실제 오답이 제시되지 않았다면 학생이 틀린 이유를 지어내지 마세요.",
+      question: "학생의 질문에 직접 답하고, 근거와 이해하기 쉬운 예시를 들어 설명해 주세요.",
+    };
     const prompt = `${instruction}
-      
-      [추가 입력 텍스트/질문]: ${text || ""}
-      [사용자 질문]: ${additionalQuestion || ""}
+
+      [학생이 입력한 내용 또는 학습 주제]
+      ${text || "(사진만 제공됨)"}
+      [학생의 추가 질문]
+      ${additionalQuestion || "(없음)"}
+      [이 기능에서 수행할 작업]
+      ${actionTask[actionType]}
 
       [텍스트 및 스타일 엄격한 규칙 - 필수]:
       1. 절대로 이모지, 이모티콘(예: 🔔, ✨, 📚, - 등)을 사용하지 마세요. 오직 깔끔한 줄글과 필요한 문장 기호만 사용합니다.
