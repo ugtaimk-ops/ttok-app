@@ -51,6 +51,19 @@ test("private APIs reject callers without a verified Firebase token", async () =
     }
     assert.equal(health?.status, 200, "server must start and keep health public");
 
+    const preflight = await fetch(`${origin}/api/study/action`, {
+      method: "OPTIONS",
+      headers: {
+        Origin: "https://localhost",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "authorization,content-type,x-ai-request-id",
+      },
+    });
+    assert.equal(preflight.status, 200);
+    const allowedHeaders = preflight.headers.get("access-control-allow-headers")?.toLowerCase() || "";
+    assert.ok(allowedHeaders.split(/,\s*/).includes("x-ai-request-id"),
+      "native WebView must be allowed to send the AI idempotency header");
+
     for (const route of [
       "/api/school/search?keyword=test",
       "/api/meal/info?officeCode=ABC&schoolCode=1234567&date=20261026",
