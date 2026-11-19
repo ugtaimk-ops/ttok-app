@@ -1,3 +1,4 @@
+import { creditContext, creditOperation, creditsEnabled } from "./services/creditStore";
 import {createSchoolSearch} from './services/schoolSearch';
 import {verifySchoolAccount} from './services/schoolIdentity';
 import {timerTickets} from './services/timerAccountLink';
@@ -196,7 +197,22 @@ app.post("/api/practice/analyze", (req, res, next) => {
 // Also stashes uid/isPremium on the request for routes that need to gate a
 // feature to premium users specifically (e.g. /api/home/ai-report below),
 // so they don't need a second Firestore read.
+app.use([...AI_ROUTES, "/api/problem/solve"], async (req,res,next)=>{
+  if(!creditsEnabled()) return next();
+  try {
+    const uid=(req as any).uid as string;
+    const status=await creditOperation(uid,'status');
+    if(status.legacy) return next();
+    const premium=status.plans.some((p:string)=>p==='pro'||p==='max');
+    if(req.originalUrl.split('?')[0]==='/api/home/ai-report' && !premium) return res.status(403).json({error:'Pro 또는 Max 구독이 필요한 기능이에요.'});
+    (req as any).creditBilling=true;
+    (req as any).isPremium=premium;
+    const requestId=requestIdFromHeader(req.header('x-ai-request-id')) || fallbackRequestId(uid,req.path,req.body);
+    return creditContext.run({uid,requestId},()=>next());
+  } catch {return res.status(503).json({error:'AI 크레딧을 확인하지 못했어요.',code:'CREDITS_UNAVAILABLE'});}
+});
 app.use(AI_ROUTES, async (req, res, next) => {
+  if((req as any).creditBilling) return next();
   try {
     const uid = (req as any).uid as string;
     const route = req.originalUrl.split("?")[0];
@@ -307,9 +323,19 @@ app.get("/api/health", (req, res) => {
 // Reading usage does not consume an AI request. It also persists a zero count
 // when the Korean calendar month changes, so all devices show the new month
 // immediately after opening the app rather than waiting for an AI request.
+app.get('/api/credits/products', (req,res)=>{
+  if(!creditsEnabled()) return res.sendStatus(404);
+  try { const products=JSON.parse(process.env.CREDIT_PRODUCT_MAP_JSON||'{}');
+    return res.setHeader('Cache-Control','no-store').json({products});
+  }catch{return res.sendStatus(503);}
+});
 app.get("/api/usage/status", async (req, res) => {
   const uid = (req as any).uid as string;
   try {
+    if(creditsEnabled()) {
+      const credits=await creditOperation(uid,'status');
+      if(!credits.legacy) return res.setHeader('Cache-Control','no-store').json({version:7,credits,month:currentMonthKey(),used:0,limit:credits.balance,isPremium:credits.plans.some((p:string)=>p==='pro'||p==='max')});
+    }
     if (quotaV6Enabled()) {
       res.setHeader("Cache-Control", "no-store");
       const quota = await getQuotaStatus(uid, req.query.refresh === "1");
@@ -366,7 +392,7 @@ app.post("/api/problem/solve", async (req, res) => {
     if (!pending) {
       pending = (async () => {
         const quotaRequestId = requestIdFromHeader(req.header("x-ai-request-id")) || fallbackRequestId(uid, "/api/problem/solve", { hash });
-        const usage = quotaV6Enabled() ? await reserveQuota(uid, quotaRequestId, true) : await checkAndConsumeUsage(uid);
+        const usage = (req as any).creditBilling ? {allowed:true} : quotaV6Enabled() ? await reserveQuota(uid, quotaRequestId, true) : await checkAndConsumeUsage(uid);
         if (!usage.allowed) {
           const error: any = new Error("AI 이용 횟수를 모두 사용했어요.");
           error.status = 403;
@@ -404,10 +430,11 @@ app.post("/api/problem/solve", async (req, res) => {
         const result = { source: "gemini", model: "gemini-2.5-flash-lite", ...parsed };
         try { await saveProblemResult(uid, hash, result); }
         catch (error) { console.error("[ProblemSolve] Cache record failed:", error); }
-        if (quotaV6Enabled()) await finishQuota(uid, quotaRequestId, true);
+        if (!(req as any).creditBilling && quotaV6Enabled()) await finishQuota(uid, quotaRequestId, true);
         return result;
         } catch (error) {
-          try { if (quotaV6Enabled()) await finishQuota(uid, quotaRequestId, false);
+          try { if ((req as any).creditBilling) { /* provider handles credits */ }
+            else if (quotaV6Enabled()) await finishQuota(uid, quotaRequestId, false);
             else if ("month" in usage) await refundUsage(uid, usage.month); }
           catch (refundError) { console.error("[ProblemSolve] Refund failed:", refundError); }
           throw error;

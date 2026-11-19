@@ -1,3 +1,4 @@
+import CreditPaywall from "./CreditPaywall";
 import { useState, useEffect } from "react";
 import { Crown, Loader2, RefreshCw, Sparkles, Settings2 } from "lucide-react";
 import { UserProfile } from "../types";
@@ -47,6 +48,7 @@ export default function PremiumSection({ user, darkMode, planPreview }: PremiumS
       setShowPaywall(true);
       return;
     }
+    if(user.aiCredits) {setShowPaywall(true);return;}
     if (isLoadingOffering) return;
     setIsLoadingOffering(true);
     setMessage(null);
@@ -115,9 +117,9 @@ export default function PremiumSection({ user, darkMode, planPreview }: PremiumS
       </div>
 
       <div className="flex items-center justify-between text-fluid-sm font-semibold">
-        <span className="text-slate-400">{planPreview ? "AI 이용권 미리보기" : user.aiQuota ? "AI 이용권 잔여" : "이번 달 AI 사용량"}</span>
+        <span className="text-slate-400">{user.aiCredits ? "남은 AI 크레딧" : planPreview ? "AI 이용권 미리보기" : user.aiQuota ? "AI 이용권 잔여" : "이번 달 AI 사용량"}</span>
         <span className="font-bold text-slate-800 dark:text-slate-200">
-          {planPreview ? planPreview === "pro" ? "결제 주기당 50회" : "하루 1회" : user.aiQuota ? `${user.aiQuota.subscriptionRemaining}회` : `${used} / ${limit}회`}
+          {user.aiCredits ? `${user.aiCredits.balance.toLocaleString()} 크레딧` : planPreview ? planPreview === "pro" ? "결제 주기당 50회" : "하루 1회" : user.aiQuota ? `${user.aiQuota.subscriptionRemaining}회` : `${used} / ${limit}회`}
         </span>
       </div>
       {user.aiQuota && !planPreview && <div className="space-y-1 text-fluid-xs text-slate-500">
@@ -170,7 +172,8 @@ export default function PremiumSection({ user, darkMode, planPreview }: PremiumS
         구매 내역 복원
       </button>}
 
-      {showPaywall && (
+      {showPaywall && user.aiCredits && <CreditPaywall onClose={()=>setShowPaywall(false)} />}
+      {showPaywall && !user.aiCredits && (
         <V6PaywallModal products={localPreview ? {} : v6Products} previewOnly={localPreview}
           purchaseReady={!!user.aiQuota}
           activePlans={planPreview === "pro" ? ["pro"] : planPreview === "free" ? [] : user.aiQuota?.plans.map((plan) => plan.planId) || []}

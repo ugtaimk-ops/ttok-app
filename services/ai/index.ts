@@ -1,3 +1,4 @@
+import {creditContext} from "../creditStore";
 import { AIService, AIProviderType } from "./types";
 import { GeminiProvider } from "./geminiProvider";
 import { OpenAIProvider } from "./openaiProvider";
@@ -42,6 +43,7 @@ export function parseJSONResponse(text: string): any {
  * falling back to Gemini if not set.
  */
 export function getAIService(providerType?: AIProviderType): AIService {
+  if(creditContext.getStore()) return new GeminiProvider();
   const selectedProvider = providerType || (process.env.AI_PROVIDER as AIProviderType) || "gemini";
 
   switch (selectedProvider) {

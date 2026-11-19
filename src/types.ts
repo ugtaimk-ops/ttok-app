@@ -1,4 +1,5 @@
 export interface UserProfile {
+  aiCredits?: {balance:number; plans:string[]; expiresAt:number|null};
   name: string;
   school: string;
   schoolCode?: string;

@@ -1,5 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIService, GenerateContentOptions } from "./types";
+import { creditContext, creditOperation, creditsEnabled } from "../creditStore";
+import { modelRatesFromJson, priceGeminiUsage } from "../creditPolicy";
 import { recordAiTokenUsage } from "../usageService";
 
 // Module-level (not per-instance) so the "which key is currently good" state
@@ -151,7 +153,8 @@ export class GeminiProvider implements AIService {
     hasImage: boolean,
     signal: AbortSignal,
     attemptTimeoutMs: number,
-    costContext?: GenerateContentOptions["costContext"]
+    costContext?: GenerateContentOptions["costContext"],
+    onUsage?: (usage: any) => Promise<void>
   ): Promise<string> {
     const ai = this.getClient(apiKey);
     let lastError: any = null;
@@ -176,6 +179,7 @@ export class GeminiProvider implements AIService {
           });
 
           if (response && response.text) {
+            if (onUsage) await onUsage(response.usageMetadata);
             console.info(`Successfully generated content with model: ${modelName}`);
             if (costContext && response.usageMetadata) {
               void recordAiTokenUsage(costContext.uid, costContext.feature, modelName, response.usageMetadata)
@@ -217,6 +221,38 @@ export class GeminiProvider implements AIService {
   }
 
   async generateContent(options: GenerateContentOptions): Promise<string> {
+    const context=creditContext.getStore();
+    if (!creditsEnabled() || !context) return this.generateUnmetered(options);
+    const model=process.env.CREDIT_GEMINI_MODEL;
+    if (!model) throw Error("Credit model not configured");
+    const rates=modelRatesFromJson(process.env.CREDIT_MODEL_RATES_JSON || "",model);
+    const parts:any[]=[{text:options.prompt}];
+    if(options.imageBase64) parts.push({inlineData:{mimeType:options.imageMimeType||'image/jpeg',data:options.imageBase64}});
+    if(options.videoBase64) parts.push({inlineData:{mimeType:options.videoMimeType||'video/webm',data:options.videoBase64}});
+    const client=this.getClient(getApiKeys()[0]);
+    const count=await client.models.countTokens({model,contents:[{role:'user',parts}],config:{systemInstruction:options.systemInstruction}});
+    if(!Number.isSafeInteger(count.totalTokens)) throw Error('Token count unavailable');
+    const output=Math.min(options.maxOutputTokens || 1024, 4096);
+    // An explicit per-request ceiling, with margin for token-count differences.
+    const reserve=priceGeminiUsage({promptTokenCount:Math.ceil(count.totalTokens!*1.2)+128,candidatesTokenCount:output},rates).credits;
+    const reservation=await creditOperation(context.uid,'reserve',context.requestId,reserve);
+    if(reservation.legacy) throw Error('Subscription changed; retry request');
+    let received=false;
+    try {
+      return await this.generateUnmetered({...options,modelOverride:model,maxOutputTokens:output}, async usage=>{
+        received=true;
+        const actual=priceGeminiUsage(usage,rates);
+        await creditOperation(context.uid,'settle',context.requestId,actual.credits);
+      },true);
+    } catch(error) {
+      // Once Gemini returned usage, a storage failure requires reconciliation;
+      // never refund a successfully generated paid response automatically.
+      if(!received) await creditOperation(context.uid,'release',context.requestId);
+      throw error;
+    }
+  }
+
+  private async generateUnmetered(options: GenerateContentOptions, onUsage?: (usage:any)=>Promise<void>, creditMode=false): Promise<string> {
     const apiKeys = getApiKeys();
     if (apiKeys.length === 0) {
       throw new Error("GEMINI_API_KEY environment variable is missing.");
@@ -257,7 +293,7 @@ export class GeminiProvider implements AIService {
       text: options.prompt,
     });
 
-    const config: any = {};
+    const config: any = creditMode ? {thinkingConfig:{thinkingBudget:0}} : {};
 
     if (options.systemInstruction) {
       config.systemInstruction = options.systemInstruction;
@@ -296,7 +332,7 @@ export class GeminiProvider implements AIService {
       const apiKey = apiKeys[keyIndex];
 
       try {
-        const result = await this.generateWithKey(apiKey, modelsToTry, contents, config, options.prompt, !!(options.imageBase64 || options.videoBase64), deadline, attemptTimeoutMs, options.costContext);
+        const result = await this.generateWithKey(apiKey, modelsToTry, contents, config, options.prompt, !!(options.imageBase64 || options.videoBase64), deadline, attemptTimeoutMs, options.costContext, onUsage);
         currentKeyIndex = keyIndex;
         return result;
       } catch (error: any) {

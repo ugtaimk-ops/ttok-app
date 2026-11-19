@@ -373,12 +373,12 @@ export default function App() {
         const response = await robustFetch("/api/usage/status");
         if (!response.ok) throw new Error(`Usage status ${response.status}`);
         const status = await response.json() as {
-          month: string; used: number; isPremium: boolean; quota?: UserProfile["aiQuota"];
+          month: string; used: number; isPremium: boolean; quota?: UserProfile["aiQuota"]; credits?: UserProfile["aiCredits"];
         };
         if (active) {
           shownMonth = status.month;
           setUser(prev => ({ ...prev, uid, aiUsageMonth: status.month,
-            aiUsageCount: status.used, isPremium: status.isPremium, aiQuota: status.quota }));
+            aiUsageCount: status.used, isPremium: status.isPremium, aiQuota: status.quota, aiCredits: status.credits }));
         }
       } catch (error) {
         console.warn("[Usage] Could not refresh account status:", error);
