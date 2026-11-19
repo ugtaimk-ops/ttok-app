@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import V6PaywallModal from "./components/V6PaywallModal";
+import CreditPaywall from "./components/CreditPaywall";
 import "./index.css";
 
 function Preview() {
@@ -13,8 +13,8 @@ function Preview() {
       <button type="button" onClick={() => setOpen(true)}
         className="mt-6 w-full rounded-2xl bg-blue-600 p-4 font-bold text-white">요금제 화면 보기</button>
     </div>
-    {open && <V6PaywallModal products={{}} activePlans={[]} previewOnly
-      onClose={() => setOpen(false)} onPurchased={() => {}} />}
+    {open && <CreditPaywall previewOnly
+      onClose={() => setOpen(false)} />}
   </main>;
 }
 

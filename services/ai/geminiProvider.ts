@@ -179,7 +179,10 @@ export class GeminiProvider implements AIService {
           });
 
           if (response && response.text) {
-            if (onUsage) await onUsage(response.usageMetadata);
+            if (onUsage) {
+              try {await onUsage(response.usageMetadata);}
+              catch {throw new Error('CREDIT_SETTLEMENT_FAILED');}
+            }
             console.info(`Successfully generated content with model: ${modelName}`);
             if (costContext && response.usageMetadata) {
               void recordAiTokenUsage(costContext.uid, costContext.feature, modelName, response.usageMetadata)
@@ -234,7 +237,8 @@ export class GeminiProvider implements AIService {
     if(!Number.isSafeInteger(count.totalTokens)) throw Error('Token count unavailable');
     const output=Math.min(options.maxOutputTokens || 1024, 4096);
     // An explicit per-request ceiling, with margin for token-count differences.
-    const reserve=priceGeminiUsage({promptTokenCount:Math.ceil(count.totalTokens!*1.2)+128,candidatesTokenCount:output},rates).credits;
+    const reserveRates={...rates,inputUsdPerMillion:Math.max(rates.inputUsdPerMillion,rates.audioInputUsdPerMillion||0)};
+    const reserve=priceGeminiUsage({promptTokenCount:Math.ceil(count.totalTokens!*1.2)+128,candidatesTokenCount:output},reserveRates).credits;
     const reservation=await creditOperation(context.uid,'reserve',context.requestId,reserve);
     if(reservation.legacy) throw Error('Subscription changed; retry request');
     let received=false;

@@ -25,9 +25,10 @@ export default function PremiumSection({ user, darkMode, planPreview }: PremiumS
   const localPreview = import.meta.env.DEV && !Capacitor.isNativePlatform();
   const isPremium = planPreview ? planPreview === "pro" : user.isPremium === true;
   const activePlanIds = user.aiQuota?.plans.map((plan) => plan.planId) || [];
-  const currentPlanLabel = planPreview === "pro" || activePlanIds.includes("pro") || (isPremium && !user.aiQuota)
+  const creditLabel=user.aiCredits?.plans.includes('max')?'똑 Max':user.aiCredits?.plans.includes('pro')?'똑 Pro':user.aiCredits?.plans.includes('basic')?'똑 Basic':'무료';
+  const currentPlanLabel = user.aiCredits ? creditLabel : planPreview === "pro" || activePlanIds.includes("pro") || (isPremium && !user.aiQuota)
     ? "똑 PRO" : activePlanIds.includes("plus") ? "AI Plus"
-    : activePlanIds.includes("basic") ? "AI Basic" : "일반";
+    : activePlanIds.includes("basic") ? "똑 Basic" : "일반";
   const limit = isPremium ? PREMIUM_MONTHLY_LIMIT : FREE_MONTHLY_LIMIT;
   const used = planPreview ? 0 : user.aiUsageMonth === getKoreanMonthKey() && typeof user.aiUsageCount === "number"
     ? user.aiUsageCount : 0;
@@ -125,7 +126,7 @@ export default function PremiumSection({ user, darkMode, planPreview }: PremiumS
       {user.aiQuota && !planPreview && <div className="space-y-1 text-fluid-xs text-slate-500">
         {user.aiQuota.mode === "free" && <p>오늘 무료 AI {user.aiQuota.freeRemaining}회 남음</p>}
         {user.aiQuota.plans.map((plan) => <p key={plan.planId}>
-          {({ basic: "AI Basic", pro: "똑 Pro", plus: "AI Plus" })[plan.planId]}: {plan.total}회 중 {plan.remaining}회 남음
+          {({ basic: "똑 Basic", pro: "똑 Pro", plus: "AI Plus" })[plan.planId]}: {plan.total}회 중 {plan.remaining}회 남음
         </p>)}
         {user.aiQuota.rewardRemaining > 0 && <p>광고 보상 이용권: {user.aiQuota.rewardRemaining}회</p>}
       </div>}
@@ -148,7 +149,7 @@ export default function PremiumSection({ user, darkMode, planPreview }: PremiumS
           {localPreview ? "요금제 화면 미리보기" : "요금제 보기 / AI 이용권 추가"}
         </button>
       )}
-      {(isPremium || !!user.aiQuota?.plans.length) && (
+      {(isPremium || !!user.aiQuota?.plans.length || !!user.aiCredits?.plans.length) && (
         <button data-ui="premium-manage"
           onClick={handleManageSubscription}
           disabled={isOpeningManage || !!planPreview}

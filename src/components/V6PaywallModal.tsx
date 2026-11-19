@@ -7,7 +7,7 @@ import { useScreenBack } from "../lib/screenBack";
 type Plan = "basic" | "pro" | "plus";
 type Products = Partial<Record<Plan, PurchasesStoreProduct>>;
 const PLANS: Array<{ id: Plan; title: string; quota: number; targetPrice: string; detail: string }> = [
-  { id: "basic", title: "AI Basic", quota: 30, targetPrice: "₩1,900", detail: "AI 이용권" },
+  { id: "basic", title: "똑 Basic", quota: 30, targetPrice: "₩1,900", detail: "AI 이용권" },
   { id: "pro", title: "똑 Pro", quota: 50, targetPrice: "₩3,900", detail: "AI 추천 기능 이용" },
   { id: "plus", title: "AI Plus", quota: 70, targetPrice: "₩3,900", detail: "AI 이용권" },
 ];
@@ -42,7 +42,7 @@ export default function V6PaywallModal({ products, activePlans, previewOnly = fa
           <h2 className="text-xl font-black">똑 요금제</h2>
           <button type="button" className="min-h-11 px-3 rounded-xl font-bold" onClick={onClose} disabled={!!busy}>닫기</button>
         </div>
-        <p className="mt-2 text-sm text-slate-500">Pro와 AI Basic 또는 AI Plus를 함께 이용할 수 있어요. 각 구독은 별도로 결제됩니다.</p>
+        <p className="mt-2 text-sm text-slate-500">Pro와 똑 Basic 또는 AI Plus를 함께 이용할 수 있어요. 각 구독은 별도로 결제됩니다.</p>
         {previewOnly && <p role="status" className="mt-2 rounded-xl bg-blue-50 p-3 text-sm text-blue-700">
           화면 미리보기예요. 실제 가격 확인과 결제는 Play 스토어에서 설치한 Android 앱에서 할 수 있어요.
         </p>}

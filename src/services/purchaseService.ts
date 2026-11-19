@@ -102,6 +102,8 @@ export const purchaseService = {
 
   async restorePurchases(): Promise<CustomerInfo> {
     const result = await Purchases.restorePurchases();
+    await robustFetch("/api/usage/status?refresh=1").catch(()=>{});
+    window.dispatchEvent(new Event("ttok:usage-updated"));
     return result.customerInfo;
   },
 
@@ -117,7 +119,7 @@ export const purchaseService = {
   },
 
   hasActiveV6Entitlement(customerInfo: CustomerInfo): boolean {
-    return !!customerInfo.entitlements.active[ENTITLEMENT_ID] ||
+    return !!customerInfo.entitlements.active["ttok_max"] || !!customerInfo.entitlements.active[ENTITLEMENT_ID] ||
       customerInfo.activeSubscriptions.some((subscriptionId) =>
         Object.values(V6_PRODUCT_IDS).some((productId) =>
           subscriptionId === productId || subscriptionId.startsWith(`${productId}:`)));

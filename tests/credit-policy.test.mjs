@@ -92,7 +92,7 @@ test("unpriced audio input is refused instead of silently charging the text rate
     inputUsdPerMillion: 0.1, cachedInputUsdPerMillion: 0.01, outputUsdPerMillion: 0.4,
   }), /audio pricing/);
   assert.throws(() => priceGeminiUsage({ promptTokenCount: 100, candidatesTokenCount: 20,
-    promptTokensDetails: [{ modality: "VIDEO", tokenCount: 50 }] }, {
+    promptTokensDetails: [{ modality: "UNKNOWN", tokenCount: 50 }] }, {
     inputUsdPerMillion: 0.1, cachedInputUsdPerMillion: 0.01, outputUsdPerMillion: 0.4,
   }), /Unsupported Gemini input modality/);
 });

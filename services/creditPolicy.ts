@@ -132,7 +132,7 @@ export function priceGeminiUsage(usage: GeminiUsage, rates: ModelRates): {
   // Unknown input modalities must be priced explicitly before this engine is
   // activated. Charging them as text could undercharge a live account.
   if (usage.promptTokensDetails?.some(item =>
-    item.modality && !["TEXT", "IMAGE", "AUDIO"].includes(item.modality))) {
+    item.modality && !["TEXT", "IMAGE", "AUDIO", "VIDEO"].includes(item.modality))) {
     throw new Error("Unsupported Gemini input modality");
   }
   const audio = (usage.promptTokensDetails || [])

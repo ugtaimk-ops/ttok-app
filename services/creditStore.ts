@@ -72,6 +72,6 @@ export async function creditOperation(uid:string, operation:'status'|'reserve'|'
     const balance=creditBalance(state,now);
     tx.set(wallet,{grants:state.grants,totalAvailable:balance,updatedAt:now,schemaVersion:7});
     if(operation!=='status' && state.holds[requestId]) tx.set(request,{hold:state.holds[requestId],updatedAt:now});
-    return {legacy:false as const,balance,plans:(subscription?.periods || []).map(p=>p.plan),expiresAt:Math.min(...state.grants.filter(g=>g.expiresAt>now).map(g=>g.expiresAt))};
+    return {legacy:false as const,balance,plans:(subscription?.periods || []).map(p=>p.plan),expiresAt:state.grants.some(g=>g.expiresAt>now)?Math.min(...state.grants.filter(g=>g.expiresAt>now).map(g=>g.expiresAt)):null};
   });
 }

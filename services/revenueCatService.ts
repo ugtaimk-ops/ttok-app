@@ -1,3 +1,4 @@
+import {creditsEnabled, verifiedCreditPeriods} from "./creditStore";
 // Server-side handling of RevenueCat webhook events: verifies the request,
 // then asks RevenueCat's own REST API for the subscriber's authoritative
 // current entitlement state (rather than trying to infer it from the event
@@ -54,6 +55,10 @@ async function fetchSubscriber(appUserId: string): Promise<any> {
 }
 
 function isEntitlementActive(subscriber: any, appUserId: string): boolean {
+  if (creditsEnabled()) {
+    const result=verifiedCreditPeriods(subscriber,JSON.parse(process.env.CREDIT_PRODUCT_MAP_JSON || '{}'),Date.now());
+    if(!result.legacy) return result.periods.some(p=>p.plan==='pro'||p.plan==='max');
+  }
   const allEntitlements = subscriber?.entitlements ?? {};
   const entitlement = allEntitlements[ENTITLEMENT_ID];
   if (!entitlement) {
