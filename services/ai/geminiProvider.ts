@@ -3,6 +3,7 @@ import { AIService, GenerateContentOptions } from "./types";
 import { creditContext, creditOperation, creditsEnabled } from "../creditStore";
 import { modelRatesFromJson, priceGeminiUsage } from "../creditPolicy";
 import { recordAiTokenUsage } from "../usageService";
+import { countWithKeyRotation } from "./tokenCounter";
 
 // Module-level (not per-instance) so the "which key is currently good" state
 // survives across requests - server.ts calls getAIService() fresh on every
@@ -232,8 +233,12 @@ export class GeminiProvider implements AIService {
     const parts:any[]=[{text:options.prompt}];
     if(options.imageBase64) parts.push({inlineData:{mimeType:options.imageMimeType||'image/jpeg',data:options.imageBase64}});
     if(options.videoBase64) parts.push({inlineData:{mimeType:options.videoMimeType||'video/webm',data:options.videoBase64}});
-    const client=this.getClient(getApiKeys()[0]);
-    const count=await client.models.countTokens({model,contents:[{role:'user',parts}],config:{systemInstruction:options.systemInstruction}});
+    const countSignal=AbortSignal.timeout(20_000);
+    const counted=await countWithKeyRotation(getApiKeys(),currentKeyIndex,
+      key=>this.getClient(key).models.countTokens({model,contents:[{role:'user',parts}],config:{systemInstruction:options.systemInstruction,abortSignal:countSignal}}),
+      error=>!countSignal.aborted && shouldTryNextKey(error));
+    currentKeyIndex=counted.keyIndex;
+    const count=counted.result;
     if(!Number.isSafeInteger(count.totalTokens)) throw Error('Token count unavailable');
     const output=Math.min(options.maxOutputTokens || 1024, 4096);
     // An explicit per-request ceiling, with margin for token-count differences.

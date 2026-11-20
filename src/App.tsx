@@ -27,7 +27,7 @@ import HomeScreen from "./components/HomeScreen";
 import KkorureukScreen from "./components/KkorureukScreen";
 import AssessmentScreen from "./components/AssessmentScreen";
 import PracticeScreen from "./components/PracticeScreen";
-import StudyScreen from "./components/StudyScreen";
+import StudyScreen from "./components/AiChatScreen";
 import ProfileScreen from "./components/ProfileScreen";
 import SettingsScreen from "./components/SettingsScreen";
 import BottomNavigationBar from "./components/BottomNavigationBar";
@@ -127,7 +127,7 @@ export default function App() {
     return () => { cancelled = true; };
   }, [authUser?.uid, emailVerified, termsRetry]);
 
-  const [tokTab, setTokTab] = useState<string>("home");
+  const [tokTab, setTokTab] = useState<string>(() => new URLSearchParams(window.location.search).get("screen") === "study" ? "study" : "home");
   const [tabTransition, setTabTransition] = useState<{ from: string; to: string; direction: 1 | -1 } | null>(null);
   const tabTransitionTimer = useRef<number | null>(null);
   useEffect(() => () => {
@@ -969,6 +969,8 @@ export default function App() {
                 darkMode={darkMode}
                 isActive={tokTab === "study"}
                 initialHelperMode={studyHelperMode}
+                schedules={schedules}
+                todos={todos}
               />
             </ScreenScope>
 

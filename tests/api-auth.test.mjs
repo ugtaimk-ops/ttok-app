@@ -82,6 +82,8 @@ test("private APIs reject callers without a verified Firebase token", async () =
 
     const ai = await fetch(`${origin}/api/script/generate`, { method: "POST" });
     assert.equal(ai.status, 401);
+    const chat = await fetch(`${origin}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({message:'질문',history:[]}) });
+    assert.equal(chat.status, 401, "chat must require Firebase authentication before AI billing");
     const oversizedAnonymous = await fetch(`${origin}/api/practice/analyze`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ videoBase64: "A".repeat(2_000_000) }),

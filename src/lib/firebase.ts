@@ -39,7 +39,7 @@ const firebaseConfig = {
 
 const emulatorMode=(import.meta as any).env.DEV&&(import.meta as any).env.VITE_USE_FIREBASE_EMULATORS==='true';
 // Local four-phone preview shares Firebase persistence only within each pair.
-const previewDevice=(import.meta as any).env.DEV ? new URLSearchParams(location.search).get('previewDevice') : null;
+const previewDevice=((import.meta as any).env.DEV || (import.meta as any).env.VITE_PREVIEW_DEVICES === 'true') ? new URLSearchParams(location.search).get('previewDevice') : null;
 const previewName=previewDevice==='left'||previewDevice==='right' ? 'ddok-timer-'+previewDevice : undefined;
 const app = initializeApp(emulatorMode?{...firebaseConfig,projectId:'demo-ddok-shared',apiKey:'demo-api-key',authDomain:'localhost'}:firebaseConfig, previewName);
 

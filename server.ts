@@ -1,3 +1,5 @@
+import { handleStudyChat } from "./services/chatRoute";
+import { validChatBody } from "./services/chatPrompt";
 import { creditContext, creditOperation, creditsEnabled } from "./services/creditStore";
 import {createSchoolSearch} from './services/schoolSearch';
 import {verifySchoolAccount} from './services/schoolIdentity';
@@ -120,7 +122,7 @@ app.use("/api/", async (req, res, next) => {
 app.use("/revenuecat/webhook", (req, res, next) =>
   verifyWebhookAuth(req.header("authorization")) ? next() : res.status(401).json({ error: "Unauthorized" }));
 app.use("/api/practice/analyze", express.json({ limit: "23mb" }));
-for (const route of ["/api/problem/solve", "/api/assessment/extract", "/api/study/action"]) {
+for (const route of ["/api/problem/solve", "/api/assessment/extract", "/api/study/action", "/api/chat"]) {
   app.use(route, express.json({ limit: "13mb" }));
 }
 app.use("/revenuecat/webhook", express.json({ limit: "128kb" }));
@@ -137,7 +139,7 @@ app.post('/timer-auth/exchange',timerExchangeLimit,(req,res)=>{
   catch(error) {res.status(error instanceof Error&&error.message==='NOT_CONFIGURED'?503:400).json({error:'연결 요청이 만료되었거나 서버 설정을 확인해야 해요.'});}
 });
 
-const AI_ROUTES = ["/api/script/generate", "/api/practice/analyze", "/api/assessment/extract", "/api/study/action", "/api/home/ai-report"];
+const AI_ROUTES = ["/api/script/generate", "/api/practice/analyze", "/api/assessment/extract", "/api/study/action", "/api/home/ai-report", "/api/chat"];
 const CACHEABLE_AI_ROUTES = new Set(["/api/assessment/extract", "/api/study/action"]);
 const validString = (value: unknown, max: number) => value === undefined || (typeof value === "string" && value.length <= max);
 const validImage = (image: unknown, mime: unknown) =>
@@ -172,6 +174,8 @@ app.use(AI_ROUTES, (req, res, next) => {
     valid = ["summary", "quiz", "note", "question"].includes(body.actionType) &&
       validString(body.text, 20_000) && validString(body.additionalQuestion, 1000) &&
       validImage(body.imageBase64, body.mimeType);
+  } else if (route === "/api/chat") {
+    valid = validChatBody(body) && validImage(body.imageBase64, body.mimeType);
   } else if (route === "/api/home/ai-report") {
     valid = validReportList(body.todos, ["text", "category", "dueDate"]) &&
       validReportList(body.schedules, ["title", "type", "subject", "date"]);
@@ -802,6 +806,8 @@ app.post("/api/assessment/extract", async (req, res) => {
 
 
 // 4. Study Helper (Summary, Quiz, Wrong Notes, Q&A)
+app.post("/api/chat", handleStudyChat);
+
 app.post("/api/study/action", async (req, res) => {
   try {
     const { actionType, text, imageBase64, mimeType, additionalQuestion } = req.body;

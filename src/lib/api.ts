@@ -32,10 +32,11 @@ export async function robustFetch(path: string, options: RequestInit = {}): Prom
   }
   const headers = new Headers(options.headers);
   const metered = ["/api/script/generate", "/api/practice/analyze", "/api/assessment/extract",
-    "/api/study/action", "/api/home/ai-report", "/api/problem/solve"];
+    "/api/study/action", "/api/home/ai-report", "/api/problem/solve", "/api/chat"];
   if (options.method?.toUpperCase() === "POST" && metered.includes(path) && !headers.has("X-AI-Request-ID")) {
     headers.set("X-AI-Request-ID", crypto.randomUUID());
   }
+  await auth.authStateReady();
   const idToken = await auth.currentUser?.getIdToken();
   if (idToken) headers.set("Authorization", `Bearer ${idToken}`);
   headers.set("Accept", "application/json");
