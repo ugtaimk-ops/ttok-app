@@ -234,8 +234,8 @@ export default function StudyScreen({
         body: JSON.stringify({
           actionType,
           text: textInput,
-          imageBase64: uploadedBase64,
-          mimeType: uploadedMime,
+          imageBase64: uploadedBase64 || undefined,
+          mimeType: uploadedBase64 ? uploadedMime : undefined,
           additionalQuestion: ""
         })
       });

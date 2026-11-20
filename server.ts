@@ -164,6 +164,11 @@ app.use(AI_ROUTES, (req, res, next) => {
   } else if (route === "/api/assessment/extract") {
     valid = validImage(body.imageBase64, body.mimeType) && typeof body.imageBase64 === "string";
   } else if (route === "/api/study/action") {
+    // Older clients serialize the optional photo as null/empty for text-only requests.
+    if (body.imageBase64 === null || body.imageBase64 === "") {
+      delete body.imageBase64;
+      delete body.mimeType;
+    }
     valid = ["summary", "quiz", "note", "question"].includes(body.actionType) &&
       validString(body.text, 20_000) && validString(body.additionalQuestion, 1000) &&
       validImage(body.imageBase64, body.mimeType);
