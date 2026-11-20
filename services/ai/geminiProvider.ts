@@ -325,7 +325,8 @@ export class GeminiProvider implements AIService {
     // One deadline covers all model/key fallbacks and stays below the app's
     // 120-second request timeout. The SDK signal aborts the active HTTP call.
     const deadline = AbortSignal.timeout(options.videoBase64 ? 110_000 : GEMINI_TOTAL_TIMEOUT_MS);
-    const attemptTimeoutMs = options.videoBase64 ? 70_000 : GEMINI_ATTEMPT_TIMEOUT_MS;
+    const attemptTimeoutMs = options.videoBase64 ? 70_000
+      : options.costContext?.feature === "study" ? 45_000 : GEMINI_ATTEMPT_TIMEOUT_MS;
 
     // Start from whichever key last worked, and rotate forward through the
     // rest of the list on quota exhaustion OR an auth/invalid-key error - a
