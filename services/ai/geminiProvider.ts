@@ -297,7 +297,7 @@ export class GeminiProvider implements AIService {
       text: options.prompt,
     });
 
-    const config: any = creditMode ? {thinkingConfig:{thinkingBudget:0}} : {};
+    const config: any = creditMode ? {thinkingConfig: options.modelOverride?.startsWith("gemini-2.5-") ? {thinkingBudget:0} : {thinkingLevel:"minimal"}} : {};
 
     if (options.systemInstruction) {
       config.systemInstruction = options.systemInstruction;
