@@ -1,3 +1,16 @@
+import type { GenerateContentOptions } from './types';
+
+/** Developer API countTokens rejects config.systemInstruction. Include its
+ * text in the counting contents only; generation keeps the real system role. */
+export function tokenCountParts(options: GenerateContentOptions): any[] {
+  const parts: any[] = [];
+  if (options.systemInstruction) parts.push({ text: options.systemInstruction });
+  parts.push({ text: options.prompt });
+  if (options.imageBase64) parts.push({ inlineData: { mimeType: options.imageMimeType || 'image/jpeg', data: options.imageBase64 } });
+  if (options.videoBase64) parts.push({ inlineData: { mimeType: options.videoMimeType || 'video/webm', data: options.videoBase64 } });
+  return parts;
+}
+
 /** Count requests need the same key failover as generation, before any charge. */
 export async function countWithKeyRotation<T>(
   keys: string[], start: number, count: (key: string) => Promise<T>,

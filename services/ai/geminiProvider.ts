@@ -3,7 +3,7 @@ import { AIService, GenerateContentOptions } from "./types";
 import { creditContext, creditOperation, creditsEnabled } from "../creditStore";
 import { modelRatesFromJson, priceGeminiUsage } from "../creditPolicy";
 import { recordAiTokenUsage } from "../usageService";
-import { countWithKeyRotation } from "./tokenCounter";
+import { countWithKeyRotation, tokenCountParts } from "./tokenCounter";
 
 // Module-level (not per-instance) so the "which key is currently good" state
 // survives across requests - server.ts calls getAIService() fresh on every
@@ -230,12 +230,10 @@ export class GeminiProvider implements AIService {
     const model=process.env.CREDIT_GEMINI_MODEL;
     if (!model) throw Error("Credit model not configured");
     const rates=modelRatesFromJson(process.env.CREDIT_MODEL_RATES_JSON || "",model);
-    const parts:any[]=[{text:options.prompt}];
-    if(options.imageBase64) parts.push({inlineData:{mimeType:options.imageMimeType||'image/jpeg',data:options.imageBase64}});
-    if(options.videoBase64) parts.push({inlineData:{mimeType:options.videoMimeType||'video/webm',data:options.videoBase64}});
+    const parts=tokenCountParts(options);
     const countSignal=AbortSignal.timeout(20_000);
     const counted=await countWithKeyRotation(getApiKeys(),currentKeyIndex,
-      key=>this.getClient(key).models.countTokens({model,contents:[{role:'user',parts}],config:{systemInstruction:options.systemInstruction,abortSignal:countSignal}}),
+      key=>this.getClient(key).models.countTokens({model,contents:[{role:'user',parts}],config:{abortSignal:countSignal}}),
       error=>!countSignal.aborted && shouldTryNextKey(error));
     currentKeyIndex=counted.keyIndex;
     const count=counted.result;

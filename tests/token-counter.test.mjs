@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { countWithKeyRotation } from '../services/ai/tokenCounter.ts';
+import { countWithKeyRotation, tokenCountParts } from '../services/ai/tokenCounter.ts';
+test('system instructions are counted as text, including image and video input',()=>{
+  assert.deepEqual(tokenCountParts({prompt:'question',systemInstruction:'tutor',imageBase64:'img',videoBase64:'vid'}),[
+    {text:'tutor'}, {text:'question'},
+    {inlineData:{mimeType:'image/jpeg',data:'img'}}, {inlineData:{mimeType:'video/webm',data:'vid'}},
+  ]);
+});
 test('token counter skips an invalid key and returns the working index', async()=>{
   const visited=[];
   const result=await countWithKeyRotation(['bad','good'],0,async key=>{
